@@ -1,5 +1,0 @@
-upstox-python-sdk
-pandas
-numpy
-requests
-ta
