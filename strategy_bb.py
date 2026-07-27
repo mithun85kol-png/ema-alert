@@ -1,5 +1,5 @@
 """
-Bollinger Band re-entry strategy, evaluated on 5-minute candles.
+Bollinger Band re-entry strategy, evaluated on a given timeframe.
 
 Sell signal: price was above the upper band and the latest closed candle
              re-enters below the upper band, confirmed by a red (bearish)
@@ -26,14 +26,16 @@ class BBSignal:
     close: float
     open: float
     band_level: float
+    timeframe: int
 
 
-def evaluate(symbol: str, raw_1min_df: pd.DataFrame) -> Optional[BBSignal]:
-    candles = resample_candles(raw_1min_df, config.TIMEFRAME_MINUTES)
+def evaluate(symbol: str, raw_1min_df: pd.DataFrame, timeframe_minutes: int = None) -> Optional[BBSignal]:
+    tf = timeframe_minutes or config.TIMEFRAME_MINUTES
+    candles = resample_candles(raw_1min_df, tf)
 
     min_bars_needed = config.BB_LENGTH + 2
     if len(candles) < min_bars_needed:
-        log.debug("%s: not enough bars yet for BB (%d/%d)", symbol, len(candles), min_bars_needed)
+        log.debug("%s (%dm): not enough bars yet for BB (%d/%d)", symbol, tf, len(candles), min_bars_needed)
         return None
 
     candles = bollinger_bands(candles, config.BB_LENGTH, config.BB_MULT)
@@ -48,9 +50,9 @@ def evaluate(symbol: str, raw_1min_df: pd.DataFrame) -> Optional[BBSignal]:
     is_green = last["close"] > last["open"]
 
     if prev["close"] > prev["bb_upper"] and last["close"] < last["bb_upper"] and is_red:
-        return BBSignal(symbol, "SELL", last["timestamp"], last["close"], last["open"], last["bb_upper"])
+        return BBSignal(symbol, "SELL", last["timestamp"], last["close"], last["open"], last["bb_upper"], tf)
 
     if prev["close"] < prev["bb_lower"] and last["close"] > last["bb_lower"] and is_green:
-        return BBSignal(symbol, "BUY", last["timestamp"], last["close"], last["open"], last["bb_lower"])
+        return BBSignal(symbol, "BUY", last["timestamp"], last["close"], last["open"], last["bb_lower"], tf)
 
     return None
