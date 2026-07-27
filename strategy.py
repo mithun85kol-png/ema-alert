@@ -1,10 +1,10 @@
 """
-EMA 9/20 crossover strategy with RSI filter, evaluated on 5-minute candles.
-
-Bullish alert: EMA9 crosses above EMA20 on the most recently closed candle,
-               AND RSI is between RSI_BULLISH_MIN and RSI_BULLISH_MAX.
-Bearish alert: EMA9 crosses below EMA20 on the most recently closed candle,
-               AND RSI is between RSI_BEARISH_MIN and RSI_BEARISH_MAX.
+EMA 9/20 crossover strategy on 5-minute candles, filtered by price
+position relative to VWAP:
+  Bullish: EMA9 crosses above EMA20 AND close is above VWAP
+  Bearish: EMA9 crosses below EMA20 AND close is below VWAP
+RSI is still calculated and shown in the alert for reference, but is not
+used as a filter.
 """
 from dataclasses import dataclass
 from typing import Optional
@@ -25,6 +25,7 @@ class Signal:
     ema_fast: float
     ema_slow: float
     rsi: float
+    vwap: float
 
 
 def evaluate(symbol: str, raw_1min_df: pd.DataFrame) -> Optional[Signal]:
@@ -43,12 +44,15 @@ def evaluate(symbol: str, raw_1min_df: pd.DataFrame) -> Optional[Signal]:
     crossed_up = prev["ema_fast"] <= prev["ema_slow"] and last["ema_fast"] > last["ema_slow"]
     crossed_down = prev["ema_fast"] >= prev["ema_slow"] and last["ema_fast"] < last["ema_slow"]
 
-    if crossed_up and config.RSI_BULLISH_MIN <= last["rsi"] <= config.RSI_BULLISH_MAX:
-        return Signal(symbol, "BULLISH", last["timestamp"], last["close"],
-                      last["ema_fast"], last["ema_slow"], last["rsi"])
+    above_vwap = last["close"] > last["vwap"]
+    below_vwap = last["close"] < last["vwap"]
 
-    if crossed_down and config.RSI_BEARISH_MIN <= last["rsi"] <= config.RSI_BEARISH_MAX:
+    if crossed_up and above_vwap:
+        return Signal(symbol, "BULLISH", last["timestamp"], last["close"],
+                      last["ema_fast"], last["ema_slow"], last["rsi"], last["vwap"])
+
+    if crossed_down and below_vwap:
         return Signal(symbol, "BEARISH", last["timestamp"], last["close"],
-                      last["ema_fast"], last["ema_slow"], last["rsi"])
+                      last["ema_fast"], last["ema_slow"], last["rsi"], last["vwap"])
 
     return None
