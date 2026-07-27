@@ -4,6 +4,9 @@ crossover signal, an EMA9 retest signal, and a Bollinger Band re-entry
 signal, independently. GOLD/SILVER/CRUDEOIL (MCX front-month futures) are
 resolved dynamically every run. Equity/index instruments are only checked
 during NSE hours; commodities are checked until MCX close.
+
+Additionally, as an extra (non-replacing) check, all Nifty 50 stocks are
+checked for an EMA 50/200 crossover on a 75-min timeframe.
 """
 from datetime import datetime
 import pytz
@@ -14,12 +17,15 @@ from upstox_client import UpstoxClient
 from strategy import evaluate as evaluate_ema
 import strategy_bb
 import strategy_retest
+import strategy_ema50_200
 import commodities
+import nifty50_watchlist
 from telegram_notifier import (
     send_message,
     format_signal_message,
     format_bb_signal_message,
     format_retest_message,
+    format_ema50200_message,
 )
 
 log = config.get_logger("ema_alert_bot")
@@ -81,6 +87,39 @@ def run_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
     return changed
 
 
+def run_ema50200_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
+    """Extra, independent check: EMA 50/200 crossover on 75-min candles for
+    Nifty 50 stocks. Needs a much longer 1-min lookback than the other
+    strategies, so it fetches its own candle data per symbol."""
+    changed = False
+    for item in watchlist:
+        symbol = item["symbol"]
+        instrument_key = item["instrument_key"]
+        try:
+            raw = client.get_recent_candles(
+                instrument_key,
+                interval=config.BASE_CANDLE_INTERVAL,
+                lookback_days=config.CANDLE_LOOKBACK_DAYS_EMA50200,
+            )
+            if raw.empty:
+                log.warning("%s: no candle data returned (EMA50/200)", symbol)
+                continue
+
+            signal = strategy_ema50_200.evaluate(symbol, raw)
+            if signal is not None and not state_store.already_alerted(
+                state, symbol, signal.candle_time, tag="EMA50200"
+            ):
+                if send_message(format_ema50200_message(signal)):
+                    log.info("EMA50/200 alert sent: %s %s @ %s", symbol, signal.direction, signal.candle_time)
+                    state_store.mark_alerted(state, symbol, signal.candle_time, tag="EMA50200")
+                    changed = True
+
+        except Exception as e:
+            log.exception("Error processing %s (EMA50/200): %s", symbol, e)
+
+    return changed
+
+
 def main():
     tz = pytz.timezone(config.TIMEZONE)
     now = datetime.now(tz)
@@ -107,6 +146,14 @@ def main():
         watchlist += commodities.build_commodity_watchlist(client)
 
     changed = run_cycle(client, state, watchlist)
+
+    # Extra EMA 50/200 (75-min) check for Nifty 50 stocks - only during
+    # equity market hours, independent of the main watchlist above.
+    if equity_open:
+        log.info("Running extra EMA 50/200 (75-min) check for Nifty 50 stocks")
+        nifty50_list = nifty50_watchlist.build_nifty50_watchlist()
+        changed_50200 = run_ema50200_cycle(client, state, nifty50_list)
+        changed = changed or changed_50200
 
     if changed:
         state_store.save_state(state)
