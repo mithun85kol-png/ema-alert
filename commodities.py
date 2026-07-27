@@ -9,8 +9,7 @@ import config
 
 log = config.get_logger(__name__)
 
-COMMODITY_SYMBOLS = ["GOLD", "SILVER"]
-
+COMMODITY_SYMBOLS = ["GOLD", "SILVER", "CRUDEOIL"]
 
 def resolve_front_month(client, underlying_symbol: str):
     try:
