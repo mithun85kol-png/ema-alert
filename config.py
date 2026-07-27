@@ -21,9 +21,12 @@ EMA_FAST = 9
 EMA_SLOW = 20
 RSI_PERIOD = 14
 RSI_BULLISH_MIN = 50
-RSI_BULLISH_MAX = 100
+RSI_BULLISH_MAX = 70
 RSI_BEARISH_MAX = 50
-RSI_BEARISH_MIN = 0
+RSI_BEARISH_MIN = 30
+
+BB_LENGTH = 20
+BB_MULT = 1.2
 
 TIMEFRAME_MINUTES = 5
 BASE_CANDLE_INTERVAL = "1minute"
@@ -39,12 +42,15 @@ STATE_FILE = "alert_state.json"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # ---------------- Watchlist ----------------
+# GOLD and SILVER are resolved dynamically at runtime (see commodities.py)
+# and appended to this list automatically - no need to add them here.
 WATCHLIST = [
     {"symbol": "NIFTY50", "instrument_key": "NSE_INDEX|Nifty 50"},
     {"symbol": "BANKNIFTY", "instrument_key": "NSE_INDEX|Nifty Bank"},
     {"symbol": "RELIANCE", "instrument_key": "NSE_EQ|INE002A01018"},
     {"symbol": "KOTAKBANK", "instrument_key": "NSE_EQ|INE237A01036"},
     {"symbol": "BDL", "instrument_key": "NSE_EQ|INE171Z01026"},
+    {"symbol": "SENSEX", "instrument_key": "BSE_INDEX|SENSEX"},
 ]
 
 
