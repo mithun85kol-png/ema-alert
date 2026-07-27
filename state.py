@@ -1,7 +1,6 @@
 """
-Persists the timestamp of the last alert sent per symbol so the bot doesn't
-re-send the same alert if the same candle is checked more than once, or
-if it restarts mid-session.
+Persists the timestamp of the last alert sent per (symbol, strategy) pair
+so the bot doesn't re-send the same alert twice.
 """
 import json
 import os
@@ -29,9 +28,13 @@ def save_state(state: dict) -> None:
         log.error("Could not write state file: %s", e)
 
 
-def already_alerted(state: dict, symbol: str, candle_time) -> bool:
-    return state.get(symbol) == str(candle_time)
+def _key(symbol: str, tag: str = "EMA") -> str:
+    return f"{symbol}_{tag}"
 
 
-def mark_alerted(state: dict, symbol: str, candle_time) -> None:
-    state[symbol] = str(candle_time)
+def already_alerted(state: dict, symbol: str, candle_time, tag: str = "EMA") -> bool:
+    return state.get(_key(symbol, tag)) == str(candle_time)
+
+
+def mark_alerted(state: dict, symbol: str, candle_time, tag: str = "EMA") -> None:
+    state[_key(symbol, tag)] = str(candle_time)
