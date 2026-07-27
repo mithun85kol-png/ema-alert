@@ -1,6 +1,6 @@
 """
 Central configuration for the EMA Alert Bot.
-Loads secrets from .env and holds strategy parameters + watchlist.
+Loads secrets from .env and holds strategy parameters + watchlist groups.
 """
 import os
 import logging
@@ -20,22 +20,17 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 EMA_FAST = 9
 EMA_SLOW = 20
 RSI_PERIOD = 14
-RSI_BULLISH_MIN = 50
-RSI_BULLISH_MAX = 70
-RSI_BEARISH_MAX = 50
-RSI_BEARISH_MIN = 30
 
 BB_LENGTH = 20
 BB_MULT = 1.2
 
-# Indices (Nifty50, BankNifty, Sensex) get their own faster timeframe.
-INDEX_TIMEFRAME_MINUTES = 3
-
-# Everything else (custom equities, commodities, all Nifty50 stocks) uses this.
-TIMEFRAME_MINUTES = 5
+# Each group is checked on its own timeframe
+INDEX_TIMEFRAME = 3
+COMMODITY_TIMEFRAME = 5
+STOCK_TIMEFRAME = 75
 
 BASE_CANDLE_INTERVAL = "1minute"
-CANDLE_LOOKBACK_DAYS = 10
+CANDLE_LOOKBACK_DAYS = 10  # enough warm-up data even for the 75-min stock timeframe
 
 # Market hours (IST)
 MARKET_OPEN = "09:15"
@@ -48,21 +43,30 @@ STATE_FILE = "alert_state.json"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # ---------------- Watchlists ----------------
-# Indices: EMA9/20 cross + Bollinger checked on INDEX_TIMEFRAME_MINUTES (3-min).
 INDEX_WATCHLIST = [
     {"symbol": "NIFTY50", "instrument_key": "NSE_INDEX|Nifty 50"},
     {"symbol": "BANKNIFTY", "instrument_key": "NSE_INDEX|Nifty Bank"},
     {"symbol": "SENSEX", "instrument_key": "BSE_INDEX|SENSEX"},
 ]
 
-# Custom equities (non-index): checked on TIMEFRAME_MINUTES (5-min), same
-# group as commodities and all Nifty50 stocks.
-# GOLD and SILVER are resolved dynamically at runtime (see commodities.py)
-# and appended to this list automatically - no need to add them here.
-WATCHLIST = [
-    {"symbol": "RELIANCE", "instrument_key": "NSE_EQ|INE002A01018"},
-    {"symbol": "KOTAKBANK", "instrument_key": "NSE_EQ|INE237A01036"},
-    {"symbol": "BDL", "instrument_key": "NSE_EQ|INE171Z01026"},
+# MCX front-month contracts are resolved automatically every run
+COMMODITY_SYMBOLS = ["GOLD", "SILVER", "CRUDEOIL"]
+
+# All Nifty50 constituents (as of the last rebalance) + BDL. Instrument
+# keys are resolved automatically by symbol every run - no ISIN needed.
+# If a symbol here is outdated (index gets rebalanced twice a year, in
+# Jan/Jul) it just gets skipped with a log warning, nothing breaks.
+STOCK_SYMBOLS = [
+    "RELIANCE", "BHARTIARTL", "HDFCBANK", "ICICIBANK", "SBIN", "TCS",
+    "BAJFINANCE", "LT", "HINDUNILVR", "SUNPHARMA", "MARUTI", "INFY",
+    "TITAN", "ADANIENT", "ADANIPORTS", "M&M", "KOTAKBANK", "AXISBANK",
+    "ITC", "ULTRACEMCO", "HCLTECH", "NTPC", "ONGC", "BAJAJ-AUTO",
+    "JSWSTEEL", "BAJAJFINSV", "BEL", "ETERNAL", "POWERGRID", "COALINDIA",
+    "ASIANPAINT", "SHRIRAMFIN", "TATASTEEL", "HINDALCO", "GRASIM",
+    "EICHERMOT", "INDIGO", "SBILIFE", "WIPRO", "JIOFIN", "TRENT",
+    "TECHM", "APOLLOHOSP", "HDFCLIFE", "TATAMOTORS", "CIPLA",
+    "TATACONSUM", "MAXHEALTH", "DRREDDY",
+    "BDL",  # kept from earlier, not part of Nifty50 itself
 ]
 
 
