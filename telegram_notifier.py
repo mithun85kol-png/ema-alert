@@ -33,18 +33,10 @@ def format_signal_message(signal) -> str:
     arrow = "🟢⬆️" if signal.direction == "BULLISH" else "🔴⬇️"
     return (
         f"{arrow} <b>{signal.symbol}</b> — EMA {signal.direction} crossover\n"
-        f"Timeframe: 5-min | {signal.candle_time.strftime('%Y-%m-%d %H:%M')}\n"
+        f"Timeframe: {config.TIMEFRAME_MINUTES}-min | {signal.candle_time.strftime('%Y-%m-%d %H:%M')}\n"
         f"Close: {signal.close:.2f}\n"
         f"EMA9: {signal.ema_fast:.2f}  EMA20: {signal.ema_slow:.2f}\n"
         f"RSI(14): {signal.rsi:.1f}"
-    )
-    def format_retest_message(signal) -> str:
-    arrow = "🟢⬆️" if signal.direction == "BULLISH" else "🔴⬇️"
-    return (
-        f"{arrow} <b>{signal.symbol}</b> — EMA9 Retest ({signal.direction})\n"
-        f"Timeframe: {config.TIMEFRAME_MINUTES}-min | {signal.candle_time.strftime('%Y-%m-%d %H:%M')}\n"
-        f"Close: {signal.close:.2f}\n"
-        f"EMA9: {signal.ema_fast:.2f}"
     )
 
 
@@ -53,7 +45,17 @@ def format_bb_signal_message(signal) -> str:
     band_label = "Upper Band" if signal.direction == "SELL" else "Lower Band"
     return (
         f"{arrow} <b>{signal.symbol}</b> — Bollinger Band {signal.direction} signal\n"
-        f"Timeframe: 5-min | {signal.candle_time.strftime('%Y-%m-%d %H:%M')}\n"
+        f"Timeframe: {config.TIMEFRAME_MINUTES}-min | {signal.candle_time.strftime('%Y-%m-%d %H:%M')}\n"
         f"Close: {signal.close:.2f}  Open: {signal.open:.2f}\n"
         f"{band_label}: {signal.band_level:.2f}"
+    )
+
+
+def format_retest_message(signal) -> str:
+    arrow = "🟢⬆️" if signal.direction == "BULLISH" else "🔴⬇️"
+    return (
+        f"{arrow} <b>{signal.symbol}</b> — EMA9 Retest ({signal.direction})\n"
+        f"Timeframe: {config.TIMEFRAME_MINUTES}-min | {signal.candle_time.strftime('%Y-%m-%d %H:%M')}\n"
+        f"Close: {signal.close:.2f}\n"
+        f"EMA9: {signal.ema_fast:.2f}"
     )
