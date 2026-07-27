@@ -1,6 +1,8 @@
 """
-EMA Alert Bot - single-run entrypoint, meant to be invoked by GitHub Actions
-on a schedule (e.g. every 5 minutes during market hours).
+EMA Alert Bot - single-run entrypoint. Checks each symbol for both an EMA
+crossover signal and a Bollinger Band re-entry signal, independently.
+GOLD and SILVER (MCX front-month futures) are resolved dynamically every
+run so their contract keys always stay current.
 """
 from datetime import datetime
 import pytz
@@ -8,8 +10,10 @@ import pytz
 import config
 import state as state_store
 from upstox_client import UpstoxClient
-from strategy import evaluate
-from telegram_notifier import send_message, format_signal_message
+from strategy import evaluate as evaluate_ema
+import strategy_bb
+import commodities
+from telegram_notifier import send_message, format_signal_message, format_bb_signal_message
 
 log = config.get_logger("ema_alert_bot")
 
@@ -22,9 +26,9 @@ def within_market_hours(now: datetime) -> bool:
     return open_t <= now <= close_t and now.weekday() < 5
 
 
-def run_cycle(client: UpstoxClient, state: dict) -> bool:
+def run_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
     changed = False
-    for item in config.WATCHLIST:
+    for item in watchlist:
         symbol = item["symbol"]
         instrument_key = item["instrument_key"]
         try:
@@ -37,18 +41,23 @@ def run_cycle(client: UpstoxClient, state: dict) -> bool:
                 log.warning("%s: no candle data returned", symbol)
                 continue
 
-            signal = evaluate(symbol, raw)
-            if signal is None:
-                continue
+            ema_signal = evaluate_ema(symbol, raw)
+            if ema_signal is not None and not state_store.already_alerted(
+                state, symbol, ema_signal.candle_time, tag="EMA"
+            ):
+                if send_message(format_signal_message(ema_signal)):
+                    log.info("EMA alert sent: %s %s @ %s", symbol, ema_signal.direction, ema_signal.candle_time)
+                    state_store.mark_alerted(state, symbol, ema_signal.candle_time, tag="EMA")
+                    changed = True
 
-            if state_store.already_alerted(state, symbol, signal.candle_time):
-                continue
-
-            message = format_signal_message(signal)
-            if send_message(message):
-                log.info("Alert sent: %s %s @ %s", symbol, signal.direction, signal.candle_time)
-                state_store.mark_alerted(state, symbol, signal.candle_time)
-                changed = True
+            bb_signal = strategy_bb.evaluate(symbol, raw)
+            if bb_signal is not None and not state_store.already_alerted(
+                state, symbol, bb_signal.candle_time, tag="BB"
+            ):
+                if send_message(format_bb_signal_message(bb_signal)):
+                    log.info("BB alert sent: %s %s @ %s", symbol, bb_signal.direction, bb_signal.candle_time)
+                    state_store.mark_alerted(state, symbol, bb_signal.candle_time, tag="BB")
+                    changed = True
 
         except Exception as e:
             log.exception("Error processing %s: %s", symbol, e)
@@ -64,14 +73,16 @@ def main():
         log.info("Outside market hours (%s IST) - skipping this run", now.strftime("%H:%M"))
         return
 
-    log.info("Running EMA Alert check (EMA %d/%d, RSI %d, %d-min timeframe) at %s IST",
-              config.EMA_FAST, config.EMA_SLOW, config.RSI_PERIOD,
+    log.info("Running alert check (EMA %d/%d, BB %d/%.1f, %d-min timeframe) at %s IST",
+              config.EMA_FAST, config.EMA_SLOW, config.BB_LENGTH, config.BB_MULT,
               config.TIMEFRAME_MINUTES, now.strftime("%H:%M"))
 
     client = UpstoxClient()
     state = state_store.load_state()
 
-    changed = run_cycle(client, state)
+    watchlist = list(config.WATCHLIST) + commodities.build_commodity_watchlist(client)
+
+    changed = run_cycle(client, state, watchlist)
 
     if changed:
         state_store.save_state(state)
