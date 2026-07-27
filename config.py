@@ -35,6 +35,7 @@ CANDLE_LOOKBACK_DAYS = 5
 # Market hours (IST)
 MARKET_OPEN = "09:15"
 MARKET_CLOSE = "15:30"
+COMMODITY_MARKET_CLOSE = "23:30"
 TIMEZONE = "Asia/Kolkata"
 
 STATE_FILE = "alert_state.json"
