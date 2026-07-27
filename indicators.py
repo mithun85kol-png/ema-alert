@@ -1,5 +1,5 @@
 """
-Technical indicator helpers: candle resampling, EMA, RSI.
+Technical indicator helpers: candle resampling, EMA, RSI, VWAP.
 """
 import pandas as pd
 
@@ -37,9 +37,27 @@ def rsi(series: pd.Series, period: int = 14) -> pd.Series:
     return rsi_values
 
 
+def vwap(df: pd.DataFrame) -> pd.Series:
+    """
+    Volume-weighted average price, reset every trading day (cumulative
+    from that day's first candle).
+    """
+    typical_price = (df["high"] + df["low"] + df["close"]) / 3
+    tp_vol = typical_price * df["volume"]
+    day = df["timestamp"].dt.date
+
+    cum_tp_vol = tp_vol.groupby(day).cumsum()
+    cum_vol = df["volume"].groupby(day).cumsum()
+
+    vwap_values = cum_tp_vol / cum_vol.replace(0, pd.NA)
+    vwap_values = vwap_values.fillna(df["close"])
+    return vwap_values
+
+
 def add_indicators(df: pd.DataFrame, ema_fast: int, ema_slow: int, rsi_period: int) -> pd.DataFrame:
     df = df.copy()
     df["ema_fast"] = ema(df["close"], ema_fast)
     df["ema_slow"] = ema(df["close"], ema_slow)
     df["rsi"] = rsi(df["close"], rsi_period)
+    df["vwap"] = vwap(df)
     return df
