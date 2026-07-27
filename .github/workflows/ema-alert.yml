@@ -2,7 +2,7 @@ name: EMA Alert Bot
 
 on:
   schedule:
-    - cron: '*/5 3-10 * * 1-5'
+    -  cron: '*/5 3-18 * * 1-5'
   workflow_dispatch: {}
 
 permissions:
