@@ -28,8 +28,12 @@ RSI_BEARISH_MIN = 30
 BB_LENGTH = 20
 BB_MULT = 1.2
 
+# Indices (Nifty50, BankNifty, Sensex) get their own faster timeframe.
+INDEX_TIMEFRAME_MINUTES = 3
+
+# Everything else (custom equities, commodities, all Nifty50 stocks) uses this.
 TIMEFRAME_MINUTES = 5
-SECONDARY_TIMEFRAME_MINUTES = 75
+
 BASE_CANDLE_INTERVAL = "1minute"
 CANDLE_LOOKBACK_DAYS = 10
 
@@ -51,16 +55,22 @@ STATE_FILE = "alert_state.json"
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-# ---------------- Watchlist ----------------
+# ---------------- Watchlists ----------------
+# Indices: EMA9/20 cross + Bollinger checked on INDEX_TIMEFRAME_MINUTES (3-min).
+INDEX_WATCHLIST = [
+    {"symbol": "NIFTY50", "instrument_key": "NSE_INDEX|Nifty 50"},
+    {"symbol": "BANKNIFTY", "instrument_key": "NSE_INDEX|Nifty Bank"},
+    {"symbol": "SENSEX", "instrument_key": "BSE_INDEX|SENSEX"},
+]
+
+# Custom equities (non-index): checked on TIMEFRAME_MINUTES (5-min), same
+# group as commodities and all Nifty50 stocks.
 # GOLD and SILVER are resolved dynamically at runtime (see commodities.py)
 # and appended to this list automatically - no need to add them here.
 WATCHLIST = [
-    {"symbol": "NIFTY50", "instrument_key": "NSE_INDEX|Nifty 50"},
-    {"symbol": "BANKNIFTY", "instrument_key": "NSE_INDEX|Nifty Bank"},
     {"symbol": "RELIANCE", "instrument_key": "NSE_EQ|INE002A01018"},
     {"symbol": "KOTAKBANK", "instrument_key": "NSE_EQ|INE237A01036"},
     {"symbol": "BDL", "instrument_key": "NSE_EQ|INE171Z01026"},
-    {"symbol": "SENSEX", "instrument_key": "BSE_INDEX|SENSEX"},
 ]
 
 
