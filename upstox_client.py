@@ -1,6 +1,7 @@
 """
-Thin wrapper around the Upstox v2 historical/intraday candle endpoints,
-authenticated with an Analytics Token (read-only market data access).
+Thin wrapper around the Upstox v2 historical/intraday candle endpoints and
+instrument search, authenticated with an Analytics Token (read-only market
+data access).
 """
 import requests
 import pandas as pd
@@ -68,6 +69,13 @@ class UpstoxClient:
         df = pd.concat(frames, ignore_index=True)
         df = df.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
         return df
+
+    def search_instruments(self, query: str, exchanges: str = "MCX", segments: str = "FO",
+                            expiry: str = "current_month,next_month") -> list:
+        url = (f"{config.UPSTOX_BASE_URL}/instruments/search?query={query}"
+               f"&exchanges={exchanges}&segments={segments}&expiry={expiry}&records=30")
+        data = self._get(url)
+        return data.get("data", [])
 
     @staticmethod
     def _to_dataframe(data: dict) -> pd.DataFrame:
