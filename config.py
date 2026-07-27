@@ -37,14 +37,6 @@ TIMEFRAME_MINUTES = 5
 BASE_CANDLE_INTERVAL = "1minute"
 CANDLE_LOOKBACK_DAYS = 10
 
-# Extra alert: EMA 50/200 crossover on a 75-min timeframe, for Nifty 50 stocks.
-# Needs a much longer 1-min history so that ~200 bars of 75-min data exist
-# (75-min => ~5 bars/trading day => ~215 bars needed => ~45 trading days).
-EMA50200_TIMEFRAME_MINUTES = 75
-EMA50200_EMA_FAST = 50
-EMA50200_EMA_SLOW = 200
-CANDLE_LOOKBACK_DAYS_EMA50200 = 45
-
 # Market hours (IST)
 MARKET_OPEN = "09:15"
 MARKET_CLOSE = "15:30"
