@@ -59,3 +59,14 @@ def format_retest_message(signal) -> str:
         f"Close: {signal.close:.2f}\n"
         f"EMA9: {signal.ema_fast:.2f}"
     )
+
+
+def format_ema50200_message(signal) -> str:
+    arrow = "🟢⬆️" if signal.direction == "BULLISH" else "🔴⬇️"
+    return (
+        f"{arrow} <b>{signal.symbol}</b> — EMA 50/200 crossover\n"
+        f"Timeframe: {signal.timeframe}-min | {signal.candle_time.strftime('%Y-%m-%d %H:%M')}\n"
+        f"Close: {signal.close:.2f}\n"
+        f"EMA50: {signal.ema_fast:.2f}  EMA200: {signal.ema_slow:.2f}\n"
+        f"RSI(14): {signal.rsi:.1f}"
+    )
