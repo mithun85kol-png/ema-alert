@@ -31,10 +31,12 @@ def send_message(text: str) -> bool:
 
 def format_signal_message(signal) -> str:
     arrow = "🟢⬆️" if signal.direction == "BULLISH" else "🔴⬇️"
+    vwap_note = "price above VWAP" if signal.direction == "BULLISH" else "price below VWAP"
     return (
         f"{arrow} <b>{signal.symbol}</b> — EMA {signal.direction} crossover\n"
         f"Timeframe: 5-min | {signal.candle_time.strftime('%Y-%m-%d %H:%M')}\n"
         f"Close: {signal.close:.2f}\n"
         f"EMA9: {signal.ema_fast:.2f}  EMA20: {signal.ema_slow:.2f}\n"
+        f"VWAP: {signal.vwap:.2f} ({vwap_note})\n"
         f"RSI(14): {signal.rsi:.1f}"
     )
