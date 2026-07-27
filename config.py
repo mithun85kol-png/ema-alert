@@ -43,7 +43,7 @@ WATCHLIST = [
     {"symbol": "NIFTY50", "instrument_key": "NSE_INDEX|Nifty 50"},
     {"symbol": "BANKNIFTY", "instrument_key": "NSE_INDEX|Nifty Bank"},
     {"symbol": "RELIANCE", "instrument_key": "NSE_EQ|INE002A01018"},
-    {"symbol": "KOTAKBANK", "instrument_key": "NSE_EQ|INE237A01028"},
+    {"symbol": "KOTAKBANK", "instrument_key": "NSE_EQ|INE237A01036"},
     {"symbol": "BDL", "instrument_key": "NSE_EQ|INE171Z01026"},
 ]
 
