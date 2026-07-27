@@ -1,12 +1,17 @@
 """
-EMA Alert Bot - single-run entrypoint. Checks each symbol for an EMA
-crossover signal, an EMA9 retest signal, and a Bollinger Band re-entry
-signal, independently. GOLD/SILVER/CRUDEOIL (MCX front-month futures) are
-resolved dynamically every run. Equity/index instruments are only checked
-during NSE hours; commodities are checked until MCX close.
+EMA Alert Bot - single-run entrypoint.
 
-Additionally, as an extra (non-replacing) check, all Nifty 50 stocks are
-checked for an EMA 50/200 crossover on a 75-min timeframe.
+Groups:
+  - Indices (Nifty50, BankNifty, Sensex): EMA9/20 cross + Bollinger Band,
+    checked on config.INDEX_TIMEFRAME_MINUTES (3-min).
+  - Custom equities + commodities (GOLD/SILVER/CRUDEOIL, MCX front-month)
+    + all Nifty 50 stocks: EMA9/20 cross + Bollinger Band, checked on
+    config.TIMEFRAME_MINUTES (5-min).
+  - All Nifty 50 stocks (extra, independent): EMA 50/200 crossover on a
+    75-min timeframe.
+
+Equity/index instruments are only checked during NSE hours; commodities
+are checked until MCX close.
 """
 from datetime import datetime
 import pytz
@@ -16,7 +21,6 @@ import state as state_store
 from upstox_client import UpstoxClient
 from strategy import evaluate as evaluate_ema
 import strategy_bb
-import strategy_retest
 import strategy_ema50_200
 import commodities
 import nifty50_watchlist
@@ -24,7 +28,6 @@ from telegram_notifier import (
     send_message,
     format_signal_message,
     format_bb_signal_message,
-    format_retest_message,
     format_ema50200_message,
 )
 
@@ -39,7 +42,20 @@ def within_hours(now: datetime, close_time_str: str) -> bool:
     return open_t <= now <= close_t and now.weekday() < 5
 
 
-def run_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
+def merge_watchlists(*lists) -> list:
+    """Combines watchlists, de-duplicating by symbol (keeps first occurrence)
+    so we don't fetch/alert the same instrument twice in one run."""
+    merged = []
+    seen = set()
+    for wl in lists:
+        for item in wl:
+            if item["symbol"] not in seen:
+                seen.add(item["symbol"])
+                merged.append(item)
+    return merged
+
+
+def run_cycle(client: UpstoxClient, state: dict, watchlist: list, timeframe_minutes: int) -> bool:
     changed = False
     for item in watchlist:
         symbol = item["symbol"]
@@ -54,7 +70,7 @@ def run_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
                 log.warning("%s: no candle data returned", symbol)
                 continue
 
-            ema_signal = evaluate_ema(symbol, raw)
+            ema_signal = evaluate_ema(symbol, raw, timeframe_minutes=timeframe_minutes)
             if ema_signal is not None and not state_store.already_alerted(
                 state, symbol, ema_signal.candle_time, tag="EMA"
             ):
@@ -63,16 +79,7 @@ def run_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
                     state_store.mark_alerted(state, symbol, ema_signal.candle_time, tag="EMA")
                     changed = True
 
-            retest_signal = strategy_retest.evaluate(symbol, raw)
-            if retest_signal is not None and not state_store.already_alerted(
-                state, symbol, retest_signal.candle_time, tag="RETEST"
-            ):
-                if send_message(format_retest_message(retest_signal)):
-                    log.info("Retest alert sent: %s %s @ %s", symbol, retest_signal.direction, retest_signal.candle_time)
-                    state_store.mark_alerted(state, symbol, retest_signal.candle_time, tag="RETEST")
-                    changed = True
-
-            bb_signal = strategy_bb.evaluate(symbol, raw)
+            bb_signal = strategy_bb.evaluate(symbol, raw, timeframe_minutes=timeframe_minutes)
             if bb_signal is not None and not state_store.already_alerted(
                 state, symbol, bb_signal.candle_time, tag="BB"
             ):
@@ -89,8 +96,7 @@ def run_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
 
 def run_ema50200_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
     """Extra, independent check: EMA 50/200 crossover on 75-min candles for
-    Nifty 50 stocks. Needs a much longer 1-min lookback than the other
-    strategies, so it fetches its own candle data per symbol."""
+    Nifty 50 stocks."""
     changed = False
     for item in watchlist:
         symbol = item["symbol"]
@@ -131,29 +137,38 @@ def main():
         log.info("Outside all market hours (%s IST) - skipping this run", now.strftime("%H:%M"))
         return
 
-    log.info("Running alert check (EMA %d/%d, BB %d/%.1f, %d-min timeframe) at %s IST "
-              "[equity_open=%s, commodity_open=%s]",
-              config.EMA_FAST, config.EMA_SLOW, config.BB_LENGTH, config.BB_MULT,
-              config.TIMEFRAME_MINUTES, now.strftime("%H:%M"), equity_open, commodity_open)
+    log.info(
+        "Running alert check (EMA %d/%d, BB %d/%.1f) at %s IST "
+        "[equity_open=%s, commodity_open=%s]",
+        config.EMA_FAST, config.EMA_SLOW, config.BB_LENGTH, config.BB_MULT,
+        now.strftime("%H:%M"), equity_open, commodity_open,
+    )
 
     client = UpstoxClient()
     state = state_store.load_state()
 
-    watchlist = []
-    if equity_open:
-        watchlist += list(config.WATCHLIST)
-    if commodity_open:
-        watchlist += commodities.build_commodity_watchlist(client)
+    changed = False
+    nifty50_list = []
 
-    changed = run_cycle(client, state, watchlist)
-
-    # Extra EMA 50/200 (75-min) check for Nifty 50 stocks - only during
-    # equity market hours, independent of the main watchlist above.
+    # ---- Indices: 3-min EMA9/20 + Bollinger ----
     if equity_open:
-        log.info("Running extra EMA 50/200 (75-min) check for Nifty 50 stocks")
+        changed = run_cycle(client, state, config.INDEX_WATCHLIST, config.INDEX_TIMEFRAME_MINUTES) or changed
+
+    # ---- Custom equities + all Nifty50 stocks + commodities: 5-min ----
+    five_min_watchlist = []
+    if equity_open:
         nifty50_list = nifty50_watchlist.build_nifty50_watchlist()
-        changed_50200 = run_ema50200_cycle(client, state, nifty50_list)
-        changed = changed or changed_50200
+        five_min_watchlist = merge_watchlists(config.WATCHLIST, nifty50_list)
+    if commodity_open:
+        five_min_watchlist += commodities.build_commodity_watchlist(client)
+
+    if five_min_watchlist:
+        changed = run_cycle(client, state, five_min_watchlist, config.TIMEFRAME_MINUTES) or changed
+
+    # ---- Extra: EMA 50/200 (75-min) for Nifty 50 stocks ----
+    if equity_open and nifty50_list:
+        log.info("Running extra EMA 50/200 (75-min) check for Nifty 50 stocks")
+        changed = run_ema50200_cycle(client, state, nifty50_list) or changed
 
     if changed:
         state_store.save_state(state)
