@@ -20,7 +20,8 @@ def resolve_front_month(client, underlying_symbol: str):
 
     candidates = [
         r for r in results
-        if r.get("underlying_symbol") == underlying_symbol and r.get("instrument_type") == "FUT"
+        if r.get("instrument_type") == "FUT"
+        and (r.get("trading_symbol") or "").upper().split()[0] == underlying_symbol.upper()
     ]
     if not candidates:
         log.warning("No MCX futures contract found for %s", underlying_symbol)
