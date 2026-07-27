@@ -1,9 +1,9 @@
 """
-EMA Alert Bot - single-run entrypoint. Checks each symbol for both an EMA
-crossover signal and a Bollinger Band re-entry signal, independently.
-Equity/index instruments are only checked during NSE hours (09:15-15:30
-IST); commodities (GOLD, SILVER, CRUDEOIL) are checked until MCX close
-(23:30 IST) since their market stays open much later.
+EMA Alert Bot - single-run entrypoint. Checks each symbol for an EMA
+crossover signal, an EMA9 retest signal, and a Bollinger Band re-entry
+signal, independently. GOLD/SILVER/CRUDEOIL (MCX front-month futures) are
+resolved dynamically every run. Equity/index instruments are only checked
+during NSE hours; commodities are checked until MCX close.
 """
 from datetime import datetime
 import pytz
@@ -13,8 +13,14 @@ import state as state_store
 from upstox_client import UpstoxClient
 from strategy import evaluate as evaluate_ema
 import strategy_bb
+import strategy_retest
 import commodities
-from telegram_notifier import send_message, format_signal_message, format_bb_signal_message
+from telegram_notifier import (
+    send_message,
+    format_signal_message,
+    format_bb_signal_message,
+    format_retest_message,
+)
 
 log = config.get_logger("ema_alert_bot")
 
@@ -49,6 +55,15 @@ def run_cycle(client: UpstoxClient, state: dict, watchlist: list) -> bool:
                 if send_message(format_signal_message(ema_signal)):
                     log.info("EMA alert sent: %s %s @ %s", symbol, ema_signal.direction, ema_signal.candle_time)
                     state_store.mark_alerted(state, symbol, ema_signal.candle_time, tag="EMA")
+                    changed = True
+
+            retest_signal = strategy_retest.evaluate(symbol, raw)
+            if retest_signal is not None and not state_store.already_alerted(
+                state, symbol, retest_signal.candle_time, tag="RETEST"
+            ):
+                if send_message(format_retest_message(retest_signal)):
+                    log.info("Retest alert sent: %s %s @ %s", symbol, retest_signal.direction, retest_signal.candle_time)
+                    state_store.mark_alerted(state, symbol, retest_signal.candle_time, tag="RETEST")
                     changed = True
 
             bb_signal = strategy_bb.evaluate(symbol, raw)
