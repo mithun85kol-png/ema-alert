@@ -92,8 +92,6 @@ class UpstoxClient:
                 data = json.loads(gz.read().decode("utf-8"))
             UpstoxClient._instrument_cache = data
             log.info("Loaded MCX instrument master: %d instruments", len(data))
-            if data:
-                log.info("Sample instrument: %s", data[0])
             return data
         except Exception as e:
             log.error("Failed to load MCX instrument master: %s", e)
@@ -111,6 +109,16 @@ class UpstoxClient:
             return []
 
         query_upper = query.upper()
+
+        # Temporary debug: log all distinct "name" values containing a
+        # keyword related to the query, to catch naming mismatches
+        # (e.g. "CRUDE OIL" vs "CRUDEOIL"). Safe to remove once confirmed.
+        if query_upper == "CRUDEOIL":
+            keyword = "CRUDE"
+            matches = [inst for inst in instruments if keyword in (inst.get("name") or "").upper()]
+            distinct_names = sorted(set(m.get("name") for m in matches))
+            log.info("CRUDE-related instrument names found: %s", distinct_names)
+
         results = []
         for inst in instruments:
             name = (inst.get("name") or inst.get("underlying_symbol") or "").upper()
