@@ -1,8 +1,9 @@
 """
 EMA Alert Bot - single-run entrypoint. Checks each symbol for both an EMA
 crossover signal and a Bollinger Band re-entry signal, independently.
-GOLD and SILVER (MCX front-month futures) are resolved dynamically every
-run so their contract keys always stay current.
+Equity/index instruments are only checked during NSE hours (09:15-15:30
+IST); commodities (GOLD, SILVER, CRUDEOIL) are checked until MCX close
+(23:30 IST) since their market stays open much later.
 """
 from datetime import datetime
 import pytz
@@ -18,9 +19,9 @@ from telegram_notifier import send_message, format_signal_message, format_bb_sig
 log = config.get_logger("ema_alert_bot")
 
 
-def within_market_hours(now: datetime) -> bool:
+def within_hours(now: datetime, close_time_str: str) -> bool:
     open_h, open_m = map(int, config.MARKET_OPEN.split(":"))
-    close_h, close_m = map(int, config.MARKET_CLOSE.split(":"))
+    close_h, close_m = map(int, close_time_str.split(":"))
     open_t = now.replace(hour=open_h, minute=open_m, second=0, microsecond=0)
     close_t = now.replace(hour=close_h, minute=close_m, second=0, microsecond=0)
     return open_t <= now <= close_t and now.weekday() < 5
@@ -69,18 +70,26 @@ def main():
     tz = pytz.timezone(config.TIMEZONE)
     now = datetime.now(tz)
 
-    if not within_market_hours(now):
-        log.info("Outside market hours (%s IST) - skipping this run", now.strftime("%H:%M"))
+    equity_open = within_hours(now, config.MARKET_CLOSE)
+    commodity_open = within_hours(now, config.COMMODITY_MARKET_CLOSE)
+
+    if not equity_open and not commodity_open:
+        log.info("Outside all market hours (%s IST) - skipping this run", now.strftime("%H:%M"))
         return
 
-    log.info("Running alert check (EMA %d/%d, BB %d/%.1f, %d-min timeframe) at %s IST",
+    log.info("Running alert check (EMA %d/%d, BB %d/%.1f, %d-min timeframe) at %s IST "
+              "[equity_open=%s, commodity_open=%s]",
               config.EMA_FAST, config.EMA_SLOW, config.BB_LENGTH, config.BB_MULT,
-              config.TIMEFRAME_MINUTES, now.strftime("%H:%M"))
+              config.TIMEFRAME_MINUTES, now.strftime("%H:%M"), equity_open, commodity_open)
 
     client = UpstoxClient()
     state = state_store.load_state()
 
-    watchlist = list(config.WATCHLIST) + commodities.build_commodity_watchlist(client)
+    watchlist = []
+    if equity_open:
+        watchlist += list(config.WATCHLIST)
+    if commodity_open:
+        watchlist += commodities.build_commodity_watchlist(client)
 
     changed = run_cycle(client, state, watchlist)
 
