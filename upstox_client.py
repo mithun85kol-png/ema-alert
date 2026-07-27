@@ -3,6 +3,9 @@ Thin wrapper around the Upstox v2 historical/intraday candle endpoints and
 instrument search, authenticated with an Analytics Token (read-only market
 data access).
 """
+import gzip
+import io
+import json
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
@@ -13,6 +16,8 @@ log = config.get_logger(__name__)
 
 
 class UpstoxClient:
+    _instrument_cache = None  # class-level cache, one download per run
+
     def __init__(self, token: str = None):
         self.token = token or config.UPSTOX_ANALYTICS_TOKEN
         if not self.token:
@@ -70,12 +75,55 @@ class UpstoxClient:
         df = df.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
         return df
 
+    def _load_instrument_master(self) -> list:
+        """
+        Downloads and caches Upstox's MCX instrument master file.
+        Upstox does not expose a live query-based search endpoint, so this
+        is the correct way to look up tradable contracts.
+        """
+        if UpstoxClient._instrument_cache is not None:
+            return UpstoxClient._instrument_cache
+
+        url = "https://assets.upstox.com/market-quote/instruments/exchange/MCX.json.gz"
+        try:
+            resp = self.session.get(url, timeout=30)
+            resp.raise_for_status()
+            with gzip.GzipFile(fileobj=io.BytesIO(resp.content)) as gz:
+                data = json.loads(gz.read().decode("utf-8"))
+            UpstoxClient._instrument_cache = data
+            log.info("Loaded MCX instrument master: %d instruments", len(data))
+            if data:
+                log.info("Sample instrument: %s", data[0])
+            return data
+        except Exception as e:
+            log.error("Failed to load MCX instrument master: %s", e)
+            UpstoxClient._instrument_cache = []
+            return []
+
     def search_instruments(self, query: str, exchanges: str = "MCX", segments: str = "FO",
                             expiry: str = "current_month,next_month") -> list:
-        url = (f"{config.UPSTOX_BASE_URL}/instruments/search?query={query}"
-               f"&exchanges={exchanges}&segments={segments}&expiry={expiry}&records=30")
-        data = self._get(url)
-        return data.get("data", [])
+        """
+        Filters the MCX instrument master for futures contracts matching
+        the given underlying symbol (e.g. GOLD, SILVER, CRUDEOIL).
+        """
+        instruments = self._load_instrument_master()
+        if not instruments:
+            return []
+
+        query_upper = query.upper()
+        results = []
+        for inst in instruments:
+            name = (inst.get("name") or inst.get("underlying_symbol") or "").upper()
+            inst_type = inst.get("instrument_type", "")
+            if name == query_upper and inst_type == "FUT":
+                results.append({
+                    "underlying_symbol": name,
+                    "instrument_type": inst_type,
+                    "instrument_key": inst.get("instrument_key"),
+                    "trading_symbol": inst.get("trading_symbol"),
+                    "expiry": inst.get("expiry"),
+                })
+        return results
 
     @staticmethod
     def _to_dataframe(data: dict) -> pd.DataFrame:
