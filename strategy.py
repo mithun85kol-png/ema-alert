@@ -1,11 +1,8 @@
 """
 EMA 9/20 crossover strategy, evaluated on a caller-specified timeframe.
-A crossover only triggers a signal if the crossing candle is "strong"
-(its body is at least as large as the immediately preceding candle's
-body) - this filters out weak/indecisive crossovers.
 RSI is still calculated and shown in the alert for reference, but is not
-used as a filter. Volume of the signal candle vs the previous candle is
-also included for context.
+used as a filter — every crossover triggers an alert. Volume of the
+signal candle vs the previous candle is also included for context.
 """
 from dataclasses import dataclass
 from typing import Optional
@@ -47,16 +44,12 @@ def evaluate(symbol: str, raw_1min_df: pd.DataFrame, timeframe_minutes: int) -> 
     crossed_up = prev["ema_fast"] <= prev["ema_slow"] and last["ema_fast"] > last["ema_slow"]
     crossed_down = prev["ema_fast"] >= prev["ema_slow"] and last["ema_fast"] < last["ema_slow"]
 
-    prev_body = abs(prev["close"] - prev["open"])
-    last_body = abs(last["close"] - last["open"])
-    is_strong = last_body >= prev_body
-
-    if crossed_up and is_strong:
+    if crossed_up:
         return Signal(symbol, "BULLISH", last["timestamp"], last["close"],
                       last["ema_fast"], last["ema_slow"], last["rsi"], timeframe_minutes,
                       last["volume"], prev["volume"])
 
-    if crossed_down and is_strong:
+    if crossed_down:
         return Signal(symbol, "BEARISH", last["timestamp"], last["close"],
                       last["ema_fast"], last["ema_slow"], last["rsi"], timeframe_minutes,
                       last["volume"], prev["volume"])
