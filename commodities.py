@@ -29,11 +29,11 @@ def resolve_front_month(client, underlying_symbol: str):
         log.error("Instrument search failed for %s: %s", underlying_symbol, e)
         return None
 
-    candidates = [
-        r for r in results
-        if r.get("instrument_type") == "FUT"
-        and (r.get("name") or "").upper() == upstox_name.upper()
-    ]
+    # search_instruments() already filters the instrument master down to
+    # exact name + FUT matches, so results here are already the correct
+    # candidates - no extra filtering needed.
+    candidates = results
+
     if not candidates:
         log.warning(
             "No MCX MINI futures contract found for %s (searched name=%r) - "
