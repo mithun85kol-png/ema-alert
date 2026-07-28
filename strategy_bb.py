@@ -8,7 +8,8 @@ Buy signal:  price was below the lower band and the latest closed candle
              re-enters and closes back inside, confirmed by a strong green
              (bullish) candle.
 "strong" candle = its body (open-close range) is at least as large as the
-immediately preceding candle's body.
+immediately preceding candle's body. Volume of the signal candle vs the
+previous candle is also included for context.
 """
 from dataclasses import dataclass
 from typing import Optional
@@ -29,6 +30,8 @@ class BBSignal:
     open: float
     band_level: float
     timeframe: int
+    volume: float
+    prev_volume: float
 
 
 def evaluate(symbol: str, raw_1min_df: pd.DataFrame, timeframe_minutes: int) -> Optional[BBSignal]:
@@ -55,9 +58,11 @@ def evaluate(symbol: str, raw_1min_df: pd.DataFrame, timeframe_minutes: int) -> 
     is_green = last["close"] > last["open"]
 
     if prev["close"] > prev["bb_upper"] and last["close"] < last["bb_upper"] and is_red and is_strong:
-        return BBSignal(symbol, "SELL", last["timestamp"], last["close"], last["open"], last["bb_upper"], timeframe_minutes)
+        return BBSignal(symbol, "SELL", last["timestamp"], last["close"], last["open"], last["bb_upper"],
+                         timeframe_minutes, last["volume"], prev["volume"])
 
     if prev["close"] < prev["bb_lower"] and last["close"] > last["bb_lower"] and is_green and is_strong:
-        return BBSignal(symbol, "BUY", last["timestamp"], last["close"], last["open"], last["bb_lower"], timeframe_minutes)
+        return BBSignal(symbol, "BUY", last["timestamp"], last["close"], last["open"], last["bb_lower"],
+                         timeframe_minutes, last["volume"], prev["volume"])
 
     return None
