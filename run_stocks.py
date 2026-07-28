@@ -1,8 +1,10 @@
 """
 EMA Alert Bot - single-run entrypoint for the STOCK watchlist group
-(all Nifty50 stocks + BDL, 75-min timeframe). Runs on its own
-less-frequent schedule (stock-alert.yml), separate from the index/
-commodity checks, to keep GitHub Actions minute usage low.
+(all Nifty50 stocks + BDL). Checked on every timeframe in
+config.STOCK_TIMEFRAMES (5-min and 75-min), each firing its own
+independent alert. Runs on its own less-frequent schedule
+(stock-alert.yml), separate from the index/commodity checks, to keep
+GitHub Actions minute usage low.
 """
 from datetime import datetime
 import pytz
@@ -24,14 +26,17 @@ def main():
         log.info("Outside NSE equity hours (%s IST) - skipping this run", now.strftime("%H:%M"))
         return
 
-    log.info("Running stock alert check (%d symbols, %d-min timeframe) at %s IST",
-              len(config.STOCK_SYMBOLS), config.STOCK_TIMEFRAME, now.strftime("%H:%M"))
+    log.info("Running stock alert check (%d symbols, timeframes=%s) at %s IST",
+              len(config.STOCK_SYMBOLS), config.STOCK_TIMEFRAMES, now.strftime("%H:%M"))
 
     client = UpstoxClient()
     state = state_store.load_state()
 
     stock_watchlist = nse_equity_lookup.build_stock_watchlist(client)
-    changed = run_group(client, state, stock_watchlist, config.STOCK_TIMEFRAME)
+
+    changed = False
+    for tf in config.STOCK_TIMEFRAMES:
+        changed |= run_group(client, state, stock_watchlist, tf)
 
     if changed:
         state_store.save_state(state)
