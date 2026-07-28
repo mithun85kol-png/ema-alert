@@ -1,6 +1,6 @@
 """
 EMA Alert Bot - single-run entrypoint for the INDEX (3-min) and COMMODITY
-(5-min) watchlist groups. Runs frequently via ema-alert.yml. The STOCK
+(3-min) watchlist groups. Runs frequently via ema-alert.yml. The STOCK
 group (75-min, all Nifty50 stocks) runs separately via run_stocks.py /
 stock-alert.yml so it doesn't add cost to this frequent schedule.
 """
