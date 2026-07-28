@@ -28,7 +28,7 @@ jobs:
 
       - name: Run stock alert check
         env:
-          UPSTOX_TOKEN: ${{ secrets.UPSTOX_ANALYTICS_TOKEN }}
+          UPSTOX_ANALYTICS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python run_stocks.py
