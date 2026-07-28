@@ -11,9 +11,8 @@ import config
 import state as state_store
 from upstox_client import UpstoxClient
 from strategy import evaluate as evaluate_ema
-import strategy_bb
 import commodities
-from telegram_notifier import send_message, format_signal_message, format_bb_signal_message
+from telegram_notifier import send_message, format_signal_message
 
 log = config.get_logger("ema_alert_bot")
 
@@ -48,15 +47,6 @@ def run_group(client: UpstoxClient, state: dict, items: list, timeframe: int) ->
                 if send_message(format_signal_message(ema_signal)):
                     log.info("EMA alert sent: %s %s @ %s", symbol, ema_signal.direction, ema_signal.candle_time)
                     state_store.mark_alerted(state, symbol, ema_signal.candle_time, tag="EMA")
-                    changed = True
-
-            bb_signal = strategy_bb.evaluate(symbol, raw, timeframe)
-            if bb_signal is not None and not state_store.already_alerted(
-                state, symbol, bb_signal.candle_time, tag="BB"
-            ):
-                if send_message(format_bb_signal_message(bb_signal)):
-                    log.info("BB alert sent: %s %s @ %s", symbol, bb_signal.direction, bb_signal.candle_time)
-                    state_store.mark_alerted(state, symbol, bb_signal.candle_time, tag="BB")
                     changed = True
 
         except Exception as e:
