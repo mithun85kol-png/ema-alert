@@ -22,6 +22,7 @@ EMA_SLOW = 20
 RSI_PERIOD = 14
 
 EMA_MIN_GAP_PCT = 0.5  # minimum EMA9/EMA20 separation (% of price) to count as a valid crossover
+VOLUME_CONFIRMATION_REQUIRED = True  # signal candle volume must exceed previous candle volume
 TREND_EMA_PERIOD = 50  # longer EMA used as trend context; crossovers must align with this trend
 
 BB_LENGTH = 20
