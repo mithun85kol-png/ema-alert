@@ -29,7 +29,7 @@ BB_MULT = 1.2
 
 # Each group is checked on its own timeframe(s)
 INDEX_TIMEFRAME = 3
-COMMODITY_TIMEFRAME = 5
+COMMODITY_TIMEFRAME = 3
 
 # STOCK group gets checked on BOTH timeframes, each firing its own alert.
 STOCK_TIMEFRAMES = [5, 75]
