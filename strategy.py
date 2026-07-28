@@ -11,7 +11,12 @@ Two filters are applied on top of the raw crossover:
 2. Volume confirmation (config.VOLUME_CONFIRMATION_REQUIRED) - the
    signal candle's volume must be greater than the previous candle's
    volume, otherwise the crossover is treated as unconfirmed and no
-   alert is fired.
+   alert is fired. This filter is only applied when volume data is
+   actually available. Spot index instruments (NIFTY50, BANKNIFTY,
+   SENSEX) have no real traded volume (volume is always 0), so for
+   those the filter is automatically skipped and only the crossover +
+   gap filter apply. Stocks and MCX (mini) futures do carry real
+   volume, so the filter is enforced for those as normal.
 
 Trend context (config.TREND_EMA_PERIOD) is still calculated and included
 in every signal as informational context (UPTREND/DOWNTREND based on
@@ -76,13 +81,18 @@ def evaluate(symbol: str, raw_1min_df: pd.DataFrame, timeframe_minutes: int) -> 
         )
         return None
 
-    # Filter 2: volume confirmation (signal candle volume > previous candle volume)
-    if getattr(config, "VOLUME_CONFIRMATION_REQUIRED", False) and not (last["volume"] > prev["volume"]):
-        log.debug(
-            "%s (%dm): crossover ignored - volume not confirmed (%.0f <= %.0f)",
-            symbol, timeframe_minutes, last["volume"], prev["volume"],
-        )
-        return None
+    # Filter 2: volume confirmation - only enforced when volume data is
+    # actually present (skipped for spot indices which always report 0).
+    volume_available = (last["volume"] > 0) or (prev["volume"] > 0)
+    if getattr(config, "VOLUME_CONFIRMATION_REQUIRED", False) and volume_available:
+        if not (last["volume"] > prev["volume"]):
+            log.debug(
+                "%s (%dm): crossover ignored - volume not confirmed (%.0f <= %.0f)",
+                symbol, timeframe_minutes, last["volume"], prev["volume"],
+            )
+            return None
+    elif getattr(config, "VOLUME_CONFIRMATION_REQUIRED", False) and not volume_available:
+        log.debug("%s (%dm): no volume data available - skipping volume filter", symbol, timeframe_minutes)
 
     # Trend context (informational only - does NOT block the signal)
     uptrend = last["close"] > last["ema_trend"]
