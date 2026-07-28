@@ -1,8 +1,9 @@
 """
 EMA 9/20 crossover strategy, evaluated on a caller-specified timeframe.
 RSI is still calculated and shown in the alert for reference, but is not
-used as a filter — every crossover triggers an alert. Volume of the
-signal candle vs the previous candle is also included for context.
+used as a filter — every crossover triggers an alert, regardless of
+candle strength. Volume of the signal candle vs the previous candle is
+also included for context.
 """
 from dataclasses import dataclass
 from typing import Optional
