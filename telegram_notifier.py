@@ -39,6 +39,11 @@ def _volume_line(volume: float, prev_volume: float) -> str:
     return f"Volume: {volume:,.0f} ({note})"
 
 
+def _trend_line(trend: str) -> str:
+    icon = "📈" if trend == "UPTREND" else "📉"
+    return f"Trend: {trend} {icon}"
+
+
 def format_signal_message(signal) -> str:
     arrow = "🟢⬆️" if signal.direction == "BULLISH" else "🔴⬇️"
     return (
@@ -47,6 +52,7 @@ def format_signal_message(signal) -> str:
         f"Close: {signal.close:.2f}\n"
         f"EMA9: {signal.ema_fast:.2f}  EMA20: {signal.ema_slow:.2f}\n"
         f"RSI(14): {signal.rsi:.1f}\n"
+        f"{_trend_line(signal.trend)}\n"
         f"{_volume_line(signal.volume, signal.prev_volume)}"
     )
 
