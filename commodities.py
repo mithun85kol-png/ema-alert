@@ -1,22 +1,23 @@
 """
-Resolves the current front-month MCX futures contract for a commodity
-(e.g. GOLD, SILVER, CRUDEOIL) using Upstox's Instrument Search API. This
-runs every time the bot executes, so the contract automatically rolls
-over to the next month's contract when the current one expires - no
-manual updates needed.
+Resolves the current front-month MCX MINI futures contract for a
+commodity (GOLD MINI, SILVER MINI, CRUDE OIL MINI) using Upstox's
+Instrument Search API. This runs every time the bot executes, so the
+contract automatically rolls over to the next month's contract when the
+current one expires - no manual updates needed.
 """
 import config
 
 log = config.get_logger(__name__)
 
-# Display symbol -> the exact "name" Upstox uses in its instrument master.
-# Most match directly, but some (like CRUDEOIL) use a different spelling.
+# Internal display symbol used throughout the bot (state tracking, alert
+# messages) -> exact "name" Upstox uses in its instrument master for the
+# MINI contract of each commodity.
 COMMODITY_SYMBOLS = ["GOLD", "SILVER", "CRUDEOIL"]
 
 SYMBOL_TO_UPSTOX_NAME = {
-    "GOLD": "GOLD",
-    "SILVER": "SILVER",
-    "CRUDEOIL": "CRUDE OIL",
+    "GOLD": "GOLD MINI",
+    "SILVER": "SILVER MINI",
+    "CRUDEOIL": "CRUDE OIL MINI",
 }
 
 
@@ -31,15 +32,19 @@ def resolve_front_month(client, underlying_symbol: str):
     candidates = [
         r for r in results
         if r.get("instrument_type") == "FUT"
-        and (r.get("trading_symbol") or "").upper().split()[0] == underlying_symbol.upper().replace(" ", "")
+        and (r.get("name") or "").upper() == upstox_name.upper()
     ]
     if not candidates:
-        log.warning("No MCX futures contract found for %s", underlying_symbol)
+        log.warning(
+            "No MCX MINI futures contract found for %s (searched name=%r) - "
+            "check log output of raw search results if this persists",
+            underlying_symbol, upstox_name,
+        )
         return None
 
     candidates.sort(key=lambda r: r.get("expiry", ""))
     chosen = candidates[0]
-    log.info("%s front-month contract: %s (expiry %s)", underlying_symbol,
+    log.info("%s (MINI) front-month contract: %s (expiry %s)", underlying_symbol,
               chosen.get("trading_symbol"), chosen.get("expiry"))
     return chosen.get("instrument_key")
 
