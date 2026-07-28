@@ -4,10 +4,14 @@ RSI is still calculated and shown in the alert for reference, but is not
 used as a filter. Volume of the signal candle vs the previous candle is
 also included for context.
 
-One filter is applied on top of the raw crossover:
+Two filters are applied on top of the raw crossover:
 1. Minimum-gap filter (config.EMA_MIN_GAP_PCT) - the EMA9/EMA20
    separation on the signal candle must be at least this % of price,
    otherwise the crossover is treated as noise and no alert is fired.
+2. Volume confirmation (config.VOLUME_CONFIRMATION_REQUIRED) - the
+   signal candle's volume must be greater than the previous candle's
+   volume, otherwise the crossover is treated as unconfirmed and no
+   alert is fired.
 
 Trend context (config.TREND_EMA_PERIOD) is still calculated and included
 in every signal as informational context (UPTREND/DOWNTREND based on
@@ -69,6 +73,14 @@ def evaluate(symbol: str, raw_1min_df: pd.DataFrame, timeframe_minutes: int) -> 
         log.debug(
             "%s (%dm): crossover ignored - gap too small (%.3f%% < %.3f%%)",
             symbol, timeframe_minutes, gap_pct, min_gap_pct,
+        )
+        return None
+
+    # Filter 2: volume confirmation (signal candle volume > previous candle volume)
+    if getattr(config, "VOLUME_CONFIRMATION_REQUIRED", False) and not (last["volume"] > prev["volume"]):
+        log.debug(
+            "%s (%dm): crossover ignored - volume not confirmed (%.0f <= %.0f)",
+            symbol, timeframe_minutes, last["volume"], prev["volume"],
         )
         return None
 
