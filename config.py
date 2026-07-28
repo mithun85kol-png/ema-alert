@@ -21,6 +21,9 @@ EMA_FAST = 9
 EMA_SLOW = 20
 RSI_PERIOD = 14
 
+EMA_MIN_GAP_PCT = 0.5  # minimum EMA9/EMA20 separation (% of price) to count as a valid crossover
+TREND_EMA_PERIOD = 50  # longer EMA used as trend context; crossovers must align with this trend
+
 BB_LENGTH = 20
 BB_MULT = 1.2
 
