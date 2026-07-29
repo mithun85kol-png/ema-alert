@@ -19,14 +19,17 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 CANDLE_INTERVAL = "5minute"   # Upstox intraday candle unit
 LOOKBACK_CANDLES = 60         # enough history for EMA20 + RSI14 + volume avg to warm up
 
+# ---------- Fetching ----------
+FETCH_WORKERS = 15            # concurrent fetch threads; tune down if Upstox rate-limits (429s)
+
 # ---------- Indicator settings ----------
 EMA_FAST = 9
 EMA_SLOW = 20
 RSI_PERIOD = 14
-RSI_BULLISH_MIN = 55          # RSI must be above this for a bullish cross to count
-RSI_BEARISH_MAX = 45          # RSI must be below this for a bearish cross to count
+RSI_BULLISH_MIN = 55          # unused by current strategy.py (informational-only design); kept for reference
+RSI_BEARISH_MAX = 45          # unused by current strategy.py (informational-only design); kept for reference
 VOLUME_AVG_PERIOD = 20
-VOLUME_MULTIPLIER = 1.3       # current candle volume must be >= 1.3x the 20-candle avg
+VOLUME_MULTIPLIER = 1.3       # unused by current strategy.py (informational-only design); kept for reference
 STRONG_CANDLE_BODY_RATIO = 0.6  # candle body must be >= 60% of the candle's high-low range
 
 # ---------- Indices (cash/index segment, no expiry) ----------
