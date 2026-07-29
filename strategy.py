@@ -4,9 +4,9 @@ strong candle in the cross direction. The alert fires immediately when
 that happens, for stocks, indices, and commodities alike — there is no
 separate rule per instrument type.
 
-RSI, EMA50-based trend, sector performance, and volume-vs-previous-candle
-are attached to the signal as informational fields only. They are shown
-in the alert message but never block it from firing.
+RSI, EMA50-based trend, and volume-vs-previous-candle are attached to the
+signal as informational fields only. They are shown in the alert message
+but never block it from firing.
 """
 
 import config
@@ -14,10 +14,9 @@ from indicators import (
     add_emas, add_rsi, add_volume_avg, add_ema50,
     is_strong_candle, volume_vs_previous,
 )
-from instruments import get_sector_trend
 
 
-def check_signal(df, symbol, sector_trend_cache=None):
+def check_signal(df, symbol):
     if len(df) < max(config.EMA_SLOW, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, 50) + 2:
         return None
 
@@ -45,7 +44,6 @@ def check_signal(df, symbol, sector_trend_cache=None):
     # ---- Everything below is informational only; it never blocks the alert ----
     stock_trend = "BULLISH" if curr["close"] > curr["ema_trend"] else "BEARISH"
     vol_change_pct = volume_vs_previous(df)
-    sector_name, sector_trend = get_sector_trend(symbol, sector_trend_cache or {})
 
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
 
@@ -61,8 +59,6 @@ def check_signal(df, symbol, sector_trend_cache=None):
         "ema_slow": round(float(curr["ema_slow"]), 2),
         "ema_trend": round(float(curr["ema_trend"]), 2),
         "stock_trend": stock_trend,
-        "sector": sector_name,
-        "sector_trend": sector_trend,
         "candle_time": str(curr.get("timestamp", "")),
     }
 
