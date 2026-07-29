@@ -59,7 +59,7 @@ BB_MULT = 1.2
 # Each group is checked on its own timeframe
 INDEX_TIMEFRAME = 3
 COMMODITY_TIMEFRAME = 5
-STOCK_TIMEFRAME = 75
+STOCK_TIMEFRAMES = [5, 75]
 
 BASE_CANDLE_INTERVAL = "1minute"
 CANDLE_LOOKBACK_DAYS = 10  # enough warm-up data even for the 75-min stock timeframe
