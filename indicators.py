@@ -12,6 +12,14 @@ def add_emas(df, fast=9, slow=20):
     return df
 
 
+def add_ema50(df, period=50):
+    """Separate EMA used only to describe the instrument's overall trend
+    (price above => bullish, price below => bearish). Informational only,
+    does not gate the cross alert."""
+    df["ema_trend"] = df["close"].ewm(span=period, adjust=False).mean()
+    return df
+
+
 def add_rsi(df, period=14):
     delta = df["close"].diff()
     gain = delta.clip(lower=0)
@@ -28,6 +36,20 @@ def add_volume_avg(df, period=20):
     return df
 
 
+def volume_vs_previous(df, idx=-1):
+    """% change of current candle volume vs the immediately preceding
+    candle's volume. Informational only. Returns None if it can't be
+    computed (e.g. not enough rows or prev volume is 0)."""
+    if len(df) < 2:
+        return None
+    curr_vol = df["volume"].iloc[idx]
+    prev_idx = idx - 1 if idx >= 0 else idx - 1
+    prev_vol = df["volume"].iloc[prev_idx]
+    if prev_vol == 0 or pd.isna(prev_vol) or pd.isna(curr_vol):
+        return None
+    return round(((curr_vol - prev_vol) / prev_vol) * 100, 1)
+
+
 def is_strong_candle(row, body_ratio_min=0.6, bullish=True):
     high, low, open_, close = row["high"], row["low"], row["open"], row["close"]
     candle_range = high - low
@@ -42,12 +64,17 @@ def is_strong_candle(row, body_ratio_min=0.6, bullish=True):
 
 
 def is_volume_confirmed(row, multiplier=1.3):
+    """Kept for reference / optional use elsewhere. NOT used to gate the
+    EMA cross alert anymore — that alert fires on cross + strong candle
+    only, with everything else shown as info."""
     if pd.isna(row.get("vol_avg")) or row["vol_avg"] == 0:
         return False
     return row["volume"] >= multiplier * row["vol_avg"]
 
 
 def is_trend_confirmed(row, bullish=True):
+    """Kept for reference / optional use elsewhere. NOT used to gate the
+    EMA cross alert anymore — RSI is shown as info only."""
     if pd.isna(row.get("rsi")):
         return False
     if bullish:
