@@ -176,6 +176,30 @@ class UpstoxClient:
                     "%r: %s | instrument_type values seen: %s",
                     query_upper, base_keyword, distinct_names, distinct_types,
                 )
+
+                # Extra diagnostic: MCX doesn't seem to encode MINI in the
+                # "name" field at all (it's just "GOLD", "SILVER", etc).
+                # The MINI/full-size distinction likely lives in
+                # trading_symbol or lot_size instead - log those for FUT
+                # contracts on the base name so we can see the real pattern.
+                fut_on_base_name = [
+                    inst for inst in related
+                    if normalize(inst.get("name") or "") == base_keyword
+                    and str(inst.get("instrument_type", "")).upper() == "FUT"
+                ]
+                sample = [
+                    {
+                        "trading_symbol": inst.get("trading_symbol"),
+                        "lot_size": inst.get("lot_size"),
+                        "expiry": inst.get("expiry"),
+                    }
+                    for inst in fut_on_base_name[:15]
+                ]
+                log.warning(
+                    "%s: FUT contracts under name=%r (sample of trading_symbol/lot_size/expiry "
+                    "to identify the MINI variant): %s",
+                    query_upper, base_keyword, sample,
+                )
                 candidates = []
 
         results = []
