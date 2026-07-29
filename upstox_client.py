@@ -98,118 +98,58 @@ class UpstoxClient:
             UpstoxClient._instrument_cache = []
             return []
 
-    def search_instruments(self, query: str, exchanges: str = "MCX", segments: str = "FO",
-                            expiry: str = "current_month,next_month") -> list:
+    def search_instruments(self, query: str) -> list:
         """
-        Filters the MCX instrument master for futures contracts matching
-        the given underlying symbol (e.g. GOLD, SILVER, CRUDEOIL).
+        Filters the MCX instrument master for ALL futures contracts whose
+        "name" field matches the given base commodity (e.g. "GOLD",
+        "SILVER", "CRUDE OIL") - this includes every variant (regular,
+        mini, guinea, petal, ten, micro, 100, etc). Variant-specific
+        selection (e.g. picking out the MINI contract) is the caller's
+        job (see commodities.py), since the "name" field alone does not
+        distinguish variants - that's encoded in trading_symbol instead.
 
-        Matching is done in two passes:
-        1. Strict pass - exact "name" match (fast path, works as long as
-           Upstox's naming hasn't changed).
-        2. Fallback pass - if the strict pass finds nothing, retry with a
-           normalized/token-based match (ignores extra spaces/punctuation,
-           and just requires every word of the query - e.g. "GOLD" and
-           "MINI" - to appear somewhere in the instrument name, in any
-           order). This is tolerant of minor naming format changes on
-           Upstox's side (e.g. "GOLD MINI" vs "GOLD  MINI" vs a reordered
-           name), and accepts any instrument_type starting with "FUT"
-           instead of requiring an exact "FUT" match.
-
-        If BOTH passes come up empty, the actual distinct name/type values
-        seen for the base commodity keyword are logged at WARNING level,
-        so the real field values are visible in the run's logs instead of
-        guessing blind. (This replaces the old debug block, which checked
-        query_upper == "CRUDEOIL" but was actually called with
-        "CRUDE OIL MINI" - so it never fired.)
+        Matching is strict-first (exact normalized name match), falling
+        back to a tolerant substring match if nothing is found (handles
+        minor naming format changes on Upstox's side).
         """
         instruments = self._load_instrument_master()
         if not instruments:
             return []
 
-        query_upper = query.upper().strip()
-
         def normalize(s: str) -> str:
             return " ".join((s or "").upper().split())
 
-        query_norm = normalize(query_upper)
-        query_tokens = query_norm.split()
-        base_keyword = query_tokens[0] if query_tokens else query_norm
+        query_norm = normalize(query)
 
-        # Pass 1: strict exact match (original behavior, kept as fast path)
-        strict_matches = []
-        for inst in instruments:
-            name = normalize(inst.get("name") or inst.get("underlying_symbol") or "")
-            inst_type = inst.get("instrument_type", "")
-            if name == query_norm and inst_type == "FUT":
-                strict_matches.append(inst)
+        strict_matches = [
+            inst for inst in instruments
+            if normalize(inst.get("name") or inst.get("underlying_symbol") or "") == query_norm
+            and inst.get("instrument_type") == "FUT"
+        ]
 
         if strict_matches:
             candidates = strict_matches
         else:
-            # Pass 2: tolerant token-based match
-            fallback_matches = []
-            for inst in instruments:
-                name = normalize(inst.get("name") or inst.get("underlying_symbol") or "")
-                inst_type = str(inst.get("instrument_type", "")).upper()
-                if all(tok in name for tok in query_tokens) and inst_type.startswith("FUT"):
-                    fallback_matches.append(inst)
-
-            if fallback_matches:
+            candidates = [
+                inst for inst in instruments
+                if query_norm in normalize(inst.get("name") or inst.get("underlying_symbol") or "")
+                and str(inst.get("instrument_type", "")).upper().startswith("FUT")
+            ]
+            if candidates:
                 log.warning(
-                    "%s: strict name match failed, but found %d contract(s) via "
-                    "tolerant match - Upstox's naming format may have changed. "
-                    "Matched name(s): %s",
-                    query_upper, len(fallback_matches),
-                    sorted(set(normalize(m.get("name") or "") for m in fallback_matches)),
+                    "%s: strict name match failed, using tolerant substring match instead "
+                    "(%d contract(s) found) - Upstox's naming format may have changed.",
+                    query_norm, len(candidates),
                 )
-                candidates = fallback_matches
-            else:
-                # Nothing matched either way - log what's actually out there
-                # for this commodity so the real field values are visible.
-                related = [inst for inst in instruments
-                           if base_keyword in normalize(inst.get("name") or inst.get("underlying_symbol") or "")]
-                distinct_names = sorted(set(normalize(m.get("name") or "") for m in related))
-                distinct_types = sorted(set(str(m.get("instrument_type", "")) for m in related))
-                log.warning(
-                    "%s: no match found (strict or tolerant). Instrument names containing "
-                    "%r: %s | instrument_type values seen: %s",
-                    query_upper, base_keyword, distinct_names, distinct_types,
-                )
-
-                # Extra diagnostic: MCX doesn't seem to encode MINI in the
-                # "name" field at all (it's just "GOLD", "SILVER", etc).
-                # The MINI/full-size distinction likely lives in
-                # trading_symbol or lot_size instead - log those for FUT
-                # contracts on the base name so we can see the real pattern.
-                fut_on_base_name = [
-                    inst for inst in related
-                    if normalize(inst.get("name") or "") == base_keyword
-                    and str(inst.get("instrument_type", "")).upper() == "FUT"
-                ]
-                sample = [
-                    {
-                        "trading_symbol": inst.get("trading_symbol"),
-                        "lot_size": inst.get("lot_size"),
-                        "expiry": inst.get("expiry"),
-                    }
-                    for inst in fut_on_base_name[:15]
-                ]
-                log.warning(
-                    "%s: FUT contracts under name=%r (sample of trading_symbol/lot_size/expiry "
-                    "to identify the MINI variant): %s",
-                    query_upper, base_keyword, sample,
-                )
-                candidates = []
 
         results = []
         for inst in candidates:
-            name = normalize(inst.get("name") or inst.get("underlying_symbol") or "")
             results.append({
-                "underlying_symbol": name,
+                "name": normalize(inst.get("name") or inst.get("underlying_symbol") or ""),
                 "instrument_type": inst.get("instrument_type", ""),
                 "instrument_key": inst.get("instrument_key"),
                 "trading_symbol": inst.get("trading_symbol"),
+                "lot_size": inst.get("lot_size"),
                 "expiry": inst.get("expiry"),
             })
         return results
