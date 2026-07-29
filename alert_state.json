@@ -1,1 +1,14 @@
-{}
+{
+  "DALBHARAT:BEARISH": {
+    "candle_time": "2026-07-29 15:25:00+05:30",
+    "alerted_at": "2026-07-29T15:44:54.648622"
+  },
+  "JSWSTEEL:BEARISH": {
+    "candle_time": "2026-07-29 15:25:00+05:30",
+    "alerted_at": "2026-07-29T15:46:25.723855"
+  },
+  "POWERINDIA:BEARISH": {
+    "candle_time": "2026-07-29 15:25:00+05:30",
+    "alerted_at": "2026-07-29T15:48:11.387541"
+  }
+}
