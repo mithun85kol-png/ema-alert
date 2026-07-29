@@ -21,19 +21,45 @@ EMA_FAST = 9
 EMA_SLOW = 20
 RSI_PERIOD = 14
 
-EMA_MIN_GAP_PCT = 0.5  # minimum EMA9/EMA20 separation (% of price) to count as a valid crossover
-VOLUME_CONFIRMATION_REQUIRED = True  # signal candle volume must exceed previous candle volume
-TREND_EMA_PERIOD = 50  # longer EMA used as trend context; crossovers must align with this trend
+# NOTE: user wants stoploss placed at EMA20, and wants the alert to fire
+# right on the crossing candle's close (not a few candles later) so the
+# entry price stays close to EMA20 - keeping the stoploss distance small.
+# Since the gap is measured on the cross candle itself, where EMA9/EMA20
+# are ~equal by definition, this threshold stays near-zero (it only
+# screens out literal ties/float noise). Real strength confirmation for
+# this setup comes from VOLUME_CONFIRMATION_MULT and REQUIRE_RSI_MOMENTUM
+# below instead, since both are measurable on the crossing candle itself
+# - no need to wait for future candles, so the tight stoploss is preserved.
+EMA_MIN_GAP_PCT = 0.01  # minimum EMA9/EMA20 separation (% of price), checked on the cross candle itself
+
+TREND_EMA_PERIOD = 50  # longer EMA used as trend context (informational only, doesn't block signals)
+
+# How many recent candles to scan for a crossover, instead of only
+# comparing the last two candles. Protects against missed crosses when a
+# scheduled run is delayed or skipped (e.g. GitHub Actions cron jitter).
+CROSS_LOOKBACK_BARS = 3
+
+# NEW - strength confirmation on the crossing candle itself (replaces the
+# whipsaw filter, which needed a future candle and would have delayed the
+# alert past the crossing candle):
+# Crossing candle's volume must be at least this multiple of the previous
+# candle's volume. 1.0 = no requirement (just needs to be >= prev volume).
+# Raise toward 1.3-1.5 for stricter "real breakout" volume confirmation.
+VOLUME_CONFIRMATION_MULT = 1.15
+
+# If True, RSI must be rising for a BULLISH cross and falling for a
+# BEARISH cross, measured on the crossing candle vs the previous one.
+# Rejects crosses where momentum is already fading right as the EMAs
+# cross.
+REQUIRE_RSI_MOMENTUM = True
 
 BB_LENGTH = 20
 BB_MULT = 1.2
 
-# Each group is checked on its own timeframe(s)
+# Each group is checked on its own timeframe
 INDEX_TIMEFRAME = 3
-COMMODITY_TIMEFRAME = 3
-
-# STOCK group gets checked on BOTH timeframes, each firing its own alert.
-STOCK_TIMEFRAMES = [5, 75]
+COMMODITY_TIMEFRAME = 5
+STOCK_TIMEFRAME = 75
 
 BASE_CANDLE_INTERVAL = "1minute"
 CANDLE_LOOKBACK_DAYS = 10  # enough warm-up data even for the 75-min stock timeframe
