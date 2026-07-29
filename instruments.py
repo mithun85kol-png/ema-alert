@@ -19,10 +19,13 @@ def _load_master():
     if _cache["data"] is not None:
         return _cache["data"]
 
+    print("Downloading instrument master...", flush=True)
     resp = requests.get(INSTRUMENT_MASTER_URL, timeout=30)
     resp.raise_for_status()
+    print(f"Downloaded {len(resp.content)} bytes, parsing...", flush=True)
     with gzip.GzipFile(fileobj=io.BytesIO(resp.content)) as f:
         data = json.load(f)
+    print(f"Parsed {len(data)} instruments.", flush=True)
 
     _cache["data"] = data
     _cache["loaded_at"] = dt.datetime.utcnow()
@@ -30,6 +33,7 @@ def _load_master():
 
 
 def resolve_indices(index_names):
+    print(f"Resolving {len(index_names)} indices...", flush=True)
     master = _load_master()
     out = {}
     for display, search in index_names.items():
@@ -37,10 +41,12 @@ def resolve_indices(index_names):
             if row.get("segment") in ("NSE_INDEX", "BSE_INDEX") and row.get("name", "").upper() == search.upper():
                 out[display] = row["instrument_key"]
                 break
+    print(f"Resolved {len(out)} indices.", flush=True)
     return out
 
 
 def resolve_mcx_nearest_futures(commodity_names):
+    print(f"Resolving {len(commodity_names)} commodities...", flush=True)
     master = _load_master()
     today = dt.date.today()
     out = {}
@@ -66,10 +72,12 @@ def resolve_mcx_nearest_futures(commodity_names):
             candidates.sort(key=lambda x: x[0])
             out[display] = candidates[0][1]
 
+    print(f"Resolved {len(out)} commodities.", flush=True)
     return out
 
 
 def resolve_fo_stock_list(watchlist=None):
+    print(f"Resolving F&O stock list (watchlist={'full' if watchlist is None else len(watchlist)})...", flush=True)
     master = _load_master()
 
     if watchlist is None:
@@ -79,6 +87,7 @@ def resolve_fo_stock_list(watchlist=None):
                 sym = row.get("underlying_symbol") or row.get("name")
                 if sym:
                     underlyings.add(sym.upper())
+        print(f"Found {len(underlyings)} F&O underlyings.", flush=True)
     else:
         underlyings = {s.upper() for s in watchlist}
 
@@ -87,4 +96,5 @@ def resolve_fo_stock_list(watchlist=None):
         if row.get("segment") == "NSE_EQ" and row.get("trading_symbol", "").upper() in underlyings:
             out[row["trading_symbol"].upper()] = row["instrument_key"]
 
+    print(f"Resolved {len(out)} F&O stocks.", flush=True)
     return out
