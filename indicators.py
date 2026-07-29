@@ -1,55 +1,55 @@
 """
-Technical indicator helpers: candle resampling, EMA, RSI, Bollinger Bands.
+Indicator + confirmation helpers. All functions take a pandas DataFrame
+with columns: open, high, low, close, volume (oldest row first).
 """
+
 import pandas as pd
 
 
-def resample_candles(df: pd.DataFrame, minutes: int) -> pd.DataFrame:
-    if df.empty:
-        return df
-    df = df.set_index("timestamp")
-    ohlc = df.resample(f"{minutes}min", label="right", closed="right").agg({
-        "open": "first",
-        "high": "max",
-        "low": "min",
-        "close": "last",
-        "volume": "sum",
-    })
-    ohlc = ohlc.dropna(subset=["open", "high", "low", "close"]).reset_index()
-    return ohlc
+def add_emas(df, fast=9, slow=20):
+    df["ema_fast"] = df["close"].ewm(span=fast, adjust=False).mean()
+    df["ema_slow"] = df["close"].ewm(span=slow, adjust=False).mean()
+    return df
 
 
-def ema(series: pd.Series, period: int) -> pd.Series:
-    return series.ewm(span=period, adjust=False).mean()
-
-
-def rsi(series: pd.Series, period: int = 14) -> pd.Series:
-    delta = series.diff()
+def add_rsi(df, period=14):
+    delta = df["close"].diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
-
-    avg_gain = gain.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
-
-    rs = avg_gain / avg_loss.replace(0, pd.NA)
-    rsi_values = 100 - (100 / (1 + rs))
-    rsi_values = rsi_values.fillna(50)
-    return rsi_values
-
-
-def add_indicators(df: pd.DataFrame, ema_fast: int, ema_slow: int, rsi_period: int) -> pd.DataFrame:
-    df = df.copy()
-    df["ema_fast"] = ema(df["close"], ema_fast)
-    df["ema_slow"] = ema(df["close"], ema_slow)
-    df["rsi"] = rsi(df["close"], rsi_period)
+    avg_gain = gain.ewm(alpha=1 / period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1 / period, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, 1e-9)
+    df["rsi"] = 100 - (100 / (1 + rs))
     return df
 
 
-def bollinger_bands(df: pd.DataFrame, length: int = 20, mult: float = 1.2) -> pd.DataFrame:
-    df = df.copy()
-    middle = df["close"].rolling(window=length).mean()
-    std = df["close"].rolling(window=length).std()
-    df["bb_middle"] = middle
-    df["bb_upper"] = middle + mult * std
-    df["bb_lower"] = middle - mult * std
+def add_volume_avg(df, period=20):
+    df["vol_avg"] = df["volume"].rolling(period).mean()
     return df
+
+
+def is_strong_candle(row, body_ratio_min=0.6, bullish=True):
+    high, low, open_, close = row["high"], row["low"], row["open"], row["close"]
+    candle_range = high - low
+    if candle_range <= 0:
+        return False
+    body = abs(close - open_)
+    if body / candle_range < body_ratio_min:
+        return False
+    if bullish:
+        return close > open_
+    return close < open_
+
+
+def is_volume_confirmed(row, multiplier=1.3):
+    if pd.isna(row.get("vol_avg")) or row["vol_avg"] == 0:
+        return False
+    return row["volume"] >= multiplier * row["vol_avg"]
+
+
+def is_trend_confirmed(row, bullish=True):
+    if pd.isna(row.get("rsi")):
+        return False
+    if bullish:
+        return row["rsi"] >= 55
+    return row["rsi"] <= 45
