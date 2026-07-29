@@ -2,7 +2,7 @@ name: EMA Alert Scan
 
 on:
   schedule:
-    - cron: '*/5 3-9 * * 1-5'
+    - cron: '*/5 3-18 * * 1-5'
   workflow_dispatch: {}
 
 jobs:
@@ -14,6 +14,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -26,9 +27,4 @@ jobs:
         run: python main.py
 
       - name: Commit updated alert_state.json
-        run: |
-          git config user.name "ema-alert-bot"
-          git config user.email "actions@github.com"
-          git add alert_state.json
-          git diff --cached --quiet || git commit -m "update alert state [skip ci]"
-          git push
+        run: | git config user.name "ema-alert-bot" git config user.email "actions@github.com" git add alert_state.json git diff --cached --quiet || git commit -m "update alert state [skip ci]" git push
