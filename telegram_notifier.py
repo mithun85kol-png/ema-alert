@@ -7,11 +7,10 @@ def send_alert(signal):
         print("Telegram not configured, skipping send:", signal)
         return
 
-    direction = signal["direction"]  # "BULLISH" or "BEARISH"
+    direction = signal["direction"]
     arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
 
     candle_time = signal["candle_time"]
-    # candle_time expected like "2026-07-29 12:15:00+05:30" -> split date/time
     date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
 
     stock_trend = signal.get("stock_trend", "UNKNOWN")
@@ -25,9 +24,9 @@ def send_alert(signal):
     if vol_change is None:
         vol_note = ""
     elif vol_change >= 0:
-        vol_note = "(higher than previous ⬆️)"
+        vol_note = f"({vol_change:.1f}% higher than previous ⬆️)"
     else:
-        vol_note = "(lower than previous ⬇️)"
+        vol_note = f"({abs(vol_change):.1f}% lower than previous ⬇️)"
 
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
