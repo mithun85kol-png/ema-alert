@@ -28,6 +28,13 @@ def send_alert(signal):
     else:
         vol_note = f"({abs(vol_change):.1f}% lower than previous ⬇️)"
 
+    pivot_line = ""
+    if signal.get("r3") is not None and signal.get("s3") is not None:
+        pivot_line = (
+            f"R3: {signal['r3']} | S3: {signal['s3']}"
+            f" ({signal.get('pivot_note', 'N/A')})\n"
+        )
+
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
         f"Timeframe: 5-min | {date_part} {time_part}\n"
@@ -37,8 +44,9 @@ def send_alert(signal):
         f"Trend: {trend_label} {trend_icon}\n"
         f"Volume: {volume_str} {vol_note}\n"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
-        f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
-    )
+        f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}\n"
+        f"{pivot_line}"
+    ).rstrip()
 
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
     try:
