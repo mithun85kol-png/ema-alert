@@ -1,35 +1,44 @@
-name: EMA Alert Scan
+name: EMA Alert Bot
 
 on:
   schedule:
-    - cron: '*/5 3-18 * * 1-5'
+    - cron: '45-59/5 3 * * 1-5'
+    - cron: '*/5 4-17 * * 1-5'
+    - cron: '0 18 * * 1-5'
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
-  scan:
+  run-bot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run scan
+      - name: Run EMA alert check
         env:
-          UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
+          UPSTOX_ANALYTICS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py
+        run: python run_once.py
 
-      - name: Commit updated alert_state.json
+      - name: Commit updated alert state (if changed)
         run: |
           git config user.name "ema-alert-bot"
-          git config user.email "actions@github.com"
+          git config user.email "actions@users.noreply.github.com"
           git add alert_state.json
-          git diff --cached --quiet || git commit -m "update alert state [skip ci]"
-          git push
+          if ! git diff --staged --quiet; then
+            git commit -m "Update alert state [skip ci]"
+            git pull --rebase origin main
+            git push
+          fi
