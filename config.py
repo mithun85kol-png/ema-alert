@@ -30,7 +30,7 @@ RSI_BULLISH_MIN = 55          # unused by current strategy.py (informational-onl
 RSI_BEARISH_MAX = 45          # unused by current strategy.py (informational-only design); kept for reference
 VOLUME_AVG_PERIOD = 20
 VOLUME_MULTIPLIER = 1.3       # unused by current strategy.py (informational-only design); kept for reference
-STRONG_CANDLE_BODY_RATIO = 0.6  # candle body must be >= 60% of the candle's high-low range
+STRONG_CANDLE_BODY_RATIO = 0.45  # candle body must be >= 45% of the candle's high-low range
 
 # ---------- Indices (cash/index segment, no expiry) ----------
 INDICES = {
