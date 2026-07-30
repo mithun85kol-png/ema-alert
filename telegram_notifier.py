@@ -36,7 +36,9 @@ def send_alert(signal):
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"Trend: {trend_label} {trend_icon}\n"
-        f"Volume: {volume_str} {vol_note}"
+        f"Volume: {volume_str} {vol_note}\n"
+        f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
+        f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
     )
 
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
