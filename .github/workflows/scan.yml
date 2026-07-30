@@ -2,9 +2,7 @@ name: EMA Alert Bot
 
 on:
   schedule:
-    - cron: '45-59/5 3 * * 1-5'
-    - cron: '*/5 4-17 * * 1-5'
-    - cron: '0 18 * * 1-5'
+    -  cron: '*/5 3-18 * * 1-5'
   workflow_dispatch: {}
 
 permissions:
@@ -30,7 +28,7 @@ jobs:
           UPSTOX_ANALYTICS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py
+        run: python run_once.py
 
       - name: Commit updated alert state (if changed)
         run: |
