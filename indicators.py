@@ -1,7 +1,7 @@
 """
 Indicator helper functions for EMA cross alert system.
-Provides EMA, RSI, volume average, candle strength, and candle
-pattern detection utilities used by strategy.py.
+Provides EMA, RSI, volume average, candle strength, candle
+pattern detection, and Camarilla pivot utilities used by strategy.py.
 """
 
 import pandas as pd
@@ -114,3 +114,15 @@ def detect_candle_pattern(row):
         return "Shooting Star" if close < open_ else "Inverted Hammer"
 
     return "Normal"
+
+
+def calculate_r3_s3(prev_high, prev_low, prev_close):
+    """
+    Calculates the Camarilla R3 (resistance) and S3 (support) pivot
+    levels from the previous trading day's High, Low, and Close.
+    These are recalculated once per day (they don't change intraday).
+    """
+    candle_range = prev_high - prev_low
+    r3 = prev_close + candle_range * 1.1 / 4
+    s3 = prev_close - candle_range * 1.1 / 4
+    return round(r3, 2), round(s3, 2)
