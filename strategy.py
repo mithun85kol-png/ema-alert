@@ -12,7 +12,7 @@ but never block it from firing.
 import config
 from indicators import (
     add_emas, add_rsi, add_volume_avg, add_ema50,
-    is_strong_candle, volume_vs_previous,
+    is_strong_candle, volume_vs_previous, detect_candle_pattern,
 )
 
 
@@ -37,15 +37,15 @@ def check_signal(df, symbol):
     direction = "BULLISH" if bullish_cross else "BEARISH"
     bullish = bullish_cross
 
-    # ONLY gating condition: strong candle in the direction of the cross.
     if not is_strong_candle(curr, config.STRONG_CANDLE_BODY_RATIO, bullish=bullish):
         return None
 
-    # ---- Everything below is informational only; it never blocks the alert ----
     stock_trend = "BULLISH" if curr["close"] > curr["ema_trend"] else "BEARISH"
     vol_change_pct = volume_vs_previous(df)
-
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
+
+    cross_pattern = detect_candle_pattern(curr)
+    prev_pattern = detect_candle_pattern(prev)
 
     return {
         "symbol": symbol,
@@ -60,6 +60,8 @@ def check_signal(df, symbol):
         "ema_trend": round(float(curr["ema_trend"]), 2),
         "stock_trend": stock_trend,
         "candle_time": str(curr.get("timestamp", "")),
+        "cross_candle_pattern": cross_pattern,
+        "prev_candle_pattern": prev_pattern,
     }
 
 
