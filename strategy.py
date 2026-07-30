@@ -1,7 +1,7 @@
 """
-EMA9/EMA20 intrabar cross: alert fires when the latest closed candle's
-high-low range straddles the EMA20 line (i.e. price crossed through EMA20
-somewhere within the candle, not just close-to-close), confirmed ONLY by
+EMA9/EMA20 line crossover: alert fires when the EMA9 line crosses over the
+EMA20 line on the latest closed candle — matching the visual cross point
+shown on the chart (where the two EMA lines intersect), confirmed ONLY by
 a strong candle in the cross direction. Fires for stocks, indices, and
 commodities alike — no separate rule per instrument type.
 
@@ -29,15 +29,10 @@ def check_signal(df, symbol):
     curr = df.iloc[-1]
     prev = df.iloc[-2]
 
-    ema_slow_now = curr["ema_slow"]
-
-    # Intrabar cross: candle's high-low range straddles the EMA20 line,
-    # meaning price crossed through EMA20 somewhere within this candle
-    # (not just close vs previous close).
-    straddles_ema = curr["low"] <= ema_slow_now <= curr["high"]
-
-    bullish_cross = straddles_ema and curr["close"] > ema_slow_now and curr["open"] <= ema_slow_now
-    bearish_cross = straddles_ema and curr["close"] < ema_slow_now and curr["open"] >= ema_slow_now
+    # True EMA9/EMA20 line crossover — matches the visual cross point on
+    # the chart where the two EMA lines actually intersect.
+    bullish_cross = prev["ema_fast"] <= prev["ema_slow"] and curr["ema_fast"] > curr["ema_slow"]
+    bearish_cross = prev["ema_fast"] >= prev["ema_slow"] and curr["ema_fast"] < curr["ema_slow"]
 
     if not (bullish_cross or bearish_cross):
         return None
