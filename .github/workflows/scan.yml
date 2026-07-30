@@ -34,6 +34,6 @@ jobs:
         run: |
           git config user.name "ema-alert-bot"
           git config user.email "actions@github.com"
-          git add alert_state.json
+          git add alert_state.json pivot_cache.json
           git diff --cached --quiet || git commit -m "update alert state [skip ci]"
           git push
