@@ -39,10 +39,14 @@ def resolve_indices(index_names):
     master = _load_master()
     out = {}
     for display, search in index_names.items():
+        found = False
         for row in master:
             if row.get("segment") in ("NSE_INDEX", "BSE_INDEX") and row.get("name", "").upper() == search.upper():
                 out[display] = row["instrument_key"]
+                found = True
                 break
+        if not found:
+            print(f"  NOT RESOLVED (index): display='{display}' searched_name='{search}'", flush=True)
     print(f"Resolved {len(out)} indices.", flush=True)
     return out
 
@@ -73,6 +77,8 @@ def resolve_mcx_nearest_futures(commodity_names):
         if candidates:
             candidates.sort(key=lambda x: x[0])
             out[display] = candidates[0][1]
+        else:
+            print(f"  NOT RESOLVED (commodity): display='{display}' searched_name='{search}'", flush=True)
 
     print(f"Resolved {len(out)} commodities.", flush=True)
     return out
