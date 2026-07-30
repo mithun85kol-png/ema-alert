@@ -100,19 +100,3 @@ def resolve_fo_stock_list(watchlist=None):
 
     print(f"Resolved {len(out)} F&O stocks.", flush=True)
     return out
-
-
-def get_sector_trend(symbol, sector_trend_cache):
-    """
-    Looks up which sector a stock belongs to (config.STOCK_SECTOR_MAP) and
-    returns (sector_name, sector_trend) using a cache of already-computed
-    sector trends (built once per run in main.py's compute_sector_trends()).
-
-    Returns ("UNKNOWN", "UNKNOWN") if the symbol has no sector mapping
-    (e.g. it's an index/commodity, or a stock not yet added to the map).
-    Informational only — never blocks an alert.
-    """
-    sector_name = config.STOCK_SECTOR_MAP.get(symbol.upper())
-    if sector_name is None:
-        return "UNKNOWN", "UNKNOWN"
-    return sector_name, sector_trend_cache.get(sector_name, "UNKNOWN")
