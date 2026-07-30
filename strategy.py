@@ -1,11 +1,14 @@
 """
-EMA9/EMA20 line crossover: alert fires when the EMA9 line crosses over the
-EMA20 line on the latest closed candle — matching the visual cross point
-shown on the chart (where the two EMA lines intersect), confirmed ONLY by
-a strong candle in the cross direction. Fires for stocks, indices, and
-commodities alike — no separate rule per instrument type.
+EMA9/EMA20 line crossover with a volume confirmation: alert fires only
+when BOTH conditions hold on the latest closed candle —
+  1. EMA9 crosses EMA20 (matching the visual cross point on the chart)
+  2. The crossing candle's volume is higher than the previous candle's
+     volume (confirms real participation behind the move)
+— and is further confirmed by a strong candle in the cross direction.
+Fires for stocks, indices, and commodities alike — no separate rule per
+instrument type.
 
-RSI, EMA50-based trend, volume-vs-previous-candle, and Camarilla R3/S3
+RSI, EMA50-based trend, volume-vs-previous-candle %, and Camarilla R3/S3
 pivot proximity are attached to the signal as informational fields only.
 They are shown in the alert message but never block it from firing.
 """
@@ -33,12 +36,16 @@ def check_signal(df, symbol, r3=None, s3=None):
     curr = df.iloc[-1]
     prev = df.iloc[-2]
 
-    # True EMA9/EMA20 line crossover — matches the visual cross point on
-    # the chart where the two EMA lines actually intersect.
+    # Condition 1: True EMA9/EMA20 line crossover.
     bullish_cross = prev["ema_fast"] <= prev["ema_slow"] and curr["ema_fast"] > curr["ema_slow"]
     bearish_cross = prev["ema_fast"] >= prev["ema_slow"] and curr["ema_fast"] < curr["ema_slow"]
 
     if not (bullish_cross or bearish_cross):
+        return None
+
+    # Condition 2 (NEW): current candle's volume must be higher than the
+    # previous candle's volume.
+    if curr["volume"] <= prev["volume"]:
         return None
 
     direction = "BULLISH" if bullish_cross else "BEARISH"
