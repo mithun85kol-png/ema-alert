@@ -30,10 +30,11 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
 
-      - name: Commit updated alert_state.json
+      - name: Commit updated state files
         run: |
           git config user.name "ema-alert-bot"
           git config user.email "actions@github.com"
-          git add alert_state.json pivot_cache.json
+          git add alert_state.json
+          if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
           git diff --cached --quiet || git commit -m "update alert state [skip ci]"
           git push
