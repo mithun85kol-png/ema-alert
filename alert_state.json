@@ -10,5 +10,45 @@
   "POWERINDIA:BEARISH": {
     "candle_time": "2026-07-29 15:25:00+05:30",
     "alerted_at": "2026-07-29T15:48:11.387541"
+  },
+  "LTF:BULLISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:52.104782"
+  },
+  "LUPIN:BULLISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:52.751397"
+  },
+  "VOLTAS:BULLISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:53.376890"
+  },
+  "MARICO:BEARISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:54.056565"
+  },
+  "TATAPOWER:BULLISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:54.718837"
+  },
+  "OFSS:BULLISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:55.456128"
+  },
+  "SUNPHARMA:BEARISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:56.161020"
+  },
+  "TORNTPHARM:BULLISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:56.812984"
+  },
+  "ICICIBANK:BULLISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:57.529683"
+  },
+  "BANKINDIA:BULLISH": {
+    "candle_time": "2026-07-30 14:00:00+05:30",
+    "alerted_at": "2026-07-30T08:31:58.150754"
   }
 }
