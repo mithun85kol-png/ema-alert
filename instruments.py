@@ -34,6 +34,11 @@ def _load_master():
     return data
 
 
+def _normalize(s):
+    """Strip spaces/hyphens/etc so 'CRUDEOIL' matches 'CRUDE OIL'."""
+    return "".join(ch for ch in s.upper() if ch.isalnum())
+
+
 def resolve_indices(index_names):
     print(f"Resolving {len(index_names)} indices...", flush=True)
     master = _load_master()
@@ -58,14 +63,15 @@ def resolve_mcx_nearest_futures(commodity_names):
     out = {}
 
     for display, search in commodity_names.items():
+        search_norm = _normalize(search)
         candidates = []
         for row in master:
             if row.get("segment") != "MCX_FO":
                 continue
             if row.get("instrument_type") != "FUT":
                 continue
-            name = row.get("name", "").upper()
-            if search.upper() not in name:
+            name_norm = _normalize(row.get("name", ""))
+            if search_norm not in name_norm:
                 continue
             expiry_ms = row.get("expiry")
             if not expiry_ms:
