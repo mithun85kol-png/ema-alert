@@ -35,9 +35,9 @@ IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 STOCK_SESSION_START = dt.time(9, 15)
 STOCK_SESSION_END = dt.time(15, 30)
 
-# Commodity (MCX) session — runs later into the evening.
-COMMODITY_SESSION_START = dt.time(9, 0)
-COMMODITY_SESSION_END = dt.time(23, 30)
+# Commodity (MCX) session — now matches the stock session window.
+COMMODITY_SESSION_START = dt.time(9, 15)
+COMMODITY_SESSION_END = dt.time(15, 30)
 
 
 def _now_ist():
@@ -99,7 +99,6 @@ def fetch_prev_day_ohlc(instrument_key):
     if not candles:
         return None
 
-    # Upstox candles are [timestamp, open, high, low, close, volume, oi]
     candles_sorted = sorted(candles, key=lambda c: c[0])
     last = candles_sorted[-1]
     return {"high": last[2], "low": last[3], "close": last[4]}
@@ -122,8 +121,7 @@ def build_pivot_levels(watchlist):
     """
     Returns {symbol: {"r3": ..., "s3": ...}} for every symbol in the
     watchlist. Daily OHLC is only fetched once per calendar day per
-    symbol — results are cached in pivot_cache.json so we don't hit
-    Upstox's daily-candle endpoint on every 5-minute run.
+    symbol — results are cached in pivot_cache.json.
     """
     cache = load_pivot_cache()
     today_str = _now_ist().date().isoformat()
@@ -195,8 +193,6 @@ def run():
     saved_state = state.load_state()
     alerts_sent = 0
 
-    # Phase 1: fetch + resample every instrument in parallel (bounded pool
-    # so we don't hammer Upstox's API all at once).
     dfs = {}
 
     def _fetch_one(symbol, instrument_key):
@@ -219,7 +215,6 @@ def run():
             except Exception as e:
                 print(f"Error fetching {symbol}: {e}")
 
-    # Phase 2: run the signal check per instrument.
     for symbol, df5 in dfs.items():
         try:
             levels = pivots.get(symbol)
