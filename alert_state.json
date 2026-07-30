@@ -70,5 +70,37 @@
   "M&M:BEARISH": {
     "candle_time": "2026-07-30 14:25:00+05:30",
     "alerted_at": "2026-07-30T09:00:44.657247"
+  },
+  "NIFTY 50:BULLISH": {
+    "candle_time": "2026-07-30 15:00:00+05:30",
+    "alerted_at": "2026-07-30T09:35:13.929189"
+  },
+  "SHREECEM:BULLISH": {
+    "candle_time": "2026-07-30 15:00:00+05:30",
+    "alerted_at": "2026-07-30T09:35:14.504757"
+  },
+  "TIINDIA:BEARISH": {
+    "candle_time": "2026-07-30 15:00:00+05:30",
+    "alerted_at": "2026-07-30T09:35:15.143880"
+  },
+  "ASIANPAINT:BULLISH": {
+    "candle_time": "2026-07-30 15:00:00+05:30",
+    "alerted_at": "2026-07-30T09:35:15.726911"
+  },
+  "HDFCAMC:BULLISH": {
+    "candle_time": "2026-07-30 15:00:00+05:30",
+    "alerted_at": "2026-07-30T09:35:16.279468"
+  },
+  "MARICO:BULLISH": {
+    "candle_time": "2026-07-30 15:00:00+05:30",
+    "alerted_at": "2026-07-30T09:35:16.868881"
+  },
+  "DRREDDY:BULLISH": {
+    "candle_time": "2026-07-30 15:00:00+05:30",
+    "alerted_at": "2026-07-30T09:35:17.455283"
+  },
+  "SOLARINDS:BULLISH": {
+    "candle_time": "2026-07-30 15:00:00+05:30",
+    "alerted_at": "2026-07-30T09:35:18.147027"
   }
 }
