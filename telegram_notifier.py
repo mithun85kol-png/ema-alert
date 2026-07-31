@@ -7,10 +7,11 @@ def send_alert(signal):
         print("Telegram not configured, skipping send:", signal)
         return
 
-    direction = signal["direction"]
+    direction = signal["direction"]  # "BULLISH" or "BEARISH"
     arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
 
     candle_time = signal["candle_time"]
+    # candle_time expected like "2026-07-29 12:15:00+05:30" -> split date/time
     date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
 
     stock_trend = signal.get("stock_trend", "UNKNOWN")
@@ -28,12 +29,8 @@ def send_alert(signal):
     else:
         vol_note = f"({abs(vol_change):.1f}% lower than previous ⬇️)"
 
-    pivot_line = ""
-    if signal.get("r3") is not None and signal.get("s3") is not None:
-        pivot_line = (
-            f"R3: {signal['r3']} | S3: {signal['s3']}"
-            f" ({signal.get('pivot_note', 'N/A')})\n"
-        )
+    pivot_note = signal.get("pivot_note")
+    pivot_line = f"Pivot: {pivot_note}\n" if pivot_note else ""
 
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
@@ -43,10 +40,10 @@ def send_alert(signal):
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"Trend: {trend_label} {trend_icon}\n"
         f"Volume: {volume_str} {vol_note}\n"
-        f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
-        f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}\n"
         f"{pivot_line}"
-    ).rstrip()
+        f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
+        f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
+    )
 
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
     try:
