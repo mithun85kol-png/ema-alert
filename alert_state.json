@@ -286,5 +286,9 @@
   "DELHIVERY:BULLISH": {
     "candle_time": "2026-07-31 12:15:00+05:30",
     "alerted_at": "2026-07-31T06:51:00.649804"
+  },
+  "ICICIPRULI:BULLISH": {
+    "candle_time": "2026-07-31 13:45:00+05:30",
+    "alerted_at": "2026-07-31T08:18:45.470155"
   }
 }
