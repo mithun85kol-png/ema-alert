@@ -1,16 +1,19 @@
 """
-EMA9/EMA20 line crossover with a volume confirmation: alert fires only
-when BOTH conditions hold on the latest closed candle —
+EMA9/EMA20 line crossover with volume and trend confirmation: alert fires
+only when ALL of these hold on the latest closed candle —
   1. EMA9 crosses EMA20 (matching the visual cross point on the chart)
   2. The crossing candle's volume is higher than the previous candle's
      volume (confirms real participation behind the move)
+  3. The cross direction agrees with the broader trend (EMA50) — a
+     bullish cross is ignored if the stock is in a downtrend, and a
+     bearish cross is ignored if the stock is in an uptrend
 — and is further confirmed by a strong candle in the cross direction.
 Fires for stocks, indices, and commodities alike — no separate rule per
 instrument type.
 
-RSI, EMA50-based trend, volume-vs-previous-candle %, and Camarilla R3/S3
-pivot proximity are attached to the signal as informational fields only.
-They are shown in the alert message but never block it from firing.
+RSI, volume-vs-previous-candle %, and Camarilla R3/S3 pivot proximity
+are attached to the signal as informational fields only. They are shown
+in the alert message but never block it from firing.
 """
 
 import config
@@ -43,7 +46,7 @@ def check_signal(df, symbol, r3=None, s3=None):
     if not (bullish_cross or bearish_cross):
         return None
 
-    # Condition 2 (NEW): current candle's volume must be higher than the
+    # Condition 2: crossing candle's volume must be higher than the
     # previous candle's volume.
     if curr["volume"] <= prev["volume"]:
         return None
@@ -51,10 +54,16 @@ def check_signal(df, symbol, r3=None, s3=None):
     direction = "BULLISH" if bullish_cross else "BEARISH"
     bullish = bullish_cross
 
+    # Condition 3 (NEW): cross direction must agree with the broader
+    # trend (EMA50) — skip a bullish cross in a downtrend, and a
+    # bearish cross in an uptrend.
+    stock_trend = "BULLISH" if curr["close"] > curr["ema_trend"] else "BEARISH"
+    if direction != stock_trend:
+        return None
+
     if not is_strong_candle(curr, config.STRONG_CANDLE_BODY_RATIO, bullish=bullish):
         return None
 
-    stock_trend = "BULLISH" if curr["close"] > curr["ema_trend"] else "BEARISH"
     vol_change_pct = volume_vs_previous(df)
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
 
