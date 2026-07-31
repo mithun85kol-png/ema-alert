@@ -182,5 +182,41 @@
   "POLYCAB:BULLISH": {
     "candle_time": "2026-07-31 11:57:00+05:30",
     "alerted_at": "2026-07-31T06:31:05.078148"
+  },
+  "MARUTI:BULLISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:37.247131"
+  },
+  "MCX:BULLISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:37.873871"
+  },
+  "IRFC:BULLISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:38.542626"
+  },
+  "PNBHOUSING:BULLISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:39.295432"
+  },
+  "IOC:BULLISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:39.908371"
+  },
+  "MOTILALOFS:BEARISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:40.455706"
+  },
+  "ASHOKLEY:BULLISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:41.005635"
+  },
+  "CGPOWER:BULLISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:41.561799"
+  },
+  "GLENMARK:BEARISH": {
+    "candle_time": "2026-07-31 12:00:00+05:30",
+    "alerted_at": "2026-07-31T06:35:42.113725"
   }
 }
