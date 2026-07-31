@@ -1,14 +1,21 @@
 """
-EMA9/EMA20 line crossover: alert fires when EMA9 crosses EMA20 on the
-latest closed candle (matching the visual cross point on the chart),
-confirmed ONLY by a strong candle in the cross direction. Fires for
-stocks, indices, and commodities alike — no separate rule per
+EMA9/EMA20 line crossover with trend confirmation: alert fires only when
+ALL of these hold on the latest closed candle —
+  1. EMA9 crosses EMA20 (matching the visual cross point on the chart)
+  2. The crossing candle is strong in the cross direction
+  3. EMA9/EMA20 are a meaningful distance apart at the moment of
+     crossover (filters out whipsaw crosses that are invisible on the
+     chart, e.g. 0.005% apart)
+  4. The cross direction agrees with the broader trend (EMA50) — a
+     bullish cross only fires if the stock is in an uptrend, and a
+     bearish cross only fires if the stock is in a downtrend
+Fires for stocks, indices, and commodities alike — no separate rule per
 instrument type.
 
-RSI, volume-vs-previous-candle %, EMA50-based trend, candle patterns,
-and Camarilla R3/S3 pivot proximity are attached to the signal as
-informational fields only. They are shown in the alert message but
-never block it from firing.
+RSI, volume-vs-previous-candle %, candle patterns, and Camarilla R3/S3
+pivot proximity are attached to the signal as informational fields
+only. They are shown in the alert message but never block it from
+firing.
 """
 
 import config
@@ -34,8 +41,7 @@ def check_signal(df, symbol, r3=None, s3=None):
     curr = df.iloc[-1]
     prev = df.iloc[-2]
 
-    # Condition 1 (only firing condition, aside from candle strength):
-    # true EMA9/EMA20 line crossover.
+    # Condition 1: true EMA9/EMA20 line crossover.
     bullish_cross = prev["ema_fast"] <= prev["ema_slow"] and curr["ema_fast"] > curr["ema_slow"]
     bearish_cross = prev["ema_fast"] >= prev["ema_slow"] and curr["ema_fast"] < curr["ema_slow"]
 
@@ -45,19 +51,35 @@ def check_signal(df, symbol, r3=None, s3=None):
     direction = "BULLISH" if bullish_cross else "BEARISH"
     bullish = bullish_cross
 
+    # Condition 2: candle must be strong in the cross direction.
     if not is_strong_candle(curr, config.STRONG_CANDLE_BODY_RATIO, bullish=bullish):
         return None
 
-    # Volume and trend are informational only now — computed for the
-    # message but no longer able to block a signal from firing.
+    # Condition 3: EMA9/EMA20 must actually be a meaningful distance
+    # apart on this candle, not just touching. Without this, sideways/
+    # choppy price action produces "crosses" where the two lines are
+    # 0.005-0.01% apart — mathematically a cross, but invisible on the
+    # chart and not a real signal.
+    close_price = float(curr["close"])
+    ema_gap_pct = abs(float(curr["ema_fast"]) - float(curr["ema_slow"])) / close_price * 100
+    if ema_gap_pct < config.MIN_EMA_CROSS_GAP_PCT:
+        return None
+
+    # Condition 4 (MANDATORY): cross direction must agree with the
+    # broader trend (EMA50) — a bullish cross only fires in an uptrend,
+    # a bearish cross only fires in a downtrend.
     stock_trend = "BULLISH" if curr["close"] > curr["ema_trend"] else "BEARISH"
+    if direction != stock_trend:
+        return None
+
+    # Volume is informational only — computed for the message but does
+    # not block a signal from firing.
     vol_change_pct = volume_vs_previous(df)
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
 
     cross_pattern = detect_candle_pattern(curr)
     prev_pattern = detect_candle_pattern(prev)
 
-    close_price = float(curr["close"])
     pivot_note = None
     if r3 is not None and s3 is not None:
         if close_price >= r3:
