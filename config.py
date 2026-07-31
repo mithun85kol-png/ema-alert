@@ -16,7 +16,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ---------- Timeframe ----------
-CANDLE_INTERVAL = "5minute"   # Upstox intraday candle unit
+CANDLE_INTERVAL = "3minute"   # Upstox intraday candle unit
 LOOKBACK_CANDLES = 60         # enough history for EMA20 + RSI14 + volume avg to warm up
 
 # ---------- Fetching ----------
@@ -31,6 +31,12 @@ RSI_BEARISH_MAX = 45          # unused by current strategy.py (informational-onl
 VOLUME_AVG_PERIOD = 20
 VOLUME_MULTIPLIER = 1.3       # unused by current strategy.py (informational-only design); kept for reference
 STRONG_CANDLE_BODY_RATIO = 0.30  # candle body must be >= 30% of the candle's high-low range
+
+# Minimum distance between EMA9 and EMA20 at the moment of crossover,
+# as a % of close price. Filters out "whipsaw" crosses where the two
+# lines are essentially touching (e.g. 0.005% apart) — those aren't
+# visible as a real cross on the chart and are just noise.
+MIN_EMA_CROSS_GAP_PCT = 0.05
 
 # ---------- Indices (cash/index segment, no expiry) ----------
 INDICES = {
