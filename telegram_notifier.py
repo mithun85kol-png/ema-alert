@@ -29,8 +29,16 @@ def send_alert(signal):
     else:
         vol_note = f"({abs(vol_change):.1f}% lower than previous ⬇️)"
 
+    r3 = signal.get("r3")
+    s3 = signal.get("s3")
     pivot_note = signal.get("pivot_note")
-    pivot_line = f"Pivot: {pivot_note}\n" if pivot_note else ""
+
+    if r3 is not None and s3 is not None:
+        pivot_block = f"R3: {r3}  S3: {s3}\n"
+        if pivot_note:
+            pivot_block += f"Pivot: {pivot_note}\n"
+    else:
+        pivot_block = ""
 
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
@@ -40,7 +48,7 @@ def send_alert(signal):
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"Trend: {trend_label} {trend_icon}\n"
         f"Volume: {volume_str} {vol_note}\n"
-        f"{pivot_line}"
+        f"{pivot_block}"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
         f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
     )
