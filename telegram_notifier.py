@@ -42,7 +42,7 @@ def send_alert(signal):
 
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
-        f"Timeframe: 5-min | {date_part} {time_part}\n"
+        f"Timeframe: 3-min | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
