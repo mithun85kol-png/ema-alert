@@ -126,5 +126,25 @@
   "BLUESTARCO:BULLISH": {
     "candle_time": "2026-07-30 15:25:00+05:30",
     "alerted_at": "2026-07-30T09:59:54.924620"
+  },
+  "MANAPPURAM:BEARISH": {
+    "candle_time": "2026-07-31 11:48:00+05:30",
+    "alerted_at": "2026-07-31T06:23:15.869343"
+  },
+  "LODHA:BEARISH": {
+    "candle_time": "2026-07-31 11:48:00+05:30",
+    "alerted_at": "2026-07-31T06:23:16.579933"
+  },
+  "DLF:BULLISH": {
+    "candle_time": "2026-07-31 11:48:00+05:30",
+    "alerted_at": "2026-07-31T06:23:17.458052"
+  },
+  "KFINTECH:BULLISH": {
+    "candle_time": "2026-07-31 11:48:00+05:30",
+    "alerted_at": "2026-07-31T06:23:18.178442"
+  },
+  "GLENMARK:BULLISH": {
+    "candle_time": "2026-07-31 11:48:00+05:30",
+    "alerted_at": "2026-07-31T06:23:19.035484"
   }
 }
