@@ -146,5 +146,33 @@
   "GLENMARK:BULLISH": {
     "candle_time": "2026-07-31 11:48:00+05:30",
     "alerted_at": "2026-07-31T06:23:19.035484"
+  },
+  "PRESTIGE:BEARISH": {
+    "candle_time": "2026-07-31 11:51:00+05:30",
+    "alerted_at": "2026-07-31T06:25:36.494234"
+  },
+  "PHOENIXLTD:BEARISH": {
+    "candle_time": "2026-07-31 11:51:00+05:30",
+    "alerted_at": "2026-07-31T06:25:37.080985"
+  },
+  "ABB:BULLISH": {
+    "candle_time": "2026-07-31 11:51:00+05:30",
+    "alerted_at": "2026-07-31T06:25:37.594113"
+  },
+  "DLF:BEARISH": {
+    "candle_time": "2026-07-31 11:51:00+05:30",
+    "alerted_at": "2026-07-31T06:25:38.164279"
+  },
+  "KFINTECH:BEARISH": {
+    "candle_time": "2026-07-31 11:51:00+05:30",
+    "alerted_at": "2026-07-31T06:25:38.777178"
+  },
+  "ASHOKLEY:BEARISH": {
+    "candle_time": "2026-07-31 11:51:00+05:30",
+    "alerted_at": "2026-07-31T06:25:39.322184"
+  },
+  "ICICIBANK:BEARISH": {
+    "candle_time": "2026-07-31 11:51:00+05:30",
+    "alerted_at": "2026-07-31T06:25:39.803872"
   }
 }
