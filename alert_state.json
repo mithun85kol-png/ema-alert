@@ -242,5 +242,25 @@
   "SIEMENS:BEARISH": {
     "candle_time": "2026-07-31 12:06:00+05:30",
     "alerted_at": "2026-07-31T06:40:51.677398"
+  },
+  "NIFTY BANK:BULLISH": {
+    "candle_time": "2026-07-31 12:12:00+05:30",
+    "alerted_at": "2026-07-31T06:45:45.988351"
+  },
+  "PNB:BULLISH": {
+    "candle_time": "2026-07-31 12:12:00+05:30",
+    "alerted_at": "2026-07-31T06:45:46.509606"
+  },
+  "LAURUSLABS:BEARISH": {
+    "candle_time": "2026-07-31 12:12:00+05:30",
+    "alerted_at": "2026-07-31T06:45:47.261352"
+  },
+  "NBCC:BULLISH": {
+    "candle_time": "2026-07-31 12:12:00+05:30",
+    "alerted_at": "2026-07-31T06:45:47.759358"
+  },
+  "UNIONBANK:BULLISH": {
+    "candle_time": "2026-07-31 12:12:00+05:30",
+    "alerted_at": "2026-07-31T06:45:48.344398"
   }
 }
