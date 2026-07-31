@@ -218,5 +218,29 @@
   "GLENMARK:BEARISH": {
     "candle_time": "2026-07-31 12:00:00+05:30",
     "alerted_at": "2026-07-31T06:35:42.113725"
+  },
+  "BIOCON:BULLISH": {
+    "candle_time": "2026-07-31 12:06:00+05:30",
+    "alerted_at": "2026-07-31T06:40:47.818779"
+  },
+  "UNOMINDA:BULLISH": {
+    "candle_time": "2026-07-31 12:06:00+05:30",
+    "alerted_at": "2026-07-31T06:40:48.546892"
+  },
+  "TECHM:BULLISH": {
+    "candle_time": "2026-07-31 12:06:00+05:30",
+    "alerted_at": "2026-07-31T06:40:49.254036"
+  },
+  "RADICO:BULLISH": {
+    "candle_time": "2026-07-31 12:06:00+05:30",
+    "alerted_at": "2026-07-31T06:40:50.192052"
+  },
+  "INDIANB:BULLISH": {
+    "candle_time": "2026-07-31 12:06:00+05:30",
+    "alerted_at": "2026-07-31T06:40:50.859620"
+  },
+  "SIEMENS:BEARISH": {
+    "candle_time": "2026-07-31 12:06:00+05:30",
+    "alerted_at": "2026-07-31T06:40:51.677398"
   }
 }
