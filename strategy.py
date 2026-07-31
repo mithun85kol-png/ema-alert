@@ -95,6 +95,33 @@ def check_signal(df, symbol, r3=None, s3=None):
     }
 
 
+def debug_ema_gap(df, symbol):
+    """
+    Debug helper only — NOT used in the firing decision. Returns how far
+    apart EMA9/EMA20 are on the latest closed candle, as a % of price, so
+    you can see in the Action logs which instruments are "close" to a
+    cross even when none has fired yet.
+    """
+    if len(df) < config.EMA_SLOW + 2:
+        return None
+
+    df = add_emas(df, config.EMA_FAST, config.EMA_SLOW)
+    curr = df.iloc[-1]
+
+    ema_fast = float(curr["ema_fast"])
+    ema_slow = float(curr["ema_slow"])
+    close_price = float(curr["close"])
+    gap_pct = abs(ema_fast - ema_slow) / close_price * 100
+
+    return {
+        "symbol": symbol,
+        "ema_fast": round(ema_fast, 2),
+        "ema_slow": round(ema_slow, 2),
+        "gap_pct": round(gap_pct, 3),
+        "leaning": "BULLISH (EMA9 above)" if ema_fast > ema_slow else "BEARISH (EMA9 below)",
+    }
+
+
 def pd_isna(val):
     import pandas as pd
     return pd.isna(val)
