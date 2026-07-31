@@ -1,7 +1,7 @@
 """
 NOTE: verify Upstox's intraday endpoint/interval support against current
 docs before relying on this — API versions change. This pulls 1-minute
-candles and resamples to 5-minute locally.
+candles and resamples to 3-minute locally.
 
 NOTE: the daily-candle endpoint used for Camarilla R3/S3 pivots is built
 by analogy with the intraday endpoint below — verify the exact path
@@ -20,7 +20,7 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signal
+from strategy import check_signal, debug_ema_gap
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
@@ -68,12 +68,38 @@ def fetch_1min_candles(instrument_key):
     return df
 
 
-def resample_5min(df):
+def resample_3min(df):
     df = df.set_index("timestamp")
-    out = df.resample("5min").agg({
+    out = df.resample("3min").agg({
         "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
     }).dropna().reset_index()
     return out
+
+
+def drop_unclosed_candle(df3, now_ist):
+    """
+    The last row of a 3-min resample can be a still-forming candle if the
+    current 1-min data doesn't yet cover the full 3-min bucket (e.g. it's
+    14:01 and we only have 14:00-14:01 of data resampled into a "14:00"
+    candle). Using that incomplete candle as the latest candle produces
+    EMA values that don't match the final, fully-closed EMA — which is
+    exactly the mismatch between the alert and the chart.
+
+    A 3-min candle starting at `ts` is only closed once now_ist >=
+    ts + 3min. Drop the last row if it isn't closed yet.
+    """
+    if df3.empty:
+        return df3
+
+    last_ts = df3.iloc[-1]["timestamp"]
+    if last_ts.tzinfo is None:
+        last_ts = last_ts.tz_localize(IST)
+
+    candle_close_time = last_ts + dt.timedelta(minutes=3)
+    if now_ist < candle_close_time:
+        df3 = df3.iloc[:-1].reset_index(drop=True)
+
+    return df3
 
 
 def fetch_prev_day_ohlc(instrument_key):
@@ -199,7 +225,9 @@ def run():
         raw = fetch_1min_candles(instrument_key)
         if raw is None or len(raw) < 30:
             return symbol, None
-        return symbol, resample_5min(raw)
+        df3 = resample_3min(raw)
+        df3 = drop_unclosed_candle(df3, now_ist)
+        return symbol, df3
 
     with ThreadPoolExecutor(max_workers=config.FETCH_WORKERS) as pool:
         futures = {
@@ -209,19 +237,19 @@ def run():
         for future in as_completed(futures):
             symbol = futures[future]
             try:
-                sym, df5 = future.result()
-                if df5 is not None:
-                    dfs[sym] = df5
+                sym, df3 = future.result()
+                if df3 is not None:
+                    dfs[sym] = df3
             except Exception as e:
                 print(f"Error fetching {symbol}: {e}")
 
-    for symbol, df5 in dfs.items():
+    for symbol, df3 in dfs.items():
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
 
-            signal = check_signal(df5, symbol, r3=r3, s3=s3)
+            signal = check_signal(df3, symbol, r3=r3, s3=s3)
             if signal is None:
                 continue
 
@@ -234,6 +262,27 @@ def run():
 
         except Exception as e:
             print(f"Error on {symbol}: {e}")
+
+    # Debug visibility: show the instruments whose EMA9/EMA20 are
+    # currently closest together, even though none of them crossed this
+    # run. Helps confirm the scanner is working when 0 alerts fire.
+    gaps = []
+    for symbol, df3 in dfs.items():
+        try:
+            g = debug_ema_gap(df3, symbol)
+            if g is not None:
+                gaps.append(g)
+        except Exception:
+            pass
+
+    if gaps:
+        gaps.sort(key=lambda g: g["gap_pct"])
+        print("Closest to an EMA9/EMA20 cross this run (top 5):")
+        for g in gaps[:5]:
+            print(
+                f"  {g['symbol']}: EMA9={g['ema_fast']} EMA20={g['ema_slow']} "
+                f"gap={g['gap_pct']}%  {g['leaning']}"
+            )
 
     state.save_state(saved_state)
     print(f"Done. {alerts_sent} alert(s) sent.")
