@@ -262,5 +262,29 @@
   "UNIONBANK:BULLISH": {
     "candle_time": "2026-07-31 12:12:00+05:30",
     "alerted_at": "2026-07-31T06:45:48.344398"
+  },
+  "ICICIPRULI:BEARISH": {
+    "candle_time": "2026-07-31 12:15:00+05:30",
+    "alerted_at": "2026-07-31T06:50:56.868085"
+  },
+  "COALINDIA:BULLISH": {
+    "candle_time": "2026-07-31 12:15:00+05:30",
+    "alerted_at": "2026-07-31T06:50:57.684382"
+  },
+  "APLAPOLLO:BULLISH": {
+    "candle_time": "2026-07-31 12:15:00+05:30",
+    "alerted_at": "2026-07-31T06:50:58.421239"
+  },
+  "ZYDUSLIFE:BEARISH": {
+    "candle_time": "2026-07-31 12:15:00+05:30",
+    "alerted_at": "2026-07-31T06:50:59.098849"
+  },
+  "SUPREMEIND:BULLISH": {
+    "candle_time": "2026-07-31 12:15:00+05:30",
+    "alerted_at": "2026-07-31T06:50:59.857975"
+  },
+  "DELHIVERY:BULLISH": {
+    "candle_time": "2026-07-31 12:15:00+05:30",
+    "alerted_at": "2026-07-31T06:51:00.649804"
   }
 }
