@@ -35,7 +35,7 @@ IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 STOCK_SESSION_START = dt.time(9, 15)
 STOCK_SESSION_END = dt.time(15, 30)
 
-# Commodity (MCX) session — now matches the stock session window.
+# Commodity (MCX) session — matches the stock session window.
 COMMODITY_SESSION_START = dt.time(9, 15)
 COMMODITY_SESSION_END = dt.time(15, 30)
 
@@ -83,7 +83,7 @@ def drop_unclosed_candle(df3, now_ist):
     14:01 and we only have 14:00-14:01 of data resampled into a "14:00"
     candle). Using that incomplete candle as the latest candle produces
     EMA values that don't match the final, fully-closed EMA — which is
-    exactly the mismatch between the alert and the chart.
+    exactly the kind of mismatch between the alert and the chart.
 
     A 3-min candle starting at `ts` is only closed once now_ist >=
     ts + 3min. Drop the last row if it isn't closed yet.
