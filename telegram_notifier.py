@@ -78,6 +78,27 @@ def send_alert(signal):
     else:
         pivot_block = ""
 
+    # 75-min informative trend — purely contextual, never blocks the
+    # 3-min signal from firing. Only shown when trend_75min was
+    # successfully computed and attached to the signal (see main.py).
+    # Flags agreement/disagreement with the 3-min cross direction so
+    # it's easy to spot at a glance.
+    trend_75 = signal.get("trend_75min")
+    trend_75_block = ""
+    if trend_75:
+        bias_75 = trend_75.get("bias")
+        candles_since = trend_75.get("candles_since_cross")
+        agree_icon = "✅" if bias_75 == direction else "⚠️"
+        if candles_since is not None:
+            cross_note = f"crossed {candles_since} candle(s) ago" if candles_since > 0 else "crossed this candle"
+        else:
+            cross_note = "no recent cross"
+        trend_75_block = (
+            f"────────────────\n"
+            f"75-min trend (info): {bias_75} {agree_icon} ({cross_note})\n"
+            f"────────────────\n"
+        )
+
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
         f"{fno_line}"
@@ -90,6 +111,7 @@ def send_alert(signal):
         f"Volume: {volume_str}{vol_note}\n"
         f"{pcr_line}"
         f"{pivot_block}"
+        f"{trend_75_block}"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
         f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
     )
