@@ -15,6 +15,13 @@ run (no separate cron job / workflow):
           strategy, fetched in small batches to avoid Upstox rate-limits,
           with its own separate state file so it can never collide with
           the existing scan's alert de-dup state.
+
+75-min informative trend (added): every fetched instrument's raw 1-min
+data is ALSO resampled to 75-min locally (no extra API call) and passed
+through strategy.get_75min_trend_info(), which is filter-free and never
+blocks a signal from firing. The result is attached to each signal dict
+as signal["trend_75min"] before send_alert() so it shows up as a
+purely-informational block in the Telegram message.
 """
 
 import sys
@@ -29,7 +36,7 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signals, debug_ema_gap
+from strategy import check_signals, debug_ema_gap, get_75min_trend_info
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
@@ -93,30 +100,45 @@ def resample_3min(df):
     return out
 
 
-def drop_unclosed_candle(df3, now_ist):
+def resample_75min(df):
     """
-    The last row of a 3-min resample can be a still-forming candle if the
-    current 1-min data doesn't yet cover the full 3-min bucket (e.g. it's
+    Same resampling as resample_3min, just on a 75-minute bucket.
+    Used only for the informative 75-min trend check — never affects
+    the 3-min signal-firing logic itself.
+    """
+    df = df.set_index("timestamp")
+    out = df.resample("75min").agg({
+        "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
+    }).dropna().reset_index()
+    return out
+
+
+def drop_unclosed_candle(df, now_ist, candle_minutes=3):
+    """
+    The last row of a resample can be a still-forming candle if the
+    current 1-min data doesn't yet cover the full bucket (e.g. it's
     14:01 and we only have 14:00-14:01 of data resampled into a "14:00"
     candle). Using that incomplete candle as the latest candle produces
     EMA values that don't match the final, fully-closed EMA — which is
     exactly the kind of mismatch between the alert and the chart.
 
-    A 3-min candle starting at `ts` is only closed once now_ist >=
-    ts + 3min. Drop the last row if it isn't closed yet.
+    A candle starting at `ts` with bucket size `candle_minutes` is only
+    closed once now_ist >= ts + candle_minutes. Drop the last row if it
+    isn't closed yet. candle_minutes defaults to 3 (3-min scan); pass 75
+    when checking the 75-min resample.
     """
-    if df3.empty:
-        return df3
+    if df.empty:
+        return df
 
-    last_ts = df3.iloc[-1]["timestamp"]
+    last_ts = df.iloc[-1]["timestamp"]
     if last_ts.tzinfo is None:
         last_ts = last_ts.tz_localize(IST)
 
-    candle_close_time = last_ts + dt.timedelta(minutes=3)
+    candle_close_time = last_ts + dt.timedelta(minutes=candle_minutes)
     if now_ist < candle_close_time:
-        df3 = df3.iloc[:-1].reset_index(drop=True)
+        df = df.iloc[:-1].reset_index(drop=True)
 
-    return df3
+    return df
 
 
 def fetch_prev_day_ohlc(instrument_key):
@@ -314,20 +336,28 @@ def build_watchlist(now_ist=None):
 
 
 def _fetch_and_resample_one(symbol, instrument_key, now_ist):
+    """
+    Returns (symbol, df3, df75) — df3 drives the actual 3-min signal
+    logic (unchanged); df75 is the same raw 1-min data resampled to
+    75-min, used only for the informative trend check. Both come from a
+    single API call, so this adds no extra Upstox requests.
+    """
     raw = fetch_1min_candles(instrument_key)
     if raw is None or len(raw) < 30:
-        return symbol, None
+        return symbol, None, None
     df3 = resample_3min(raw)
-    df3 = drop_unclosed_candle(df3, now_ist)
-    return symbol, df3
+    df3 = drop_unclosed_candle(df3, now_ist, candle_minutes=3)
+    df75 = resample_75min(raw)
+    df75 = drop_unclosed_candle(df75, now_ist, candle_minutes=75)
+    return symbol, df3, df75
 
 
 def fetch_all(watchlist, now_ist, workers):
     """
-    Fetches + resamples 1-min candles -> 3-min for every instrument in
-    watchlist, concurrently (up to `workers` threads). Returns
-    {symbol: df3}, skipping any instrument whose fetch failed or that
-    doesn't have enough history yet.
+    Fetches + resamples 1-min candles -> 3-min (and 75-min) for every
+    instrument in watchlist, concurrently (up to `workers` threads).
+    Returns {symbol: (df3, df75)}, skipping any instrument whose fetch
+    failed or that doesn't have enough history yet.
     """
     dfs = {}
     with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -338,9 +368,9 @@ def fetch_all(watchlist, now_ist, workers):
         for future in as_completed(futures):
             symbol = futures[future]
             try:
-                sym, df3 = future.result()
+                sym, df3, df75 = future.result()
                 if df3 is not None:
-                    dfs[sym] = df3
+                    dfs[sym] = (df3, df75)
             except Exception as e:
                 print(f"Error fetching {symbol}: {e}")
     return dfs
@@ -393,7 +423,7 @@ def run_fo_scan(now_ist):
 
     dfs = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
 
-    for symbol, df3 in dfs.items():
+    for symbol, (df3, df75) in dfs.items():
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
@@ -416,6 +446,13 @@ def run_fo_scan(now_ist):
                         pcr_cache_this_run[symbol] = fetch_pcr(watchlist[symbol])
                     signal["pcr"] = pcr_cache_this_run[symbol]
 
+                # 75-min informative trend — never blocks the alert;
+                # get_75min_trend_info returns None if there isn't
+                # enough 75-min history yet, in which case no 75-min
+                # block is shown on the message.
+                if df75 is not None:
+                    signal["trend_75min"] = get_75min_trend_info(df75, symbol)
+
                 send_alert(signal)
                 state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
                 alerts_sent += 1
@@ -427,7 +464,7 @@ def run_fo_scan(now_ist):
     # currently closest together, even though none of them crossed this
     # run. Helps confirm the scanner is working when 0 alerts fire.
     gaps = []
-    for symbol, df3 in dfs.items():
+    for symbol, (df3, df75) in dfs.items():
         try:
             g = debug_ema_gap(df3, symbol)
             if g is not None:
@@ -484,7 +521,7 @@ def run_nifty500_scan(now_ist):
     saved_state = state.load_state(config.NIFTY500_STATE_FILE)
     alerts_sent = 0
 
-    for symbol, df3 in dfs.items():
+    for symbol, (df3, df75) in dfs.items():
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
@@ -498,6 +535,11 @@ def run_nifty500_scan(now_ist):
                 # F&O flag: tells the Telegram message whether this
                 # Nifty 500 stock also trades in F&O, or is cash-only.
                 signal["is_fno"] = symbol.upper() in fno_underlyings
+
+                # 75-min informative trend — same as Step 1, never
+                # blocks the alert.
+                if df75 is not None:
+                    signal["trend_75min"] = get_75min_trend_info(df75, symbol)
 
                 send_alert(signal)
                 state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
