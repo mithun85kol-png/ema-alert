@@ -6,6 +6,15 @@ candles and resamples to 3-minute locally.
 NOTE: the daily-candle endpoint used for Camarilla R3/S3 pivots is built
 by analogy with the intraday endpoint below — verify the exact path
 against current Upstox docs if pivot values look wrong.
+
+This script runs two scans back-to-back in the SAME 3-minute workflow
+run (no separate cron job / workflow):
+  Step 1: the existing ~50 F&O stock/index/commodity scan (unchanged).
+  Step 2: a new Nifty 500 (all ~500 stocks, cash/equity) scan, using the
+          exact same EMA9/20 + RSI + volume + trend + strong-candle
+          strategy, fetched in small batches to avoid Upstox rate-limits,
+          with its own separate state file so it can never collide with
+          the existing scan's alert de-dup state.
 """
 
 import sys
@@ -20,14 +29,22 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signal, debug_ema_gap
+from strategy import check_signals, debug_ema_gap
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
 UPSTOX_DAILY_URL = "https://api.upstox.com/v2/historical-candle/{instrument_key}/day/{to_date}/{from_date}"
 
+# NOTE: verify these two paths/params against current Upstox docs before
+# relying on them — used only to compute PCR (Put-Call Ratio) for
+# indices, an informational-only field, so a failure here never blocks
+# an alert (see fetch_pcr's try/except).
+UPSTOX_OPTION_CONTRACTS_URL = "https://api.upstox.com/v2/option/contract"
+UPSTOX_OPTION_CHAIN_URL = "https://api.upstox.com/v2/option/chain"
+
 PIVOT_CACHE_FILE = "pivot_cache.json"
+PCR_EXPIRY_CACHE_FILE = "pcr_expiry_cache.json"
 
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 
@@ -143,6 +160,101 @@ def save_pivot_cache(cache):
         json.dump(cache, f, indent=2)
 
 
+def _load_pcr_expiry_cache():
+    try:
+        with open(PCR_EXPIRY_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"date": None, "expiries": {}}
+
+
+def _save_pcr_expiry_cache(cache):
+    with open(PCR_EXPIRY_CACHE_FILE, "w") as f:
+        json.dump(cache, f, indent=2)
+
+
+def get_nearest_option_expiry(instrument_key):
+    """
+    Returns the nearest (>= today) expiry date string for the given
+    index's option chain, using Upstox's option-contracts endpoint.
+    Cached once per calendar day, since expiries don't change intraday.
+    Returns None if the lookup fails for any reason.
+    """
+    cache = _load_pcr_expiry_cache()
+    today_str = _now_ist().date().isoformat()
+    if cache.get("date") != today_str:
+        cache = {"date": today_str, "expiries": {}}
+
+    if instrument_key in cache["expiries"]:
+        return cache["expiries"][instrument_key]
+
+    headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
+    resp = requests.get(
+        UPSTOX_OPTION_CONTRACTS_URL,
+        headers=headers,
+        params={"instrument_key": instrument_key},
+        timeout=20,
+    )
+    resp.raise_for_status()
+    payload = resp.json()
+    contracts = payload.get("data", [])
+    if not contracts:
+        return None
+
+    today = dt.date.today()
+    expiries = {c.get("expiry") for c in contracts if c.get("expiry")}
+    upcoming = sorted(e for e in expiries if dt.date.fromisoformat(e) >= today)
+    if not upcoming:
+        return None
+
+    nearest = upcoming[0]
+    cache["expiries"][instrument_key] = nearest
+    _save_pcr_expiry_cache(cache)
+    return nearest
+
+
+def fetch_pcr(instrument_key):
+    """
+    Computes Put-Call Ratio (total Put OI / total Call OI) for an
+    index's nearest-expiry option chain. Informational only — returns
+    None (never raises) if anything about the lookup fails, so a PCR
+    fetch problem can never block or delay an alert from being sent.
+    """
+    try:
+        expiry = get_nearest_option_expiry(instrument_key)
+        if not expiry:
+            return None
+
+        headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
+        resp = requests.get(
+            UPSTOX_OPTION_CHAIN_URL,
+            headers=headers,
+            params={"instrument_key": instrument_key, "expiry_date": expiry},
+            timeout=20,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+        chain = payload.get("data", [])
+        if not chain:
+            return None
+
+        total_call_oi = 0
+        total_put_oi = 0
+        for row in chain:
+            call_md = (row.get("call_options") or {}).get("market_data") or {}
+            put_md = (row.get("put_options") or {}).get("market_data") or {}
+            total_call_oi += call_md.get("oi", 0) or 0
+            total_put_oi += put_md.get("oi", 0) or 0
+
+        if total_call_oi <= 0:
+            return None
+
+        return round(total_put_oi / total_call_oi, 2)
+    except Exception as e:
+        print(f"PCR fetch failed for {instrument_key}: {e}")
+        return None
+
+
 def build_pivot_levels(watchlist):
     """
     Returns {symbol: {"r3": ..., "s3": ...}} for every symbol in the
@@ -201,37 +313,26 @@ def build_watchlist(now_ist=None):
     return watchlist
 
 
-def run():
-    if not config.UPSTOX_ACCESS_TOKEN:
-        print("UPSTOX_ACCESS_TOKEN not set — aborting.")
-        sys.exit(1)
+def _fetch_and_resample_one(symbol, instrument_key, now_ist):
+    raw = fetch_1min_candles(instrument_key)
+    if raw is None or len(raw) < 30:
+        return symbol, None
+    df3 = resample_3min(raw)
+    df3 = drop_unclosed_candle(df3, now_ist)
+    return symbol, df3
 
-    now_ist = _now_ist()
-    if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
-        print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.")
-        return
 
-    watchlist = build_watchlist(now_ist)
-    print(f"Scanning {len(watchlist)} instruments...")
-
-    pivots = build_pivot_levels(watchlist)
-
-    saved_state = state.load_state()
-    alerts_sent = 0
-
+def fetch_all(watchlist, now_ist, workers):
+    """
+    Fetches + resamples 1-min candles -> 3-min for every instrument in
+    watchlist, concurrently (up to `workers` threads). Returns
+    {symbol: df3}, skipping any instrument whose fetch failed or that
+    doesn't have enough history yet.
+    """
     dfs = {}
-
-    def _fetch_one(symbol, instrument_key):
-        raw = fetch_1min_candles(instrument_key)
-        if raw is None or len(raw) < 30:
-            return symbol, None
-        df3 = resample_3min(raw)
-        df3 = drop_unclosed_candle(df3, now_ist)
-        return symbol, df3
-
-    with ThreadPoolExecutor(max_workers=config.FETCH_WORKERS) as pool:
+    with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(_fetch_one, symbol, instrument_key): symbol
+            pool.submit(_fetch_and_resample_one, symbol, instrument_key, now_ist): symbol
             for symbol, instrument_key in watchlist.items()
         }
         for future in as_completed(futures):
@@ -242,6 +343,55 @@ def run():
                     dfs[sym] = df3
             except Exception as e:
                 print(f"Error fetching {symbol}: {e}")
+    return dfs
+
+
+def _chunked(items_dict, size):
+    items = list(items_dict.items())
+    for i in range(0, len(items), size):
+        yield dict(items[i:i + size])
+
+
+def fetch_all_batched(watchlist, now_ist, batch_size, workers, delay_seconds):
+    """
+    Same as fetch_all, but splits watchlist into sequential batches of
+    `batch_size` with a `delay_seconds` pause between batches, so a
+    500-instrument scan doesn't fire hundreds of concurrent requests at
+    Upstox in one burst and trip rate-limiting (429s).
+    """
+    dfs = {}
+    batches = list(_chunked(watchlist, batch_size))
+    total = len(batches)
+    for i, batch in enumerate(batches, start=1):
+        print(f"  [Nifty500] batch {i}/{total} ({len(batch)} instruments)...", flush=True)
+        dfs.update(fetch_all(batch, now_ist, workers))
+        if i < total:
+            time.sleep(delay_seconds)
+    return dfs
+
+
+# ---------------------------------------------------------------------
+# Step 1: existing ~50 F&O stock/index/commodity scan (unchanged logic)
+# ---------------------------------------------------------------------
+
+def run_fo_scan(now_ist):
+    watchlist = build_watchlist(now_ist)
+    print(f"Scanning {len(watchlist)} instruments...")
+
+    pivots = build_pivot_levels(watchlist)
+
+    saved_state = state.load_state()
+    alerts_sent = 0
+
+    # Used to set the "F&O: Yes/No" flag on stock signals only — indices
+    # (NIFTY 50, SENSEX...) and commodities (GOLD, SILVER...) aren't
+    # stocks, so they never get this flag (see non_stock_symbols below).
+    fno_underlyings = instruments.get_fno_underlyings()
+    non_stock_symbols = set(config.INDICES.keys()) | set(config.COMMODITIES.keys())
+    index_symbols = set(config.INDICES.keys())
+    pcr_cache_this_run = {}
+
+    dfs = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
 
     for symbol, df3 in dfs.items():
         try:
@@ -249,16 +399,26 @@ def run():
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
 
-            signal = check_signal(df3, symbol, r3=r3, s3=s3)
-            if signal is None:
-                continue
+            require_trend = symbol not in index_symbols
+            signals = check_signals(df3, symbol, r3=r3, s3=s3, require_trend_confirmation=require_trend)
+            for signal in signals:
+                if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
+                    continue
 
-            if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
-                continue
+                if symbol not in non_stock_symbols:
+                    signal["is_fno"] = symbol.upper() in fno_underlyings
 
-            send_alert(signal)
-            state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
-            alerts_sent += 1
+                if symbol in index_symbols:
+                    # PCR is informational only — fetch_pcr() never
+                    # raises, so a failed/blocked fetch just means no
+                    # PCR line on this alert, nothing more.
+                    if symbol not in pcr_cache_this_run:
+                        pcr_cache_this_run[symbol] = fetch_pcr(watchlist[symbol])
+                    signal["pcr"] = pcr_cache_this_run[symbol]
+
+                send_alert(signal)
+                state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
+                alerts_sent += 1
 
         except Exception as e:
             print(f"Error on {symbol}: {e}")
@@ -286,6 +446,86 @@ def run():
 
     state.save_state(saved_state)
     print(f"Done. {alerts_sent} alert(s) sent.")
+    return alerts_sent
+
+
+# ---------------------------------------------------------------------
+# Step 2: new Nifty 500 (all ~500 stocks, cash/equity) scan
+# ---------------------------------------------------------------------
+
+def run_nifty500_scan(now_ist):
+    if not _in_stock_session(now_ist):
+        # Nifty 500 is a cash/equity scan only — no commodity leg here.
+        return 0
+
+    watchlist = instruments.resolve_nifty500_list()
+    if not watchlist:
+        print("[Nifty500] Watchlist empty (fetch failed and no cache) — skipping this run.")
+        return 0
+
+    print(f"[Nifty500] Scanning {len(watchlist)} instruments in batches of {config.NIFTY500_BATCH_SIZE}...")
+
+    fno_underlyings = instruments.get_fno_underlyings()
+
+    pivots = {}
+    if config.NIFTY500_INCLUDE_PIVOTS:
+        pivots = build_pivot_levels(watchlist)
+
+    dfs = fetch_all_batched(
+        watchlist,
+        now_ist,
+        batch_size=config.NIFTY500_BATCH_SIZE,
+        workers=config.NIFTY500_FETCH_WORKERS,
+        delay_seconds=config.NIFTY500_BATCH_DELAY_SECONDS,
+    )
+
+    # Separate state file — never touches/overwrites the F&O scan's
+    # alert_state.json.
+    saved_state = state.load_state(config.NIFTY500_STATE_FILE)
+    alerts_sent = 0
+
+    for symbol, df3 in dfs.items():
+        try:
+            levels = pivots.get(symbol)
+            r3 = levels["r3"] if levels else None
+            s3 = levels["s3"] if levels else None
+
+            signals = check_signals(df3, symbol, r3=r3, s3=s3)
+            for signal in signals:
+                if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
+                    continue
+
+                # F&O flag: tells the Telegram message whether this
+                # Nifty 500 stock also trades in F&O, or is cash-only.
+                signal["is_fno"] = symbol.upper() in fno_underlyings
+
+                send_alert(signal)
+                state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
+                alerts_sent += 1
+
+        except Exception as e:
+            print(f"[Nifty500] Error on {symbol}: {e}")
+
+    state.save_state(saved_state, config.NIFTY500_STATE_FILE)
+    print(f"[Nifty500] Done. {alerts_sent} alert(s) sent.")
+    return alerts_sent
+
+
+def run():
+    if not config.UPSTOX_ACCESS_TOKEN:
+        print("UPSTOX_ACCESS_TOKEN not set — aborting.")
+        sys.exit(1)
+
+    now_ist = _now_ist()
+    if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
+        print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.")
+        return
+
+    # ---- Step 1: existing ~50 F&O stock/index/commodity scan ----
+    run_fo_scan(now_ist)
+
+    # ---- Step 2: Nifty 500 cash/equity scan (new) ----
+    run_nifty500_scan(now_ist)
 
 
 if __name__ == "__main__":
