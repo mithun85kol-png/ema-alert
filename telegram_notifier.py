@@ -21,6 +21,35 @@ def send_alert(signal):
     volume = signal["volume"]
     volume_str = f"{volume:,}"
 
+    vol_change = signal.get("vol_change_pct")
+    if vol_change is None:
+        vol_note = ""
+    elif vol_change > 0:
+        vol_note = " (Higher than previous ⬆️)"
+    elif vol_change < 0:
+        vol_note = " (Lower than previous ⬇️)"
+    else:
+        vol_note = " (Same as previous)"
+
+    # Informational trade-plan block: entry = cross candle close, stop
+    # loss = EMA20, target = trailing 15-min high (bullish) / low
+    # (bearish). Purely informational — not a recommendation, just the
+    # rule you asked to see spelled out on every alert.
+    entry = signal.get("entry")
+    stop_loss = signal.get("stop_loss")
+    target = signal.get("target")
+    risk_reward = signal.get("risk_reward")
+    target_label = "15-min High" if direction == "BULLISH" else "15-min Low"
+    trade_plan_block = ""
+    if entry is not None and stop_loss is not None and target is not None:
+        trade_plan_block = (
+            f"Entry: {entry}\n"
+            f"Stop Loss (EMA20): {stop_loss}\n"
+            f"Target ({target_label}): {target}\n"
+        )
+        if risk_reward is not None:
+            trade_plan_block += f"Risk:Reward = 1:{risk_reward}\n"
+
     # PCR (Put-Call Ratio) — informational only, present only on index
     # signals (see main.py). Not shown for stocks/commodities.
     pcr = signal.get("pcr")
@@ -55,9 +84,10 @@ def send_alert(signal):
         f"Timeframe: 3-min | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
+        f"{trade_plan_block}"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"Trend: {trend_label} {trend_icon}\n"
-        f"Volume: {volume_str}\n"
+        f"Volume: {volume_str}{vol_note}\n"
         f"{pcr_line}"
         f"{pivot_block}"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
