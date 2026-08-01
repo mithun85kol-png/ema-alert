@@ -97,6 +97,25 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
     cross_pattern = detect_candle_pattern(curr)
     prev_pattern = detect_candle_pattern(prev)
 
+    # Informational trade-plan fields — never affect whether a signal
+    # fires. Stop Loss = EMA20 on the cross candle. Target = the
+    # trailing 15-min (config.TARGET_LOOKBACK_CANDLES candles) high for
+    # a bullish entry, or the trailing 15-min low for a bearish entry.
+    window_start = max(0, idx - (config.TARGET_LOOKBACK_CANDLES - 1))
+    window = df.iloc[window_start:idx + 1]
+    if bullish:
+        target = float(window["high"].max())
+    else:
+        target = float(window["low"].min())
+    stop_loss = float(curr["ema_slow"])
+
+    # Risk:Reward, expressed as reward per 1 unit of risk (e.g. 2.35
+    # means "1 : 2.35"). None if risk is 0 (entry == stop loss), which
+    # can happen right at the cross when EMA20 == close.
+    risk = abs(close_price - stop_loss)
+    reward = abs(target - close_price)
+    risk_reward = round(reward / risk, 2) if risk > 0 else None
+
     pivot_note = None
     if r3 is not None and s3 is not None:
         if close_price >= r3:
@@ -117,6 +136,10 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
         "symbol": symbol,
         "direction": direction,
         "close": round(close_price, 2),
+        "entry": round(close_price, 2),
+        "stop_loss": round(stop_loss, 2),
+        "target": round(target, 2),
+        "risk_reward": risk_reward,
         "rsi": round(float(rsi_val), 1) if rsi_val is not None else None,
         "volume": int(curr["volume"]),
         "vol_avg": round(float(curr["vol_avg"]), 0) if not pd_isna(curr["vol_avg"]) else None,
