@@ -47,6 +47,12 @@ MIN_EMA_CROSS_GAP_PCT = 0.05
 # runs; each candle already alerted is never re-sent (see state.py).
 CROSS_LOOKBACK_CANDLES = 5
 
+# Informational trade-plan fields added to every alert: Stop Loss = EMA20
+# (on the cross candle), Target = highest high (bullish) / lowest low
+# (bearish) over the trailing window below. 5 candles x 3-min = 15
+# minutes, matching "entry on cross, target = last 15-min high/low".
+TARGET_LOOKBACK_CANDLES = 5
+
 # ---------- Indices (cash/index segment, no expiry) ----------
 INDICES = {
     "NIFTY 50": "Nifty 50",
