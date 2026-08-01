@@ -1,6 +1,6 @@
 """
-EMA9/EMA20 line crossover with trend confirmation: alert fires only when
-ALL of these hold on the latest closed candle —
+EMA9/EMA20 line crossover with trend confirmation: a signal fires for a
+given closed candle only when ALL of these hold on that candle —
   1. EMA9 crosses EMA20 (matching the visual cross point on the chart)
   2. The crossing candle is strong in the cross direction
   3. EMA9/EMA20 are a meaningful distance apart at the moment of
@@ -8,20 +8,34 @@ ALL of these hold on the latest closed candle —
      chart, e.g. 0.005% apart)
   4. The cross direction agrees with the broader trend (EMA50) — a
      bullish cross only fires if the stock is in an uptrend, and a
-     bearish cross only fires if the stock is in a downtrend
+     bearish cross only fires if the stock is in a downtrend.
+     This condition is MANDATORY for stocks and commodities, but is
+     SKIPPED for indices (NIFTY 50, NIFTY BANK, SENSEX) — every
+     qualifying EMA cross alerts on an index regardless of EMA50 trend.
 Fires for stocks, indices, and commodities alike — no separate rule per
-instrument type.
+instrument type, other than the trend-condition exception above.
 
 RSI, volume-vs-previous-candle %, candle patterns, and Camarilla R3/S3
 pivot proximity are attached to the signal as informational fields
 only. They are shown in the alert message but never block it from
 firing.
+
+IMPORTANT — catch-up window:
+check_signals() scans the last config.CROSS_LOOKBACK_CANDLES closed
+candles (not just the single latest one) and returns a signal for
+EVERY qualifying candle in that window. This means: if a scheduled run
+is skipped or delayed (so more than one 3-min candle closed since the
+last run), any cross that happened on an "in-between" candle is still
+caught and alerted on the next run, instead of silently disappearing
+because it's no longer the "latest" candle. main.py's dedup is keyed
+on (symbol, direction, candle_time), so a candle already alerted is
+never re-sent even though it's re-checked on every later run.
 """
 
 import config
 from indicators import (
     add_emas, add_rsi, add_volume_avg, add_ema50,
-    is_strong_candle, volume_vs_previous, detect_candle_pattern,
+    is_strong_candle, detect_candle_pattern,
 )
 
 # How close price needs to be to R3/S3 (as a % of price) to be flagged
@@ -29,19 +43,15 @@ from indicators import (
 PIVOT_PROXIMITY_PCT = 0.3
 
 
-def check_signal(df, symbol, r3=None, s3=None):
-    if len(df) < max(config.EMA_SLOW, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, 50) + 2:
-        return None
+def _min_required_len(lookback):
+    return max(config.EMA_SLOW, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, 50) + lookback + 1
 
-    df = add_emas(df, config.EMA_FAST, config.EMA_SLOW)
-    df = add_rsi(df, config.RSI_PERIOD)
-    df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
-    df = add_ema50(df)
 
-    curr = df.iloc[-1]
-    prev = df.iloc[-2]
+def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
+    curr = df.iloc[idx]
+    prev = df.iloc[idx - 1]
 
-    # Condition 1: true EMA9/EMA20 line crossover.
+    # Condition 1: true EMA9/EMA20 line crossover on this candle.
     bullish_cross = prev["ema_fast"] <= prev["ema_slow"] and curr["ema_fast"] > curr["ema_slow"]
     bearish_cross = prev["ema_fast"] >= prev["ema_slow"] and curr["ema_fast"] < curr["ema_slow"]
 
@@ -65,16 +75,23 @@ def check_signal(df, symbol, r3=None, s3=None):
     if ema_gap_pct < config.MIN_EMA_CROSS_GAP_PCT:
         return None
 
-    # Condition 4 (MANDATORY): cross direction must agree with the
-    # broader trend (EMA50) — a bullish cross only fires in an uptrend,
-    # a bearish cross only fires in a downtrend.
+    # Condition 4: cross direction must agree with the broader trend
+    # (EMA50) — a bullish cross only fires in an uptrend, a bearish
+    # cross only fires in a downtrend. This is MANDATORY for stocks and
+    # commodities, but SKIPPED for indices (require_trend_confirmation
+    # =False) — for indices we want every qualifying crossover alerted
+    # regardless of the EMA50 trend. stock_trend is still computed and
+    # shown in the message either way, purely informational when the
+    # condition isn't enforced.
     stock_trend = "BULLISH" if curr["close"] > curr["ema_trend"] else "BEARISH"
-    if direction != stock_trend:
+    if require_trend_confirmation and direction != stock_trend:
         return None
 
     # Volume is informational only — computed for the message but does
     # not block a signal from firing.
-    vol_change_pct = volume_vs_previous(df)
+    curr_vol = curr["volume"]
+    prev_vol = prev["volume"]
+    vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1) if prev_vol else None
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
 
     cross_pattern = detect_candle_pattern(curr)
@@ -115,6 +132,59 @@ def check_signal(df, symbol, r3=None, s3=None):
         "s3": s3,
         "pivot_note": pivot_note,
     }
+
+
+def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True):
+    """
+    Scans the last `lookback` closed candles (default:
+    config.CROSS_LOOKBACK_CANDLES) for EMA9/20 crossovers — not just the
+    single latest candle — so a run that was skipped/delayed still
+    catches up on any cross it would otherwise have missed.
+
+    require_trend_confirmation=False disables condition 4 (EMA50 trend
+    agreement) — used for indices, where every qualifying crossover
+    should alert regardless of the broader trend. Leave True (default)
+    for stocks/commodities.
+
+    Returns a list of signal dicts, oldest candle first. Empty list if
+    nothing qualifies. Caller is responsible for de-duping against
+    already-alerted (symbol, direction, candle_time) combos (see
+    state.py) before sending each one.
+    """
+    lookback = lookback or config.CROSS_LOOKBACK_CANDLES
+
+    if len(df) < _min_required_len(1):
+        return []
+
+    # Shrink the lookback window if we don't have enough history yet
+    # (e.g. right after market open) rather than returning nothing.
+    max_possible_lookback = len(df) - _min_required_len(0)
+    lookback = max(1, min(lookback, max_possible_lookback))
+
+    df = add_emas(df, config.EMA_FAST, config.EMA_SLOW)
+    df = add_rsi(df, config.RSI_PERIOD)
+    df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
+    df = add_ema50(df)
+
+    signals = []
+    n = len(df)
+    start = max(1, n - lookback)
+    for idx in range(start, n):
+        sig = _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=require_trend_confirmation)
+        if sig is not None:
+            signals.append(sig)
+    return signals
+
+
+def check_signal(df, symbol, r3=None, s3=None):
+    """
+    Backward-compatible single-signal wrapper: returns only the most
+    recent qualifying signal (or None), same as the original behavior.
+    Prefer check_signals() in new code so missed/delayed runs still
+    catch up on earlier crosses in the lookback window.
+    """
+    signals = check_signals(df, symbol, r3=r3, s3=s3, lookback=1)
+    return signals[-1] if signals else None
 
 
 def debug_ema_gap(df, symbol):
