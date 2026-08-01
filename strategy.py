@@ -30,6 +30,13 @@ caught and alerted on the next run, instead of silently disappearing
 because it's no longer the "latest" candle. main.py's dedup is keyed
 on (symbol, direction, candle_time), so a candle already alerted is
 never re-sent even though it's re-checked on every later run.
+
+75-min informative trend (added): get_75min_trend_info() is a separate,
+filter-free helper — no strong-candle/volume/trend-agreement/gap checks
+— that just reports EMA9/20 bias on 75-min candles and how recently
+(within a lookback window) they crossed. It never fires its own signal
+and never blocks the 3-min check_signals() logic; main.py attaches its
+result to a signal dict purely as context for the alert message.
 """
 
 import config
@@ -234,6 +241,47 @@ def debug_ema_gap(df, symbol):
         "ema_slow": round(ema_slow, 2),
         "gap_pct": round(gap_pct, 3),
         "leaning": "BULLISH (EMA9 above)" if ema_fast > ema_slow else "BEARISH (EMA9 below)",
+    }
+
+
+def get_75min_trend_info(df_75min, symbol, lookback_candles=5):
+    """
+    Informative-only check on 75-min candles — no filters (no strong
+    candle, no volume, no trend-agreement, no gap threshold). Just
+    reports EMA9/20 position and whether a cross happened recently, so
+    it can be attached as context to a 3-min alert. Never blocks or
+    fires its own alert.
+
+    Returns None if there isn't enough 75-min history yet, else a dict
+    with the current bias and how many 75-min candles ago (if any) the
+    last cross happened within lookback_candles.
+    """
+    if len(df_75min) < config.EMA_SLOW + 2:
+        return None
+
+    df = add_emas(df_75min, config.EMA_FAST, config.EMA_SLOW)
+    n = len(df)
+
+    curr = df.iloc[-1]
+    bias = "BULLISH" if curr["ema_fast"] > curr["ema_slow"] else "BEARISH"
+
+    candles_since_cross = None
+    start = max(1, n - lookback_candles)
+    for idx in range(n - 1, start - 1, -1):
+        prev = df.iloc[idx - 1]
+        cur = df.iloc[idx]
+        bull_cross = prev["ema_fast"] <= prev["ema_slow"] and cur["ema_fast"] > cur["ema_slow"]
+        bear_cross = prev["ema_fast"] >= prev["ema_slow"] and cur["ema_fast"] < cur["ema_slow"]
+        if bull_cross or bear_cross:
+            candles_since_cross = (n - 1) - idx
+            break
+
+    return {
+        "symbol": symbol,
+        "bias": bias,
+        "ema_fast": round(float(curr["ema_fast"]), 2),
+        "ema_slow": round(float(curr["ema_slow"]), 2),
+        "candles_since_cross": candles_since_cross,  # None = no cross in lookback window
     }
 
 
