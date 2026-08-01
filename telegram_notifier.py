@@ -78,6 +78,12 @@ def send_alert(signal):
     else:
         pivot_block = ""
 
+    # VWAP — informational only, one line. Omitted entirely if it
+    # couldn't be computed for this candle (see strategy.py).
+    vwap = signal.get("vwap")
+    vwap_note = signal.get("vwap_note")
+    vwap_line = f"VWAP: {vwap} ({vwap_note})\n" if vwap is not None and vwap_note else ""
+
     # 75-min informative trend — purely contextual, never blocks the
     # 3-min signal from firing. Only shown when trend_75min was
     # successfully computed and attached to the signal (see main.py).
@@ -109,6 +115,7 @@ def send_alert(signal):
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"Trend: {trend_label} {trend_icon}\n"
         f"Volume: {volume_str}{vol_note}\n"
+        f"{vwap_line}"
         f"{pcr_line}"
         f"{pivot_block}"
         f"{trend_75_block}"
