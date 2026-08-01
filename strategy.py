@@ -15,10 +15,10 @@ given closed candle only when ALL of these hold on that candle —
 Fires for stocks, indices, and commodities alike — no separate rule per
 instrument type, other than the trend-condition exception above.
 
-RSI, volume-vs-previous-candle %, candle patterns, and Camarilla R3/S3
-pivot proximity are attached to the signal as informational fields
-only. They are shown in the alert message but never block it from
-firing.
+RSI, volume-vs-previous-candle %, candle patterns, VWAP position, and
+Camarilla R3/S3 pivot proximity are attached to the signal as
+informational fields only. They are shown in the alert message but
+never block it from firing.
 
 IMPORTANT — catch-up window:
 check_signals() scans the last config.CROSS_LOOKBACK_CANDLES closed
@@ -31,12 +31,19 @@ because it's no longer the "latest" candle. main.py's dedup is keyed
 on (symbol, direction, candle_time), so a candle already alerted is
 never re-sent even though it's re-checked on every later run.
 
-75-min informative trend (added): get_75min_trend_info() is a separate,
+75-min informative trend: get_75min_trend_info() is a separate,
 filter-free helper — no strong-candle/volume/trend-agreement/gap checks
 — that just reports EMA9/20 bias on 75-min candles and how recently
 (within a lookback window) they crossed. It never fires its own signal
 and never blocks the 3-min check_signals() logic; main.py attaches its
 result to a signal dict purely as context for the alert message.
+
+VWAP (added): computed cumulatively from the start of the current
+session's df (Upstox intraday endpoint only returns the current
+trading day, so no extra day-boundary handling is needed). Purely
+informational — never blocks a signal. Attached inline inside
+_evaluate_candle since it needs the same df/idx already in scope, no
+separate API call or extra fetch required.
 """
 
 import config
@@ -52,6 +59,24 @@ PIVOT_PROXIMITY_PCT = 0.3
 
 def _min_required_len(lookback):
     return max(config.EMA_SLOW, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, 50) + lookback + 1
+
+
+def _compute_vwap_at(df, idx):
+    """
+    Cumulative session VWAP up to and including candle `idx`:
+        VWAP = sum(typical_price * volume) / sum(volume)
+    where typical_price = (high + low + close) / 3 for each candle.
+    df is assumed to contain only the current trading session's candles
+    (true for data from Upstox's intraday endpoint), so no explicit
+    "since market open" filtering is needed — row 0 already is the
+    session's first candle.
+    """
+    window = df.iloc[: idx + 1]
+    typical_price = (window["high"] + window["low"] + window["close"]) / 3
+    cum_vol = window["volume"].sum()
+    if cum_vol <= 0:
+        return None
+    return float((typical_price * window["volume"]).sum() / cum_vol)
 
 
 def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
@@ -139,6 +164,17 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
             else:
                 pivot_note = "Mid-range (not near R3/S3)"
 
+    # VWAP — purely informational. Flags whether price is trading above
+    # or below the session VWAP at the moment of the cross, and by what
+    # %. None if volume data is unusable (cum_vol == 0), in which case
+    # the alert simply omits the VWAP line.
+    vwap = _compute_vwap_at(df, idx)
+    vwap_note = None
+    if vwap is not None and vwap > 0:
+        vwap_diff_pct = round((close_price - vwap) / vwap * 100, 2)
+        position = "Above VWAP" if close_price >= vwap else "Below VWAP"
+        vwap_note = f"{position} ({vwap_diff_pct:+.2f}%)"
+
     return {
         "symbol": symbol,
         "direction": direction,
@@ -161,6 +197,8 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
         "r3": r3,
         "s3": s3,
         "pivot_note": pivot_note,
+        "vwap": round(vwap, 2) if vwap is not None else None,
+        "vwap_note": vwap_note,
     }
 
 
