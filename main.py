@@ -22,6 +22,20 @@ through strategy.get_75min_trend_info(), which is filter-free and never
 blocks a signal from firing. The result is attached to each signal dict
 as signal["trend_75min"] before send_alert() so it shows up as a
 purely-informational block in the Telegram message.
+
+Retry/backoff (added): every Upstox HTTP call goes through
+_request_with_retry(), which retries on 429 (rate-limit) and transient
+5xx errors a few times with a short increasing wait (config.py:
+UPSTOX_MAX_RETRIES / UPSTOX_RETRY_BACKOFF_BASE_SECONDS) before giving
+up on that one instrument. This means a brief rate-limit no longer
+silently drops a symbol from the scan.
+
+Fetch-failure summary (added): symbols that still fail after retries
+are counted (per scan) and, if the total across both scans meets
+config.FAILURE_ALERT_MIN_COUNT, a single short Telegram message is sent
+at the end of the run summarizing how many symbols were skipped and
+why — so a persistent Upstox problem is visible instead of only living
+in the GitHub Actions log.
 """
 
 import sys
@@ -76,10 +90,60 @@ def _in_commodity_session(now_ist):
     return COMMODITY_SESSION_START <= now_ist.time() <= COMMODITY_SESSION_END
 
 
+# ---------------------------------------------------------------------
+# Retry/backoff wrapper for Upstox HTTP calls
+# ---------------------------------------------------------------------
+
+def _request_with_retry(method, url, **kwargs):
+    """
+    Thin wrapper around requests.get/... that retries on 429
+    (rate-limited) and transient 5xx responses, with a short increasing
+    wait between attempts. Raises the final error (via raise_for_status)
+    if every attempt fails, exactly like a plain requests call would —
+    callers don't need to change their exception handling.
+
+    Total attempts = 1 + config.UPSTOX_MAX_RETRIES.
+    Wait before attempt N (N>=2) = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * (N-1)
+    e.g. base=0.6s -> waits of 0.6s, 1.2s, 1.8s before attempts 2, 3, 4.
+    """
+    last_exc = None
+    attempts = 1 + config.UPSTOX_MAX_RETRIES
+
+    for attempt in range(1, attempts + 1):
+        try:
+            resp = method(url, **kwargs)
+        except requests.exceptions.RequestException as e:
+            # Network-level failure (timeout, connection error, etc.) —
+            # also worth retrying, same backoff schedule.
+            last_exc = e
+            if attempt < attempts:
+                wait = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * attempt
+                time.sleep(wait)
+                continue
+            raise
+
+        if resp.status_code in config.UPSTOX_RETRY_STATUS_CODES and attempt < attempts:
+            wait = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * attempt
+            time.sleep(wait)
+            continue
+
+        # Either success, or a non-retryable error, or we're out of
+        # retries — let the caller's raise_for_status() surface it.
+        return resp
+
+    # Should be unreachable, but just in case.
+    if last_exc:
+        raise last_exc
+
+
+def _get_with_retry(url, **kwargs):
+    return _request_with_retry(requests.get, url, **kwargs)
+
+
 def fetch_1min_candles(instrument_key):
     headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
     url = UPSTOX_INTRADAY_URL.format(instrument_key=instrument_key)
-    resp = requests.get(url, headers=headers, timeout=20)
+    resp = _get_with_retry(url, headers=headers, timeout=20)
     resp.raise_for_status()
     payload = resp.json()
     candles = payload.get("data", {}).get("candles", [])
@@ -157,7 +221,7 @@ def fetch_prev_day_ohlc(instrument_key):
         to_date=to_date.isoformat(),
         from_date=from_date.isoformat(),
     )
-    resp = requests.get(url, headers=headers, timeout=20)
+    resp = _get_with_retry(url, headers=headers, timeout=20)
     resp.raise_for_status()
     payload = resp.json()
     candles = payload.get("data", {}).get("candles", [])
@@ -211,7 +275,7 @@ def get_nearest_option_expiry(instrument_key):
         return cache["expiries"][instrument_key]
 
     headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
-    resp = requests.get(
+    resp = _get_with_retry(
         UPSTOX_OPTION_CONTRACTS_URL,
         headers=headers,
         params={"instrument_key": instrument_key},
@@ -248,7 +312,7 @@ def fetch_pcr(instrument_key):
             return None
 
         headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
-        resp = requests.get(
+        resp = _get_with_retry(
             UPSTOX_OPTION_CHAIN_URL,
             headers=headers,
             params={"instrument_key": instrument_key, "expiry_date": expiry},
@@ -341,6 +405,10 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist):
     logic (unchanged); df75 is the same raw 1-min data resampled to
     75-min, used only for the informative trend check. Both come from a
     single API call, so this adds no extra Upstox requests.
+
+    Raises on a genuine fetch failure (after retries are exhausted in
+    fetch_1min_candles) so the caller (fetch_all) can distinguish
+    "failed to fetch" from "fetched fine, just not enough history yet".
     """
     raw = fetch_1min_candles(instrument_key)
     if raw is None or len(raw) < 30:
@@ -356,10 +424,19 @@ def fetch_all(watchlist, now_ist, workers):
     """
     Fetches + resamples 1-min candles -> 3-min (and 75-min) for every
     instrument in watchlist, concurrently (up to `workers` threads).
-    Returns {symbol: (df3, df75)}, skipping any instrument whose fetch
-    failed or that doesn't have enough history yet.
+
+    Returns (dfs, failed_symbols):
+      dfs            -- {symbol: (df3, df75)} for every instrument that
+                         fetched successfully (with enough history).
+      failed_symbols -- list of symbols whose fetch raised an exception
+                         even after the retry/backoff in
+                         fetch_1min_candles was exhausted. These are the
+                         ones genuinely skipped this run (as opposed to
+                         a symbol that fetched fine but had too little
+                         history, which is not counted as a failure).
     """
     dfs = {}
+    failed_symbols = []
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
             pool.submit(_fetch_and_resample_one, symbol, instrument_key, now_ist): symbol
@@ -373,7 +450,8 @@ def fetch_all(watchlist, now_ist, workers):
                     dfs[sym] = (df3, df75)
             except Exception as e:
                 print(f"Error fetching {symbol}: {e}")
-    return dfs
+                failed_symbols.append(symbol)
+    return dfs, failed_symbols
 
 
 def _chunked(items_dict, size):
@@ -388,16 +466,64 @@ def fetch_all_batched(watchlist, now_ist, batch_size, workers, delay_seconds):
     `batch_size` with a `delay_seconds` pause between batches, so a
     500-instrument scan doesn't fire hundreds of concurrent requests at
     Upstox in one burst and trip rate-limiting (429s).
+
+    Returns (dfs, failed_symbols), same shape as fetch_all.
     """
     dfs = {}
+    failed_symbols = []
     batches = list(_chunked(watchlist, batch_size))
     total = len(batches)
     for i, batch in enumerate(batches, start=1):
         print(f"  [Nifty500] batch {i}/{total} ({len(batch)} instruments)...", flush=True)
-        dfs.update(fetch_all(batch, now_ist, workers))
+        batch_dfs, batch_failed = fetch_all(batch, now_ist, workers)
+        dfs.update(batch_dfs)
+        failed_symbols.extend(batch_failed)
         if i < total:
             time.sleep(delay_seconds)
-    return dfs
+    return dfs, failed_symbols
+
+
+# ---------------------------------------------------------------------
+# Fetch-failure summary alert
+# ---------------------------------------------------------------------
+
+def send_telegram_text(text):
+    """
+    Sends a plain text message to Telegram directly (bypasses
+    telegram_notifier.send_alert, which expects a full signal dict).
+    Used only for the end-of-run fetch-failure summary. Never raises —
+    a failed summary send should not affect the run's exit status.
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping summary send:", text)
+        return
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram summary send failed:", e)
+
+
+def maybe_send_failure_summary(fo_failed, nifty500_failed, fo_total, nifty500_total):
+    total_failed = len(fo_failed) + len(nifty500_failed)
+    if total_failed < config.FAILURE_ALERT_MIN_COUNT:
+        return
+
+    lines = [
+        f"⚠️ Scan warning: {total_failed} instrument(s) failed to fetch this run "
+        f"(after retries) and were skipped.",
+    ]
+    if fo_failed:
+        lines.append(f"F&O/Index/Commodity scan: {len(fo_failed)}/{fo_total} failed")
+    if nifty500_failed:
+        lines.append(f"Nifty500 scan: {len(nifty500_failed)}/{nifty500_total} failed")
+    lines.append("They will be retried automatically on the next 3-min run.")
+
+    send_telegram_text("\n".join(lines))
 
 
 # ---------------------------------------------------------------------
@@ -421,7 +547,7 @@ def run_fo_scan(now_ist):
     index_symbols = set(config.INDICES.keys())
     pcr_cache_this_run = {}
 
-    dfs = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
+    dfs, failed_symbols = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
 
     for symbol, (df3, df75) in dfs.items():
         try:
@@ -482,8 +608,10 @@ def run_fo_scan(now_ist):
             )
 
     state.save_state(saved_state)
+    if failed_symbols:
+        print(f"{len(failed_symbols)} instrument(s) failed to fetch this run: {failed_symbols}")
     print(f"Done. {alerts_sent} alert(s) sent.")
-    return alerts_sent
+    return alerts_sent, failed_symbols, len(watchlist)
 
 
 # ---------------------------------------------------------------------
@@ -493,12 +621,12 @@ def run_fo_scan(now_ist):
 def run_nifty500_scan(now_ist):
     if not _in_stock_session(now_ist):
         # Nifty 500 is a cash/equity scan only — no commodity leg here.
-        return 0
+        return 0, [], 0
 
     watchlist = instruments.resolve_nifty500_list()
     if not watchlist:
         print("[Nifty500] Watchlist empty (fetch failed and no cache) — skipping this run.")
-        return 0
+        return 0, [], 0
 
     print(f"[Nifty500] Scanning {len(watchlist)} instruments in batches of {config.NIFTY500_BATCH_SIZE}...")
 
@@ -508,7 +636,7 @@ def run_nifty500_scan(now_ist):
     if config.NIFTY500_INCLUDE_PIVOTS:
         pivots = build_pivot_levels(watchlist)
 
-    dfs = fetch_all_batched(
+    dfs, failed_symbols = fetch_all_batched(
         watchlist,
         now_ist,
         batch_size=config.NIFTY500_BATCH_SIZE,
@@ -549,8 +677,10 @@ def run_nifty500_scan(now_ist):
             print(f"[Nifty500] Error on {symbol}: {e}")
 
     state.save_state(saved_state, config.NIFTY500_STATE_FILE)
+    if failed_symbols:
+        print(f"[Nifty500] {len(failed_symbols)} instrument(s) failed to fetch this run: {failed_symbols}")
     print(f"[Nifty500] Done. {alerts_sent} alert(s) sent.")
-    return alerts_sent
+    return alerts_sent, failed_symbols, len(watchlist)
 
 
 def run():
@@ -564,10 +694,14 @@ def run():
         return
 
     # ---- Step 1: existing ~50 F&O stock/index/commodity scan ----
-    run_fo_scan(now_ist)
+    _, fo_failed, fo_total = run_fo_scan(now_ist)
 
     # ---- Step 2: Nifty 500 cash/equity scan (new) ----
-    run_nifty500_scan(now_ist)
+    _, nifty500_failed, nifty500_total = run_nifty500_scan(now_ist)
+
+    # ---- Fetch-failure visibility: one summary alert if enough
+    # instruments failed across both scans this run ----
+    maybe_send_failure_summary(fo_failed, nifty500_failed, fo_total, nifty500_total)
 
 
 if __name__ == "__main__":
