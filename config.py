@@ -19,8 +19,22 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 CANDLE_INTERVAL = "3minute"   # Upstox intraday candle unit
 LOOKBACK_CANDLES = 60         # enough history for EMA20 + RSI14 + volume avg to warm up
 
-# ---------- Fetching ----------
-FETCH_WORKERS = 15            # concurrent fetch threads; tune down if Upstox rate-limits (429s)
+# ---------- Fetching (Step 1: ~50 F&O stocks/index/commodity scan) ----------
+# Raised 15 -> 30. This scan only covers ~50 instruments so it was never
+# the bottleneck, but a bit more headroom costs nothing and keeps this
+# scan comfortably fast even if Upstox is briefly slow to respond.
+FETCH_WORKERS = 30
+
+# ---------- Upstox request retry/backoff (applies to ALL Upstox calls:
+# intraday candles, daily OHLC for pivots) ----------
+# If Upstox returns 429 (rate-limited) or a transient 5xx, retry a few
+# times with a short increasing wait instead of dropping the instrument
+# from this run. Keeps a temporary rate-limit from silently skipping a
+# stock -- worst case it costs an extra second or two on that symbol,
+# it does not get permanently missed.
+UPSTOX_MAX_RETRIES = 3          # total attempts = 1 initial + this many retries... see main.py (attempts = MAX_RETRIES)
+UPSTOX_RETRY_STATUS_CODES = (429, 500, 502, 503, 504)
+UPSTOX_RETRY_BACKOFF_BASE_SECONDS = 0.6   # attempt 1 wait ~0.6s, attempt 2 ~1.2s, attempt 3 ~1.8s
 
 # ---------- Indicator settings ----------
 EMA_FAST = 9
@@ -101,12 +115,22 @@ NIFTY500_CACHE_MAX_AGE_DAYS = 7
 NIFTY500_STATE_FILE = "alert_state_nifty500.json"
 
 # Fetching ~500 instruments' 1-min candles in one go risks Upstox
-# rate-limiting (429s). Instead this scan fetches in smaller sequential
-# batches, with a short pause between batches, and a smaller thread pool
-# per batch than the main F&O scan uses.
-NIFTY500_BATCH_SIZE = 40           # instruments per batch
-NIFTY500_FETCH_WORKERS = 8         # concurrent threads *within* a batch
-NIFTY500_BATCH_DELAY_SECONDS = 2   # pause between batches
+# rate-limiting (429s). This scan fetches in smaller sequential batches,
+# with a short pause between batches, and its own thread pool per batch.
+#
+# Tuned up from the original (40 / 8 workers / 2s delay) so the full
+# ~500-symbol scan comfortably finishes inside the 3-minute cron window:
+#   - batch size 40->50, workers 8->20: fewer, faster batches
+#   - delay 2s->1s: less idle time between batches
+#   - combined with the retry logic above, a transient 429 no longer
+#     drops a symbol outright — it just costs that symbol an extra
+#     ~1-2s instead.
+# If you start seeing lots of 429s in the Action logs even with retries,
+# dial NIFTY500_FETCH_WORKERS back down first (batch concurrency is the
+# main lever on rate-limiting), not batch size.
+NIFTY500_BATCH_SIZE = 50           # instruments per batch
+NIFTY500_FETCH_WORKERS = 20        # concurrent threads *within* a batch
+NIFTY500_BATCH_DELAY_SECONDS = 1   # pause between batches
 
 # R3/S3 Camarilla pivots are skipped for the Nifty 500 scan by default —
 # computing them requires one extra daily-candle API call per stock, which
@@ -114,3 +138,11 @@ NIFTY500_BATCH_DELAY_SECONDS = 2   # pause between batches
 # want pivot proximity notes on Nifty 500 alerts too (first run of the day
 # will be slower while the pivot cache warms up).
 NIFTY500_INCLUDE_PIVOTS = False
+
+# ---------- Fetch-failure visibility ----------
+# After a run, if the number of instruments that failed to fetch (even
+# after retries) is >= this many, a single short Telegram warning is
+# sent summarizing the count -- so a persistent rate-limit or outage
+# shows up as a visible signal instead of silently vanishing into the
+# GitHub Actions log. Set to a high number (e.g. 9999) to disable.
+FAILURE_ALERT_MIN_COUNT = 5
