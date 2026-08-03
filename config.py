@@ -93,52 +93,6 @@ FO_STOCK_WATCHLIST = [
 STATE_FILE = "alert_state.json"
 DEDUPE_MINUTES = 30
 
-# ==========================================================================
-# ---------- Nifty 500 (cash/equity) scan — Step 2, runs alongside ----------
-# ==========================================================================
-#
-# This is a second, independent scan of all ~500 Nifty 500 stocks (cash/
-# equity, not F&O), using the exact same EMA9/20 + RSI + volume + trend +
-# strong-candle strategy as the existing F&O scan. It runs in the SAME
-# 3-minute workflow run as the existing scan (no separate cron job).
-
-# Official NSE archive CSV listing all current Nifty 500 constituents.
-# NSE reconstitutes this list only twice a year (Jan 31 / Jul 31 cutoff),
-# so we don't need to re-download it every 3-minute run — see
-# NIFTY500_CACHE_MAX_AGE_DAYS below.
-NIFTY500_CSV_URL = "https://nsearchives.nseindia.com/content/indices/ind_nifty500list.csv"
-NIFTY500_SYMBOLS_CACHE_FILE = "nifty500_symbols_cache.json"
-NIFTY500_CACHE_MAX_AGE_DAYS = 7
-
-# Separate state file so Nifty 500 alert de-dup never touches/overwrites
-# the existing F&O scan's alert_state.json.
-NIFTY500_STATE_FILE = "alert_state_nifty500.json"
-
-# Fetching ~500 instruments' 1-min candles in one go risks Upstox
-# rate-limiting (429s). This scan fetches in smaller sequential batches,
-# with a short pause between batches, and its own thread pool per batch.
-#
-# Tuned up from the original (40 / 8 workers / 2s delay) so the full
-# ~500-symbol scan comfortably finishes inside the 3-minute cron window:
-#   - batch size 40->50, workers 8->20: fewer, faster batches
-#   - delay 2s->1s: less idle time between batches
-#   - combined with the retry logic above, a transient 429 no longer
-#     drops a symbol outright — it just costs that symbol an extra
-#     ~1-2s instead.
-# If you start seeing lots of 429s in the Action logs even with retries,
-# dial NIFTY500_FETCH_WORKERS back down first (batch concurrency is the
-# main lever on rate-limiting), not batch size.
-NIFTY500_BATCH_SIZE = 50           # instruments per batch
-NIFTY500_FETCH_WORKERS = 20        # concurrent threads *within* a batch
-NIFTY500_BATCH_DELAY_SECONDS = 1   # pause between batches
-
-# R3/S3 Camarilla pivots are skipped for the Nifty 500 scan by default —
-# computing them requires one extra daily-candle API call per stock, which
-# means ~500 extra calls before the scan even starts. Flip to True if you
-# want pivot proximity notes on Nifty 500 alerts too (first run of the day
-# will be slower while the pivot cache warms up).
-NIFTY500_INCLUDE_PIVOTS = False
-
 # ---------- Fetch-failure visibility ----------
 # After a run, if the number of instruments that failed to fetch (even
 # after retries) is >= this many, a single short Telegram warning is
