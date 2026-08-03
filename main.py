@@ -43,12 +43,19 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signals, debug_ema_gap, get_75min_trend_info
+from strategy import check_signals, check_signals_75min, debug_ema_gap, get_75min_trend_info
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
 UPSTOX_DAILY_URL = "https://api.upstox.com/v2/historical-candle/{instrument_key}/day/{to_date}/{from_date}"
+
+# NOTE: verify against current Upstox docs — same historical-candle
+# family as UPSTOX_DAILY_URL above, just with a 1-minute interval.
+# Used only to warm up EMA9/EMA20 on the 75-min timeframe (see
+# build_hist1min_cache below); a failure here degrades gracefully to
+# "not enough 75-min history yet" rather than blocking the 3-min scan.
+UPSTOX_HISTORICAL_1MIN_URL = "https://api.upstox.com/v2/historical-candle/{instrument_key}/1minute/{to_date}/{from_date}"
 
 # NOTE: verify these two paths/params against current Upstox docs before
 # relying on them — used only to compute PCR (Put-Call Ratio) for
@@ -159,15 +166,39 @@ def resample_3min(df):
 
 def resample_75min(df):
     """
-    Same resampling as resample_3min, just on a 75-minute bucket.
-    Used only for the informative 75-min trend check — never affects
-    the 3-min signal-firing logic itself.
+    Resamples 1-minute candles to 75-minute bars, aligning each trading
+    day's bins independently to the session start (09:15 IST). This
+    matters once historical (pre-today) data is combined with today's
+    data (see build_hist1min_cache / _fetch_and_resample_one below) —
+    without per-day alignment, bars could blend minutes from the end of
+    one session with the start of the next, or drift out of sync with
+    the visual 75-min chart.
     """
+    if df.empty:
+        return df
+
+    df = df.copy()
+    ts = pd.to_datetime(df["timestamp"])
+    if ts.dt.tz is None:
+        ts = ts.dt.tz_localize(IST)
+    else:
+        ts = ts.dt.tz_convert(IST)
+    df["timestamp"] = ts
     df = df.set_index("timestamp")
-    out = df.resample("75min").agg({
-        "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
-    }).dropna().reset_index()
-    return out
+
+    out_frames = []
+    for date, day_df in df.groupby(df.index.date):
+        day_start = dt.datetime.combine(date, STOCK_SESSION_START, tzinfo=IST)
+        day_out = day_df.resample("75min", origin=day_start).agg({
+            "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
+        }).dropna()
+        out_frames.append(day_out)
+
+    if not out_frames:
+        return pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume"])
+
+    out = pd.concat(out_frames).reset_index().rename(columns={"index": "timestamp"})
+    return out.sort_values("timestamp").reset_index(drop=True)
 
 
 def drop_unclosed_candle(df, now_ist, candle_minutes=3):
@@ -224,6 +255,93 @@ def fetch_prev_day_ohlc(instrument_key):
     candles_sorted = sorted(candles, key=lambda c: c[0])
     last = candles_sorted[-1]
     return {"high": last[2], "low": last[3], "close": last[4]}
+
+
+def fetch_historical_1min(instrument_key, days_back):
+    """
+    Fetches PRE-TODAY 1-minute candles for the last `days_back` calendar
+    days via Upstox's historical-candle endpoint. Used only to warm up
+    EMA9/EMA20 on the 75-min timeframe (a single trading day alone only
+    yields ~5 bars — nowhere near enough). Returns the raw candle list
+    (JSON-serializable) or None on failure.
+    """
+    headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
+    today = _now_ist().date()
+    to_date = today - dt.timedelta(days=1)
+    from_date = to_date - dt.timedelta(days=days_back)
+
+    url = UPSTOX_HISTORICAL_1MIN_URL.format(
+        instrument_key=instrument_key,
+        to_date=to_date.isoformat(),
+        from_date=from_date.isoformat(),
+    )
+    resp = _get_with_retry(url, headers=headers, timeout=30)
+    resp.raise_for_status()
+    payload = resp.json()
+    return payload.get("data", {}).get("candles", [])
+
+
+def load_hist1min_cache():
+    try:
+        with open(config.HIST_1MIN_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"date": None, "data": {}}
+
+
+def save_hist1min_cache(cache):
+    with open(config.HIST_1MIN_CACHE_FILE, "w") as f:
+        json.dump(cache, f)
+
+
+def build_hist1min_cache(watchlist):
+    """
+    Ensures every symbol in watchlist has PRE-TODAY 1-min history cached
+    for 75-min EMA warmup. Fetched once per calendar day per symbol
+    (not on every 3-min run) — cache is keyed by date and reset when the
+    date rolls over, same pattern as build_pivot_levels(). A symbol that
+    fails to fetch simply has no cached history that day, which
+    degrades gracefully: its 75-min bars just won't have enough bars to
+    warm up EMA9/EMA20 yet (see get_75min_trend_info /
+    check_signals_75min — both already handle "not enough history" by
+    returning None / []), never a crash.
+    """
+    cache = load_hist1min_cache()
+    today_str = _now_ist().date().isoformat()
+
+    if cache.get("date") != today_str:
+        cache = {"date": today_str, "data": {}}
+
+    missing = {sym: key for sym, key in watchlist.items() if sym not in cache["data"]}
+
+    if missing:
+        print(f"Fetching {config.HISTORICAL_1MIN_LOOKBACK_DAYS}-day 1-min history for {len(missing)} instrument(s) (75-min warmup)...")
+
+        def _fetch_one_hist(symbol, instrument_key):
+            try:
+                candles = fetch_historical_1min(instrument_key, config.HISTORICAL_1MIN_LOOKBACK_DAYS)
+                return symbol, candles
+            except Exception as e:
+                print(f"Historical 1-min fetch failed for {symbol}: {e}")
+                return symbol, None
+
+        with ThreadPoolExecutor(max_workers=config.FETCH_WORKERS) as pool:
+            futures = {
+                pool.submit(_fetch_one_hist, symbol, instrument_key): symbol
+                for symbol, instrument_key in missing.items()
+            }
+            for future in as_completed(futures):
+                symbol = futures[future]
+                try:
+                    sym, candles = future.result()
+                    if candles:
+                        cache["data"][sym] = candles
+                except Exception as e:
+                    print(f"Error caching history for {symbol}: {e}")
+
+        save_hist1min_cache(cache)
+
+    return cache["data"]
 
 
 def load_pivot_cache():
@@ -392,12 +510,19 @@ def build_watchlist(now_ist=None):
     return watchlist
 
 
-def _fetch_and_resample_one(symbol, instrument_key, now_ist):
+def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     """
     Returns (symbol, df3, df75) — df3 drives the actual 3-min signal
-    logic (unchanged); df75 is the same raw 1-min data resampled to
-    75-min, used only for the informative trend check. Both come from a
-    single API call, so this adds no extra Upstox requests.
+    logic (unchanged); df75 is used for both the informative 75-min
+    trend check AND the standalone 75-min alert.
+
+    df75 combines cached PRE-TODAY 1-min history (hist_candles, from
+    build_hist1min_cache — enough days to warm up EMA9/EMA20) with
+    today's fresh 1-min data, deduped and resampled together. Without
+    hist_candles, df75 falls back to today-only data (same as before) —
+    which will almost never have enough bars to warm up EMA9/EMA20, so
+    the 75-min features simply stay dormant for that symbol until
+    history is available, never a crash.
 
     Raises on a genuine fetch failure (after retries are exhausted in
     fetch_1min_candles) so the caller (fetch_all) can distinguish
@@ -408,15 +533,32 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist):
         return symbol, None, None
     df3 = resample_3min(raw)
     df3 = drop_unclosed_candle(df3, now_ist, candle_minutes=3)
-    df75 = resample_75min(raw)
+
+    if hist_candles:
+        hist_df = pd.DataFrame(
+            hist_candles,
+            columns=["timestamp", "open", "high", "low", "close", "volume", "oi"],
+        )
+        hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"])
+        combined_75 = pd.concat([hist_df, raw], ignore_index=True)
+        combined_75 = combined_75.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
+    else:
+        combined_75 = raw
+
+    df75 = resample_75min(combined_75)
     df75 = drop_unclosed_candle(df75, now_ist, candle_minutes=75)
     return symbol, df3, df75
 
 
-def fetch_all(watchlist, now_ist, workers):
+def fetch_all(watchlist, now_ist, workers, hist_cache=None):
     """
     Fetches + resamples 1-min candles -> 3-min (and 75-min) for every
     instrument in watchlist, concurrently (up to `workers` threads).
+
+    hist_cache: {symbol: [candle, ...]} of cached pre-today 1-min
+    history (see build_hist1min_cache), passed through to each
+    instrument's 75-min resample so EMA9/EMA20 there is properly warmed
+    up. Optional — omitting it just means 75-min features stay dormant.
 
     Returns (dfs, failed_symbols):
       dfs            -- {symbol: (df3, df75)} for every instrument that
@@ -428,11 +570,14 @@ def fetch_all(watchlist, now_ist, workers):
                          a symbol that fetched fine but had too little
                          history, which is not counted as a failure).
     """
+    hist_cache = hist_cache or {}
     dfs = {}
     failed_symbols = []
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(_fetch_and_resample_one, symbol, instrument_key, now_ist): symbol
+            pool.submit(
+                _fetch_and_resample_one, symbol, instrument_key, now_ist, hist_cache.get(symbol)
+            ): symbol
             for symbol, instrument_key in watchlist.items()
         }
         for future in as_completed(futures):
@@ -508,7 +653,8 @@ def run_fo_scan(now_ist):
     index_symbols = set(config.INDICES.keys())
     pcr_cache_this_run = {}
 
-    dfs, failed_symbols = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
+    hist_cache = build_hist1min_cache(watchlist)
+    dfs, failed_symbols = fetch_all(watchlist, now_ist, config.FETCH_WORKERS, hist_cache=hist_cache)
 
     for symbol, (df3, df75) in dfs.items():
         try:
@@ -546,6 +692,30 @@ def run_fo_scan(now_ist):
 
         except Exception as e:
             print(f"Error on {symbol}: {e}")
+
+    # ---- 75-min STANDALONE alert (added) ----
+    # Pure EMA9/EMA20 crossover on the 75-min chart — no strong-candle,
+    # no trend-agreement, no gap filter. Fires independently of the
+    # 3-min check_signals() loop above: a 75-min cross can alert here
+    # even when nothing crossed on the 3-min chart this run (and vice
+    # versa). State is namespaced with "::75m" so it never collides
+    # with the 3-min alert's dedup state for the same symbol/direction.
+    for symbol, (df3, df75) in dfs.items():
+        if df75 is None:
+            continue
+        try:
+            signals_75 = check_signals_75min(df75, symbol)
+            for signal in signals_75:
+                state_symbol = f"{symbol}::75m"
+                if state.already_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"]):
+                    continue
+
+                send_alert(signal)
+                state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
+                alerts_sent += 1
+
+        except Exception as e:
+            print(f"Error on {symbol} (75-min): {e}")
 
     # Debug visibility: show the instruments whose EMA9/EMA20 are
     # currently closest together, even though none of them crossed this
