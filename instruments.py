@@ -3,12 +3,9 @@ Resolves human-readable names (NIFTY 50, GOLD, RELIANCE...) into the
 instrument_key strings Upstox's API expects, using the daily instrument
 master file Upstox publishes.
 
-Also resolves the Nifty 500 constituent list (fetched from NSE's official
-archive CSV, cached to disk) against that same instrument master, and
-exposes the current set of F&O-eligible underlying stocks.
+Also exposes the current set of F&O-eligible underlying stocks.
 """
 
-import csv
 import gzip
 import io
 import json
@@ -145,103 +142,3 @@ def get_fno_underlyings():
     """
     master = _load_master()
     return _fno_underlyings_from_master(master)
-
-
-# ---------------------------------------------------------------------
-# Nifty 500 constituent list (fetched from NSE, cached to disk)
-# ---------------------------------------------------------------------
-
-def _load_nifty500_symbols_cache():
-    try:
-        with open(config.NIFTY500_SYMBOLS_CACHE_FILE, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return None
-
-
-def _save_nifty500_symbols_cache(symbols):
-    payload = {"cached_at": dt.datetime.utcnow().isoformat(), "symbols": symbols}
-    with open(config.NIFTY500_SYMBOLS_CACHE_FILE, "w") as f:
-        json.dump(payload, f, indent=2)
-
-
-def _fetch_nifty500_symbols_from_nse():
-    resp = requests.get(config.NIFTY500_CSV_URL, headers=NSE_HEADERS, timeout=20)
-    resp.raise_for_status()
-    text = resp.content.decode("utf-8-sig")
-    reader = csv.DictReader(io.StringIO(text))
-    symbols = []
-    for row in reader:
-        sym = (row.get("Symbol") or "").strip().upper()
-        if sym:
-            symbols.append(sym)
-    return symbols
-
-
-def get_nifty500_symbols():
-    """
-    Returns the list of ~500 NSE trading symbols in the Nifty 500 index.
-
-    Fetched from NSE's official archive CSV and cached to disk for
-    config.NIFTY500_CACHE_MAX_AGE_DAYS days, since the index is only
-    reconstituted twice a year — no need to hit NSE's servers every
-    3-minute run. If the live fetch fails (NSE occasionally blocks/
-    throttles non-browser requests) this falls back to a stale cache
-    rather than crashing the whole scan; if there's no cache at all,
-    it returns an empty list and the Nifty 500 step is skipped for
-    that run only (the existing F&O scan is unaffected).
-    """
-    cache = _load_nifty500_symbols_cache()
-    if cache:
-        cached_at = dt.datetime.fromisoformat(cache["cached_at"])
-        age = dt.datetime.utcnow() - cached_at
-        if age < dt.timedelta(days=config.NIFTY500_CACHE_MAX_AGE_DAYS):
-            return cache["symbols"]
-
-    try:
-        symbols = _fetch_nifty500_symbols_from_nse()
-        if len(symbols) < 400:
-            # NSE occasionally serves an HTML error/interstitial page
-            # with a 200 status instead of the CSV — guard against
-            # quietly caching garbage.
-            raise ValueError(f"only got {len(symbols)} symbols, expected ~500")
-        _save_nifty500_symbols_cache(symbols)
-        print(f"Fetched {len(symbols)} Nifty 500 symbols from NSE (fresh).", flush=True)
-        return symbols
-    except Exception as e:
-        print(f"Nifty 500 CSV fetch failed ({e}).", flush=True)
-        if cache:
-            print(f"Falling back to stale cached list from {cache['cached_at']}.", flush=True)
-            return cache["symbols"]
-        print("No cached Nifty 500 list available — skipping Nifty 500 scan this run.", flush=True)
-        return []
-
-
-def resolve_nifty500_list():
-    """
-    Returns {trading_symbol: instrument_key} for every Nifty 500 stock
-    that Upstox's instrument master also lists on NSE_EQ. Symbols that
-    don't resolve (rare naming mismatches) are skipped and logged, same
-    pattern as resolve_fo_stock_list.
-    """
-    symbols = get_nifty500_symbols()
-    if not symbols:
-        return {}
-
-    print(f"Resolving {len(symbols)} Nifty 500 symbols against Upstox instrument master...", flush=True)
-    master = _load_master()
-    wanted = set(symbols)
-
-    out = {}
-    for row in master:
-        if row.get("segment") == "NSE_EQ" and row.get("trading_symbol", "").upper() in wanted:
-            out[row["trading_symbol"].upper()] = row["instrument_key"]
-
-    missing = wanted - set(out.keys())
-    if missing:
-        preview = sorted(missing)[:20]
-        suffix = "..." if len(missing) > 20 else ""
-        print(f"  {len(missing)} Nifty 500 symbol(s) NOT RESOLVED: {preview}{suffix}", flush=True)
-
-    print(f"Resolved {len(out)} Nifty 500 stocks.", flush=True)
-    return out
