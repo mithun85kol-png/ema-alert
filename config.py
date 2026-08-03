@@ -89,6 +89,16 @@ FO_STOCK_WATCHLIST = [
     "SBIN", "AXISBANK", "KOTAKBANK", "TATAMOTORS", "BAJFINANCE",
 ]
 
+# ---------- 75-min timeframe warmup ----------
+# A single trading day only produces ~5 bars on the 75-min timeframe
+# (375-min session / 75min), nowhere near the 22 needed to warm up
+# EMA9/EMA20. This many calendar days of PRE-TODAY 1-minute history are
+# fetched once per day (cached) and combined with today's intraday data
+# before resampling to 75-min, so EMA9/EMA20 on that timeframe actually
+# has enough bars to be meaningful.
+HISTORICAL_1MIN_LOOKBACK_DAYS = 10
+HIST_1MIN_CACHE_FILE = "historical_1min_cache.json"
+
 # ---------- State / alert de-dup ----------
 STATE_FILE = "alert_state.json"
 DEDUPE_MINUTES = 30
