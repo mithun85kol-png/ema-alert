@@ -14,6 +14,13 @@ def send_alert(signal):
         _send_75min_alert(signal)
         return
 
+    # 15-min standalone commodity alerts (strategy.check_signals_15min)
+    # use the same minimal message style as the 75-min one — pure
+    # EMA9/EMA20 cross, no trend/trade-plan/PCR/pivot/VWAP blocks.
+    if signal.get("timeframe") == "15-min":
+        _send_15min_alert(signal)
+        return
+
     direction = signal["direction"]  # "BULLISH" or "BEARISH"
     arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
 
@@ -186,3 +193,51 @@ def _send_75min_alert(signal):
         r.raise_for_status()
     except Exception as e:
         print("Telegram send failed (75-min):", e)
+
+
+def _send_15min_alert(signal):
+    """
+    Standalone 15-min COMMODITY crossover alert (GOLD/SILVER/CRUDEOIL
+    etc. — see main.py, which only calls check_signals_15min for
+    config.COMMODITIES symbols). Same minimal style as the 75-min alert
+    — pure EMA9/EMA20 cross, no trend/trade-plan/PCR/pivot/VWAP blocks.
+    """
+    direction = signal["direction"]
+    arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
+
+    candle_time = signal["candle_time"]
+    date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
+
+    volume = signal["volume"]
+    volume_str = f"{volume:,}"
+
+    vol_change = signal.get("vol_change_pct")
+    if vol_change is None:
+        vol_note = ""
+    elif vol_change > 0:
+        vol_note = " (Higher than previous ⬆️)"
+    elif vol_change < 0:
+        vol_note = " (Lower than previous ⬇️)"
+    else:
+        vol_note = " (Same as previous)"
+
+    text = (
+        f"{arrow} {signal['symbol']} — 15-MIN EMA {direction} crossover\n"
+        f"Timeframe: 15-min | {date_part} {time_part}\n"
+        f"Close: {signal['close']}\n"
+        f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
+        f"RSI(14): {signal.get('rsi', 'N/A')}\n"
+        f"Volume: {volume_str}{vol_note}\n"
+        f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
+        f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
+    )
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (15-min):", e)
