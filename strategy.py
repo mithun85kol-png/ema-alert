@@ -396,6 +396,78 @@ def check_signals_75min(df_75min, symbol, lookback=None):
     return signals
 
 
+def check_signals_15min(df_15min, symbol, lookback=None):
+    """
+    STANDALONE 15-min alert — pure EMA9/EMA20 crossover on the 15-min
+    chart. Same design as check_signals_75min: no strong-candle filter,
+    no EMA50 trend-agreement requirement, no min-gap filter. Intended
+    for config.COMMODITIES only (see main.py — the caller filters by
+    symbol), so it is not restricted here. Fires independently of
+    check_signals()/check_signals_75min. Deduped separately in main.py
+    with state key namespaced "::15m".
+
+    Uses the same catch-up-window approach: scans the last `lookback`
+    closed 15-min candles (default: config.CROSS_LOOKBACK_CANDLES), not
+    just the latest one.
+
+    Returns a list of signal dicts (oldest first), each tagged
+    timeframe="15-min". Empty list if nothing qualifies or there isn't
+    enough 15-min history yet.
+    """
+    lookback = lookback or config.CROSS_LOOKBACK_CANDLES
+
+    if len(df_15min) < config.EMA_SLOW + 2:
+        return []
+
+    max_possible_lookback = len(df_15min) - (config.EMA_SLOW + 1)
+    lookback = max(1, min(lookback, max_possible_lookback))
+
+    df = add_emas(df_15min, config.EMA_FAST, config.EMA_SLOW)
+    df = add_rsi(df, config.RSI_PERIOD)
+    df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
+
+    signals = []
+    n = len(df)
+    start = max(1, n - lookback)
+    for idx in range(start, n):
+        curr = df.iloc[idx]
+        prev = df.iloc[idx - 1]
+
+        bullish_cross = prev["ema_fast"] <= prev["ema_slow"] and curr["ema_fast"] > curr["ema_slow"]
+        bearish_cross = prev["ema_fast"] >= prev["ema_slow"] and curr["ema_fast"] < curr["ema_slow"]
+
+        if not (bullish_cross or bearish_cross):
+            continue
+
+        direction = "BULLISH" if bullish_cross else "BEARISH"
+
+        curr_vol = curr["volume"]
+        prev_vol = prev["volume"]
+        vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1) if prev_vol else None
+        rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
+
+        cross_pattern = detect_candle_pattern(curr)
+        prev_pattern = detect_candle_pattern(prev)
+
+        signals.append({
+            "symbol": symbol,
+            "timeframe": "15-min",
+            "direction": direction,
+            "close": round(float(curr["close"]), 2),
+            "rsi": round(float(rsi_val), 1) if rsi_val is not None else None,
+            "volume": int(curr["volume"]),
+            "vol_avg": round(float(curr["vol_avg"]), 0) if not pd_isna(curr["vol_avg"]) else None,
+            "vol_change_pct": vol_change_pct,
+            "ema_fast": round(float(curr["ema_fast"]), 2),
+            "ema_slow": round(float(curr["ema_slow"]), 2),
+            "candle_time": str(curr.get("timestamp", "")),
+            "cross_candle_pattern": cross_pattern,
+            "prev_candle_pattern": prev_pattern,
+        })
+
+    return signals
+
+
 def pd_isna(val):
     import pandas as pd
     return pd.isna(val)
