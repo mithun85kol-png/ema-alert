@@ -12,10 +12,7 @@ MAX_REMEMBERED_PER_KEY = 50
 
 def load_state(state_file=None):
     """
-    state_file defaults to config.STATE_FILE (the existing F&O scan's
-    state) so every existing call site (state.load_state()) behaves
-    exactly as before. Pass config.NIFTY500_STATE_FILE to use the
-    separate Nifty 500 state file instead.
+    state_file defaults to config.STATE_FILE.
     """
     state_file = state_file or config.STATE_FILE
     if not os.path.exists(state_file):
