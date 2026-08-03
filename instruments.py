@@ -58,13 +58,30 @@ def resolve_indices(index_names):
     out = {}
     for display, search in index_names.items():
         found = False
+        search_upper = search.upper()
         for row in master:
-            if row.get("segment") in ("NSE_INDEX", "BSE_INDEX") and row.get("name", "").upper() == search.upper():
+            if row.get("segment") not in ("NSE_INDEX", "BSE_INDEX"):
+                continue
+            # Some BSE_INDEX entries (e.g. SENSEX) don't have a 'name'
+            # field that matches the display name exactly — fall back to
+            # trading_symbol so those still resolve.
+            name_match = row.get("name", "").upper() == search_upper
+            symbol_match = row.get("trading_symbol", "").upper() == search_upper
+            if name_match or symbol_match:
                 out[display] = row["instrument_key"]
                 found = True
                 break
         if not found:
             print(f"  NOT RESOLVED (index): display='{display}' searched_name='{search}'", flush=True)
+            if search_upper == "SENSEX":
+                # Last-resort fallback: Upstox documents SENSEX's
+                # instrument_key as the fixed string "BSE_INDEX|SENSEX"
+                # (not derived from the master file's 'name'/
+                # 'trading_symbol' fields), so use it directly rather
+                # than silently dropping the index from the scan.
+                out[display] = "BSE_INDEX|SENSEX"
+                print(f"  Using known fallback instrument_key for '{display}': BSE_INDEX|SENSEX", flush=True)
+                found = True
     print(f"Resolved {len(out)} indices.", flush=True)
     return out
 
