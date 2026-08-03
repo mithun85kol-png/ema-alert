@@ -7,14 +7,8 @@ NOTE: the daily-candle endpoint used for Camarilla R3/S3 pivots is built
 by analogy with the intraday endpoint below — verify the exact path
 against current Upstox docs if pivot values look wrong.
 
-This script runs two scans back-to-back in the SAME 3-minute workflow
-run (no separate cron job / workflow):
-  Step 1: the existing ~50 F&O stock/index/commodity scan (unchanged).
-  Step 2: a new Nifty 500 (all ~500 stocks, cash/equity) scan, using the
-          exact same EMA9/20 + RSI + volume + trend + strong-candle
-          strategy, fetched in small batches to avoid Upstox rate-limits,
-          with its own separate state file so it can never collide with
-          the existing scan's alert de-dup state.
+This script scans the ~50 F&O stock/index/commodity watchlist every
+3-minute workflow run.
 
 75-min informative trend (added): every fetched instrument's raw 1-min
 data is ALSO resampled to 75-min locally (no extra API call) and passed
@@ -31,11 +25,10 @@ up on that one instrument. This means a brief rate-limit no longer
 silently drops a symbol from the scan.
 
 Fetch-failure summary (added): symbols that still fail after retries
-are counted (per scan) and, if the total across both scans meets
-config.FAILURE_ALERT_MIN_COUNT, a single short Telegram message is sent
-at the end of the run summarizing how many symbols were skipped and
-why — so a persistent Upstox problem is visible instead of only living
-in the GitHub Actions log.
+are counted and, if the total meets config.FAILURE_ALERT_MIN_COUNT, a
+single short Telegram message is sent at the end of the run summarizing
+how many symbols were skipped and why — so a persistent Upstox problem
+is visible instead of only living in the GitHub Actions log.
 """
 
 import sys
@@ -454,35 +447,6 @@ def fetch_all(watchlist, now_ist, workers):
     return dfs, failed_symbols
 
 
-def _chunked(items_dict, size):
-    items = list(items_dict.items())
-    for i in range(0, len(items), size):
-        yield dict(items[i:i + size])
-
-
-def fetch_all_batched(watchlist, now_ist, batch_size, workers, delay_seconds):
-    """
-    Same as fetch_all, but splits watchlist into sequential batches of
-    `batch_size` with a `delay_seconds` pause between batches, so a
-    500-instrument scan doesn't fire hundreds of concurrent requests at
-    Upstox in one burst and trip rate-limiting (429s).
-
-    Returns (dfs, failed_symbols), same shape as fetch_all.
-    """
-    dfs = {}
-    failed_symbols = []
-    batches = list(_chunked(watchlist, batch_size))
-    total = len(batches)
-    for i, batch in enumerate(batches, start=1):
-        print(f"  [Nifty500] batch {i}/{total} ({len(batch)} instruments)...", flush=True)
-        batch_dfs, batch_failed = fetch_all(batch, now_ist, workers)
-        dfs.update(batch_dfs)
-        failed_symbols.extend(batch_failed)
-        if i < total:
-            time.sleep(delay_seconds)
-    return dfs, failed_symbols
-
-
 # ---------------------------------------------------------------------
 # Fetch-failure summary alert
 # ---------------------------------------------------------------------
@@ -508,26 +472,23 @@ def send_telegram_text(text):
         print("Telegram summary send failed:", e)
 
 
-def maybe_send_failure_summary(fo_failed, nifty500_failed, fo_total, nifty500_total):
-    total_failed = len(fo_failed) + len(nifty500_failed)
+def maybe_send_failure_summary(fo_failed, fo_total):
+    total_failed = len(fo_failed)
     if total_failed < config.FAILURE_ALERT_MIN_COUNT:
         return
 
     lines = [
         f"⚠️ Scan warning: {total_failed} instrument(s) failed to fetch this run "
         f"(after retries) and were skipped.",
+        f"F&O/Index/Commodity scan: {len(fo_failed)}/{fo_total} failed",
+        "They will be retried automatically on the next 3-min run.",
     ]
-    if fo_failed:
-        lines.append(f"F&O/Index/Commodity scan: {len(fo_failed)}/{fo_total} failed")
-    if nifty500_failed:
-        lines.append(f"Nifty500 scan: {len(nifty500_failed)}/{nifty500_total} failed")
-    lines.append("They will be retried automatically on the next 3-min run.")
 
     send_telegram_text("\n".join(lines))
 
 
 # ---------------------------------------------------------------------
-# Step 1: existing ~50 F&O stock/index/commodity scan (unchanged logic)
+# ~50 F&O stock/index/commodity scan
 # ---------------------------------------------------------------------
 
 def run_fo_scan(now_ist):
@@ -614,75 +575,6 @@ def run_fo_scan(now_ist):
     return alerts_sent, failed_symbols, len(watchlist)
 
 
-# ---------------------------------------------------------------------
-# Step 2: new Nifty 500 (all ~500 stocks, cash/equity) scan
-# ---------------------------------------------------------------------
-
-def run_nifty500_scan(now_ist):
-    if not _in_stock_session(now_ist):
-        # Nifty 500 is a cash/equity scan only — no commodity leg here.
-        return 0, [], 0
-
-    watchlist = instruments.resolve_nifty500_list()
-    if not watchlist:
-        print("[Nifty500] Watchlist empty (fetch failed and no cache) — skipping this run.")
-        return 0, [], 0
-
-    print(f"[Nifty500] Scanning {len(watchlist)} instruments in batches of {config.NIFTY500_BATCH_SIZE}...")
-
-    fno_underlyings = instruments.get_fno_underlyings()
-
-    pivots = {}
-    if config.NIFTY500_INCLUDE_PIVOTS:
-        pivots = build_pivot_levels(watchlist)
-
-    dfs, failed_symbols = fetch_all_batched(
-        watchlist,
-        now_ist,
-        batch_size=config.NIFTY500_BATCH_SIZE,
-        workers=config.NIFTY500_FETCH_WORKERS,
-        delay_seconds=config.NIFTY500_BATCH_DELAY_SECONDS,
-    )
-
-    # Separate state file — never touches/overwrites the F&O scan's
-    # alert_state.json.
-    saved_state = state.load_state(config.NIFTY500_STATE_FILE)
-    alerts_sent = 0
-
-    for symbol, (df3, df75) in dfs.items():
-        try:
-            levels = pivots.get(symbol)
-            r3 = levels["r3"] if levels else None
-            s3 = levels["s3"] if levels else None
-
-            signals = check_signals(df3, symbol, r3=r3, s3=s3)
-            for signal in signals:
-                if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
-                    continue
-
-                # F&O flag: tells the Telegram message whether this
-                # Nifty 500 stock also trades in F&O, or is cash-only.
-                signal["is_fno"] = symbol.upper() in fno_underlyings
-
-                # 75-min informative trend — same as Step 1, never
-                # blocks the alert.
-                if df75 is not None:
-                    signal["trend_75min"] = get_75min_trend_info(df75, symbol)
-
-                send_alert(signal)
-                state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
-                alerts_sent += 1
-
-        except Exception as e:
-            print(f"[Nifty500] Error on {symbol}: {e}")
-
-    state.save_state(saved_state, config.NIFTY500_STATE_FILE)
-    if failed_symbols:
-        print(f"[Nifty500] {len(failed_symbols)} instrument(s) failed to fetch this run: {failed_symbols}")
-    print(f"[Nifty500] Done. {alerts_sent} alert(s) sent.")
-    return alerts_sent, failed_symbols, len(watchlist)
-
-
 def run():
     if not config.UPSTOX_ACCESS_TOKEN:
         print("UPSTOX_ACCESS_TOKEN not set — aborting.")
@@ -693,15 +585,11 @@ def run():
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.")
         return
 
-    # ---- Step 1: existing ~50 F&O stock/index/commodity scan ----
     _, fo_failed, fo_total = run_fo_scan(now_ist)
 
-    # ---- Step 2: Nifty 500 cash/equity scan (new) ----
-    _, nifty500_failed, nifty500_total = run_nifty500_scan(now_ist)
-
     # ---- Fetch-failure visibility: one summary alert if enough
-    # instruments failed across both scans this run ----
-    maybe_send_failure_summary(fo_failed, nifty500_failed, fo_total, nifty500_total)
+    # instruments failed to fetch this run ----
+    maybe_send_failure_summary(fo_failed, fo_total)
 
 
 if __name__ == "__main__":
