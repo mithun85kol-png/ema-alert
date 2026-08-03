@@ -43,7 +43,7 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signals, check_signals_75min, debug_ema_gap, get_75min_trend_info
+from strategy import check_signals, check_signals_75min, check_signals_15min, debug_ema_gap, get_75min_trend_info
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
@@ -73,9 +73,11 @@ IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 STOCK_SESSION_START = dt.time(9, 15)
 STOCK_SESSION_END = dt.time(15, 30)
 
-# Commodity (MCX) session — matches the stock session window.
+# Commodity (MCX) session — extended to match MCX's evening session so
+# the standalone 15-min EMA cross alert (below) keeps firing up to
+# 11 PM IST, not just the cash-market window.
 COMMODITY_SESSION_START = dt.time(9, 15)
-COMMODITY_SESSION_END = dt.time(15, 30)
+COMMODITY_SESSION_END = dt.time(23, 0)
 
 
 def _now_ist():
@@ -159,6 +161,21 @@ def fetch_1min_candles(instrument_key):
 def resample_3min(df):
     df = df.set_index("timestamp")
     out = df.resample("3min").agg({
+        "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
+    }).dropna().reset_index()
+    return out
+
+
+def resample_15min(df):
+    """
+    Resamples 1-minute candles to 15-minute bars for the standalone
+    commodity EMA9/EMA20 cross alert (config.COMMODITIES only — see
+    run_fo_scan). No per-day origin alignment needed: the session start
+    09:15 IST is already a clean multiple of 15 minutes (555 min from
+    midnight / 15 = 37), same reasoning as resample_3min.
+    """
+    df = df.set_index("timestamp")
+    out = df.resample("15min").agg({
         "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
     }).dropna().reset_index()
     return out
@@ -512,9 +529,10 @@ def build_watchlist(now_ist=None):
 
 def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     """
-    Returns (symbol, df3, df75) — df3 drives the actual 3-min signal
-    logic (unchanged); df75 is used for both the informative 75-min
-    trend check AND the standalone 75-min alert.
+    Returns (symbol, df3, df75, df15) — df3 drives the actual 3-min
+    signal logic (unchanged); df75 is used for both the informative
+    75-min trend check AND the standalone 75-min alert; df15 is used
+    for the standalone 15-min commodity EMA cross alert.
 
     df75 combines cached PRE-TODAY 1-min history (hist_candles, from
     build_hist1min_cache — enough days to warm up EMA9/EMA20) with
@@ -534,6 +552,9 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     df3 = resample_3min(raw)
     df3 = drop_unclosed_candle(df3, now_ist, candle_minutes=3)
 
+    df15 = resample_15min(raw)
+    df15 = drop_unclosed_candle(df15, now_ist, candle_minutes=15)
+
     if hist_candles:
         hist_df = pd.DataFrame(
             hist_candles,
@@ -547,7 +568,7 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
 
     df75 = resample_75min(combined_75)
     df75 = drop_unclosed_candle(df75, now_ist, candle_minutes=75)
-    return symbol, df3, df75
+    return symbol, df3, df75, df15
 
 
 def fetch_all(watchlist, now_ist, workers, hist_cache=None):
@@ -561,8 +582,8 @@ def fetch_all(watchlist, now_ist, workers, hist_cache=None):
     up. Optional — omitting it just means 75-min features stay dormant.
 
     Returns (dfs, failed_symbols):
-      dfs            -- {symbol: (df3, df75)} for every instrument that
-                         fetched successfully (with enough history).
+      dfs            -- {symbol: (df3, df75, df15)} for every instrument
+                         that fetched successfully (with enough history).
       failed_symbols -- list of symbols whose fetch raised an exception
                          even after the retry/backoff in
                          fetch_1min_candles was exhausted. These are the
@@ -583,9 +604,9 @@ def fetch_all(watchlist, now_ist, workers, hist_cache=None):
         for future in as_completed(futures):
             symbol = futures[future]
             try:
-                sym, df3, df75 = future.result()
+                sym, df3, df75, df15 = future.result()
                 if df3 is not None:
-                    dfs[sym] = (df3, df75)
+                    dfs[sym] = (df3, df75, df15)
             except Exception as e:
                 print(f"Error fetching {symbol}: {e}")
                 failed_symbols.append(symbol)
@@ -656,7 +677,7 @@ def run_fo_scan(now_ist):
     hist_cache = build_hist1min_cache(watchlist)
     dfs, failed_symbols = fetch_all(watchlist, now_ist, config.FETCH_WORKERS, hist_cache=hist_cache)
 
-    for symbol, (df3, df75) in dfs.items():
+    for symbol, (df3, df75, df15) in dfs.items():
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
@@ -700,7 +721,7 @@ def run_fo_scan(now_ist):
     # even when nothing crossed on the 3-min chart this run (and vice
     # versa). State is namespaced with "::75m" so it never collides
     # with the 3-min alert's dedup state for the same symbol/direction.
-    for symbol, (df3, df75) in dfs.items():
+    for symbol, (df3, df75, df15) in dfs.items():
         if df75 is None:
             continue
         try:
@@ -717,11 +738,37 @@ def run_fo_scan(now_ist):
         except Exception as e:
             print(f"Error on {symbol} (75-min): {e}")
 
+    # ---- 15-min STANDALONE alert — COMMODITIES ONLY (added) ----
+    # Pure EMA9/EMA20 crossover on the 15-min chart, same pattern as the
+    # 75-min standalone alert above, but scoped to config.COMMODITIES
+    # only (GOLD/SILVER/CRUDEOIL etc.) since that's what was asked for —
+    # it does NOT run for stocks/indices. Fires independently of the
+    # 3-min and 75-min checks. State is namespaced "::15m" so it never
+    # collides with the 3-min or 75-min dedup entries for the same
+    # symbol/direction.
+    commodity_symbols = set(config.COMMODITIES.keys())
+    for symbol, (df3, df75, df15) in dfs.items():
+        if symbol not in commodity_symbols or df15 is None:
+            continue
+        try:
+            signals_15 = check_signals_15min(df15, symbol)
+            for signal in signals_15:
+                state_symbol = f"{symbol}::15m"
+                if state.already_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"]):
+                    continue
+
+                send_alert(signal)
+                state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
+                alerts_sent += 1
+
+        except Exception as e:
+            print(f"Error on {symbol} (15-min): {e}")
+
     # Debug visibility: show the instruments whose EMA9/EMA20 are
     # currently closest together, even though none of them crossed this
     # run. Helps confirm the scanner is working when 0 alerts fire.
     gaps = []
-    for symbol, (df3, df75) in dfs.items():
+    for symbol, (df3, df75, df15) in dfs.items():
         try:
             g = debug_ema_gap(df3, symbol)
             if g is not None:
