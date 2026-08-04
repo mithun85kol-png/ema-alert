@@ -15,7 +15,9 @@ data is ALSO resampled to 75-min locally (no extra API call) and passed
 through strategy.get_75min_trend_info(), which is filter-free and never
 blocks a signal from firing. The result is attached to each signal dict
 as signal["trend_75min"] before send_alert() so it shows up as a
-purely-informational block in the Telegram message.
+purely-informational block in the Telegram message. There is no
+separate standalone 75-min alert — 75-min context only ever appears
+attached to a regular 3-min alert.
 
 Retry/backoff (added): every Upstox HTTP call goes through
 _request_with_retry(), which retries on 429 (rate-limit) and transient
@@ -34,7 +36,6 @@ is visible instead of only living in the GitHub Actions log.
 import sys
 import json
 import time
-import threading
 import datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -44,24 +45,19 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signals, check_signals_75min, check_signals_15min, debug_ema_gap, get_75min_trend_info
+from strategy import check_signals, check_signals_15min, debug_ema_gap, get_75min_trend_info
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
-# Migrated 2026-08-04: Upstox deprecated the v2 Historical/Intraday Candle
-# Data APIs in favor of v3 (see their Developer API > Announcements >
-# "Deprecation Notice: Several v2 APIs Being Phased Out"). This was the
-# cause of the "214/214 failed to fetch" scan warnings — every instrument
-# failed identically because the endpoint itself stopped working, not
-# because of any per-symbol issue. v3 uses a unit/interval pair
-# (minutes/1, minutes/3, days/1, ...) instead of a single interval string.
-UPSTOX_INTRADAY_URL = "https://api.upstox.com/v3/historical-candle/intraday/{instrument_key}/minutes/1"
-UPSTOX_DAILY_URL = "https://api.upstox.com/v3/historical-candle/{instrument_key}/days/1/{to_date}/{from_date}"
+UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
+UPSTOX_DAILY_URL = "https://api.upstox.com/v2/historical-candle/{instrument_key}/day/{to_date}/{from_date}"
 
+# NOTE: verify against current Upstox docs — same historical-candle
+# family as UPSTOX_DAILY_URL above, just with a 1-minute interval.
 # Used only to warm up EMA9/EMA20 on the 75-min timeframe (see
 # build_hist1min_cache below); a failure here degrades gracefully to
 # "not enough 75-min history yet" rather than blocking the 3-min scan.
-UPSTOX_HISTORICAL_1MIN_URL = "https://api.upstox.com/v3/historical-candle/{instrument_key}/minutes/1/{to_date}/{from_date}"
+UPSTOX_HISTORICAL_1MIN_URL = "https://api.upstox.com/v2/historical-candle/{instrument_key}/1minute/{to_date}/{from_date}"
 
 # NOTE: verify these two paths/params against current Upstox docs before
 # relying on them — used only to compute PCR (Put-Call Ratio) for
@@ -99,36 +95,6 @@ def _in_commodity_session(now_ist):
 
 
 # ---------------------------------------------------------------------
-# Global rate limiter (added 2026-08-04)
-#
-# Upstox's documented limit for candle-data endpoints is ~25 requests/
-# second per user. With FETCH_WORKERS concurrent threads all firing at
-# once, that limit was being blown through immediately (all threads
-# hit Upstox in the same instant), causing widespread 429 "Too Many
-# Requests" errors — which then get counted as fetch failures once
-# retries are exhausted.
-#
-# This throttle is shared across ALL threads (protected by a lock) and
-# enforces a minimum gap between successive Upstox requests, regardless
-# of how many worker threads are running. Capped well under the
-# documented limit (15/sec instead of 25/sec) to leave headroom for
-# other traffic on the same API key and avoid edge-of-limit flakiness.
-# ---------------------------------------------------------------------
-_rate_lock = threading.Lock()
-_last_request_time = [0.0]
-MIN_REQUEST_INTERVAL_SECONDS = 1.0 / 15  # cap ~15 req/sec across all threads
-
-
-def _throttle():
-    with _rate_lock:
-        now = time.monotonic()
-        wait = _last_request_time[0] + MIN_REQUEST_INTERVAL_SECONDS - now
-        if wait > 0:
-            time.sleep(wait)
-        _last_request_time[0] = time.monotonic()
-
-
-# ---------------------------------------------------------------------
 # Retry/backoff wrapper for Upstox HTTP calls
 # ---------------------------------------------------------------------
 
@@ -140,11 +106,6 @@ def _request_with_retry(method, url, **kwargs):
     if every attempt fails, exactly like a plain requests call would —
     callers don't need to change their exception handling.
 
-    Every attempt (including the first) goes through _throttle() first,
-    so concurrent threads can't burst past the shared rate cap — this is
-    what actually prevents the 429s, the retry loop below is just a
-    safety net for whatever occasionally still gets rate-limited.
-
     Total attempts = 1 + config.UPSTOX_MAX_RETRIES.
     Wait before attempt N (N>=2) = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * (N-1)
     e.g. base=0.6s -> waits of 0.6s, 1.2s, 1.8s before attempts 2, 3, 4.
@@ -153,7 +114,6 @@ def _request_with_retry(method, url, **kwargs):
     attempts = 1 + config.UPSTOX_MAX_RETRIES
 
     for attempt in range(1, attempts + 1):
-        _throttle()
         try:
             resp = method(url, **kwargs)
         except requests.exceptions.RequestException as e:
@@ -361,9 +321,8 @@ def build_hist1min_cache(watchlist):
     date rolls over, same pattern as build_pivot_levels(). A symbol that
     fails to fetch simply has no cached history that day, which
     degrades gracefully: its 75-min bars just won't have enough bars to
-    warm up EMA9/EMA20 yet (see get_75min_trend_info /
-    check_signals_75min — both already handle "not enough history" by
-    returning None / []), never a crash.
+    warm up EMA9/EMA20 yet (see get_75min_trend_info — it returns None
+    until there's enough history), never a crash.
     """
     cache = load_hist1min_cache()
     today_str = _now_ist().date().isoformat()
@@ -572,9 +531,9 @@ def build_watchlist(now_ist=None):
 def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     """
     Returns (symbol, df3, df75, df15) — df3 drives the actual 3-min
-    signal logic (unchanged); df75 is used for both the informative
-    75-min trend check AND the standalone 75-min alert; df15 is used
-    for the standalone 15-min commodity EMA cross alert.
+    signal logic (unchanged); df75 is used for the informative 75-min
+    trend check attached to 3-min alerts; df15 is used for the
+    standalone 15-min commodity EMA cross alert.
 
     df75 combines cached PRE-TODAY 1-min history (hist_candles, from
     build_hist1min_cache — enough days to warm up EMA9/EMA20) with
@@ -756,29 +715,12 @@ def run_fo_scan(now_ist):
         except Exception as e:
             print(f"Error on {symbol}: {e}")
 
-    # ---- 75-min STANDALONE alert (added) ----
-    # Pure EMA9/EMA20 crossover on the 75-min chart — no strong-candle,
-    # no trend-agreement, no gap filter. Fires independently of the
-    # 3-min check_signals() loop above: a 75-min cross can alert here
-    # even when nothing crossed on the 3-min chart this run (and vice
-    # versa). State is namespaced with "::75m" so it never collides
-    # with the 3-min alert's dedup state for the same symbol/direction.
-    for symbol, (df3, df75, df15) in dfs.items():
-        if df75 is None:
-            continue
-        try:
-            signals_75 = check_signals_75min(df75, symbol)
-            for signal in signals_75:
-                state_symbol = f"{symbol}::75m"
-                if state.already_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"]):
-                    continue
-
-                send_alert(signal)
-                state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
-                alerts_sent += 1
-
-        except Exception as e:
-            print(f"Error on {symbol} (75-min): {e}")
+    # ---- 75-min: informational-only (no separate alert) ----
+    # A standalone 75-min alert used to fire here independently; it has
+    # been removed on request. 75-min context still shows up on every
+    # regular 3-min alert via signal["trend_75min"] (set above, from
+    # get_75min_trend_info) — so you can see whether a 75-min EMA9/20
+    # cross happened recently without a second, separate ping.
 
     # ---- 15-min STANDALONE alert — COMMODITIES ONLY (added) ----
     # Pure EMA9/EMA20 crossover on the 15-min chart, same pattern as the
