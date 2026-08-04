@@ -7,16 +7,9 @@ def send_alert(signal):
         print("Telegram not configured, skipping send:", signal)
         return
 
-    # 75-min standalone alerts (strategy.check_signals_75min) use a
-    # separate, simpler message — no trend/trade-plan/PCR/pivot/VWAP
-    # blocks, since that alert has no trend requirement by design.
-    if signal.get("timeframe") == "75-min":
-        _send_75min_alert(signal)
-        return
-
     # 15-min standalone commodity alerts (strategy.check_signals_15min)
-    # use the same minimal message style as the 75-min one — pure
-    # EMA9/EMA20 cross, no trend/trade-plan/PCR/pivot/VWAP blocks.
+    # use a minimal message style — pure EMA9/EMA20 cross, no
+    # trend/trade-plan/PCR/pivot/VWAP blocks.
     if signal.get("timeframe") == "15-min":
         _send_15min_alert(signal)
         return
@@ -45,24 +38,11 @@ def send_alert(signal):
     else:
         vol_note = " (Same as previous)"
 
-    # Informational trade-plan block: entry = cross candle close, stop
-    # loss = EMA20, target = trailing 15-min high (bullish) / low
-    # (bearish). Purely informational — not a recommendation, just the
-    # rule you asked to see spelled out on every alert.
-    entry = signal.get("entry")
-    stop_loss = signal.get("stop_loss")
-    target = signal.get("target")
-    risk_reward = signal.get("risk_reward")
-    target_label = "15-min High" if direction == "BULLISH" else "15-min Low"
+    # Trade-plan fields (entry/stop-loss/target/risk-reward) are still
+    # computed in strategy.py, just no longer displayed here — kept out
+    # per request. Set trade_plan_block back to a non-empty string if
+    # you want it shown again.
     trade_plan_block = ""
-    if entry is not None and stop_loss is not None and target is not None:
-        trade_plan_block = (
-            f"Entry: {entry}\n"
-            f"Stop Loss (EMA20): {stop_loss}\n"
-            f"Target ({target_label}): {target}\n"
-        )
-        if risk_reward is not None:
-            trade_plan_block += f"Risk:Reward = 1:{risk_reward}\n"
 
     # PCR (Put-Call Ratio) — informational only, present only on index
     # signals (see main.py). Not shown for stocks/commodities.
@@ -119,6 +99,18 @@ def send_alert(signal):
             f"────────────────\n"
         )
 
+    # MACD — informational only. Shows raw MACD/Signal values and bias,
+    # plus a divergence note if one was detected (see strategy.py).
+    macd_line = signal.get("macd_line")
+    macd_signal_val = signal.get("macd_signal")
+    macd_divergence = signal.get("macd_divergence")
+    macd_block = ""
+    if macd_line is not None and macd_signal_val is not None:
+        macd_bias = "Bullish" if macd_line > macd_signal_val else "Bearish"
+        macd_block = f"MACD: {macd_line} / Signal: {macd_signal_val} ({macd_bias})\n"
+        if macd_divergence:
+            macd_block += f"MACD {macd_divergence}\n"
+
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
         f"{fno_line}"
@@ -127,6 +119,7 @@ def send_alert(signal):
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
         f"{trade_plan_block}"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
+        f"{macd_block}"
         f"Trend: {trend_label} {trend_icon}\n"
         f"Volume: {volume_str}{vol_note}\n"
         f"{vwap_line}"
@@ -146,53 +139,6 @@ def send_alert(signal):
         r.raise_for_status()
     except Exception as e:
         print("Telegram send failed:", e)
-
-
-def _send_75min_alert(signal):
-    """
-    Standalone 75-min crossover alert. Deliberately minimal — no
-    trend/strong-candle context applies to this alert (it's a pure
-    EMA9/EMA20 cross, by design — see strategy.check_signals_75min).
-    """
-    direction = signal["direction"]
-    arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
-
-    candle_time = signal["candle_time"]
-    date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
-
-    volume = signal["volume"]
-    volume_str = f"{volume:,}"
-
-    vol_change = signal.get("vol_change_pct")
-    if vol_change is None:
-        vol_note = ""
-    elif vol_change > 0:
-        vol_note = " (Higher than previous ⬆️)"
-    elif vol_change < 0:
-        vol_note = " (Lower than previous ⬇️)"
-    else:
-        vol_note = " (Same as previous)"
-
-    text = (
-        f"{arrow} {signal['symbol']} — 75-MIN EMA {direction} crossover\n"
-        f"Timeframe: 75-min | {date_part} {time_part}\n"
-        f"Close: {signal['close']}\n"
-        f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
-        f"RSI(14): {signal.get('rsi', 'N/A')}\n"
-        f"Volume: {volume_str}{vol_note}\n"
-        f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
-        f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
-    )
-
-    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
-    try:
-        r = requests.post(url, data={
-            "chat_id": config.TELEGRAM_CHAT_ID,
-            "text": text,
-        }, timeout=15)
-        r.raise_for_status()
-    except Exception as e:
-        print("Telegram send failed (75-min):", e)
 
 
 def _send_15min_alert(signal):
