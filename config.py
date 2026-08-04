@@ -20,9 +20,12 @@ CANDLE_INTERVAL = "3minute"   # Upstox intraday candle unit
 LOOKBACK_CANDLES = 60         # enough history for EMA20 + RSI14 + volume avg to warm up
 
 # ---------- Fetching (Step 1: ~50 F&O stocks/index/commodity scan) ----------
-# Raised 15 -> 30. This scan only covers ~50 instruments so it was never
-# the bottleneck, but a bit more headroom costs nothing and keeps this
-# scan comfortably fast even if Upstox is briefly slow to respond.
+# Raised 15 -> 30. This controls how many instruments are fetched
+# concurrently, but as of 2026-08-04 the actual Upstox request RATE is
+# separately capped by a global throttle in main.py (~15 req/sec across
+# all workers, to stay under Upstox's ~25/sec limit and avoid 429s) —
+# so this number just controls how many fetches are in flight/queued at
+# once, not how fast requests actually go out.
 FETCH_WORKERS = 30
 
 # ---------- Upstox request retry/backoff (applies to ALL Upstox calls:
