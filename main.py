@@ -34,6 +34,7 @@ is visible instead of only living in the GitHub Actions log.
 import sys
 import json
 import time
+import threading
 import datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -98,6 +99,36 @@ def _in_commodity_session(now_ist):
 
 
 # ---------------------------------------------------------------------
+# Global rate limiter (added 2026-08-04)
+#
+# Upstox's documented limit for candle-data endpoints is ~25 requests/
+# second per user. With FETCH_WORKERS concurrent threads all firing at
+# once, that limit was being blown through immediately (all threads
+# hit Upstox in the same instant), causing widespread 429 "Too Many
+# Requests" errors — which then get counted as fetch failures once
+# retries are exhausted.
+#
+# This throttle is shared across ALL threads (protected by a lock) and
+# enforces a minimum gap between successive Upstox requests, regardless
+# of how many worker threads are running. Capped well under the
+# documented limit (15/sec instead of 25/sec) to leave headroom for
+# other traffic on the same API key and avoid edge-of-limit flakiness.
+# ---------------------------------------------------------------------
+_rate_lock = threading.Lock()
+_last_request_time = [0.0]
+MIN_REQUEST_INTERVAL_SECONDS = 1.0 / 15  # cap ~15 req/sec across all threads
+
+
+def _throttle():
+    with _rate_lock:
+        now = time.monotonic()
+        wait = _last_request_time[0] + MIN_REQUEST_INTERVAL_SECONDS - now
+        if wait > 0:
+            time.sleep(wait)
+        _last_request_time[0] = time.monotonic()
+
+
+# ---------------------------------------------------------------------
 # Retry/backoff wrapper for Upstox HTTP calls
 # ---------------------------------------------------------------------
 
@@ -109,6 +140,11 @@ def _request_with_retry(method, url, **kwargs):
     if every attempt fails, exactly like a plain requests call would —
     callers don't need to change their exception handling.
 
+    Every attempt (including the first) goes through _throttle() first,
+    so concurrent threads can't burst past the shared rate cap — this is
+    what actually prevents the 429s, the retry loop below is just a
+    safety net for whatever occasionally still gets rate-limited.
+
     Total attempts = 1 + config.UPSTOX_MAX_RETRIES.
     Wait before attempt N (N>=2) = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * (N-1)
     e.g. base=0.6s -> waits of 0.6s, 1.2s, 1.8s before attempts 2, 3, 4.
@@ -117,6 +153,7 @@ def _request_with_retry(method, url, **kwargs):
     attempts = 1 + config.UPSTOX_MAX_RETRIES
 
     for attempt in range(1, attempts + 1):
+        _throttle()
         try:
             resp = method(url, **kwargs)
         except requests.exceptions.RequestException as e:
