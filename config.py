@@ -20,12 +20,9 @@ CANDLE_INTERVAL = "3minute"   # Upstox intraday candle unit
 LOOKBACK_CANDLES = 60         # enough history for EMA20 + RSI14 + volume avg to warm up
 
 # ---------- Fetching (Step 1: ~50 F&O stocks/index/commodity scan) ----------
-# Raised 15 -> 30. This controls how many instruments are fetched
-# concurrently, but as of 2026-08-04 the actual Upstox request RATE is
-# separately capped by a global throttle in main.py (~15 req/sec across
-# all workers, to stay under Upstox's ~25/sec limit and avoid 429s) —
-# so this number just controls how many fetches are in flight/queued at
-# once, not how fast requests actually go out.
+# Raised 15 -> 30. This scan only covers ~50 instruments so it was never
+# the bottleneck, but a bit more headroom costs nothing and keeps this
+# scan comfortably fast even if Upstox is briefly slow to respond.
 FETCH_WORKERS = 30
 
 # ---------- Upstox request retry/backoff (applies to ALL Upstox calls:
@@ -70,6 +67,17 @@ CROSS_LOOKBACK_CANDLES = 5
 # minutes, matching "entry on cross, target = last 15-min high/low".
 TARGET_LOOKBACK_CANDLES = 5
 
+# ---------- MACD (added) — informational only, never blocks a signal ----------
+MACD_FAST = 12
+MACD_SLOW = 26
+MACD_SIGNAL = 9
+
+# How many trailing candles to scan for a MACD bullish/bearish
+# divergence (the window is split into two halves; price extremes and
+# MACD-line values in each half are compared — see
+# strategy._detect_macd_divergence). 20 candles x 3-min = 60 minutes.
+MACD_DIVERGENCE_LOOKBACK_CANDLES = 20
+
 # ---------- Indices (cash/index segment, no expiry) ----------
 INDICES = {
     "NIFTY 50": "Nifty 50",
@@ -101,6 +109,13 @@ FO_STOCK_WATCHLIST = [
 # has enough bars to be meaningful.
 HISTORICAL_1MIN_LOOKBACK_DAYS = 10
 HIST_1MIN_CACHE_FILE = "historical_1min_cache.json"
+
+# How many trailing 75-min candles get_75min_trend_info() checks for a
+# recent EMA9/20 cross (informational block on every 3-min alert). 5
+# candles ≈ one trading day. If no cross falls within this window, the
+# info block still shows the current bias, just without a "crossed N
+# candle(s) ago" note.
+TREND_75MIN_LOOKBACK_CANDLES = 5
 
 # ---------- State / alert de-dup ----------
 STATE_FILE = "alert_state.json"
