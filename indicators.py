@@ -18,6 +18,21 @@ def add_ema50(df):
     return df
 
 
+def add_macd(df, fast_period=12, slow_period=26, signal_period=9):
+    """
+    Adds 'macd_line', 'macd_signal', and 'macd_hist' columns.
+    macd_line = EMA(fast) - EMA(slow) of close
+    macd_signal = EMA(signal_period) of macd_line
+    macd_hist = macd_line - macd_signal
+    """
+    ema_fast = df["close"].ewm(span=fast_period, adjust=False).mean()
+    ema_slow = df["close"].ewm(span=slow_period, adjust=False).mean()
+    df["macd_line"] = ema_fast - ema_slow
+    df["macd_signal"] = df["macd_line"].ewm(span=signal_period, adjust=False).mean()
+    df["macd_hist"] = df["macd_line"] - df["macd_signal"]
+    return df
+
+
 def add_rsi(df, period):
     delta = df["close"].diff()
     gain = delta.clip(lower=0)
