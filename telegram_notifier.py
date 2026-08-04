@@ -78,27 +78,6 @@ def send_alert(signal):
     vwap_note = signal.get("vwap_note")
     vwap_line = f"VWAP: {vwap} ({vwap_note})\n" if vwap is not None and vwap_note else ""
 
-    # 75-min informative trend — purely contextual, never blocks the
-    # 3-min signal from firing. Only shown when trend_75min was
-    # successfully computed and attached to the signal (see main.py).
-    # Flags agreement/disagreement with the 3-min cross direction so
-    # it's easy to spot at a glance.
-    trend_75 = signal.get("trend_75min")
-    trend_75_block = ""
-    if trend_75:
-        bias_75 = trend_75.get("bias")
-        candles_since = trend_75.get("candles_since_cross")
-        agree_icon = "✅" if bias_75 == direction else "⚠️"
-        if candles_since is not None:
-            cross_note = f"crossed {candles_since} candle(s) ago" if candles_since > 0 else "crossed this candle"
-        else:
-            cross_note = "no recent cross"
-        trend_75_block = (
-            f"────────────────\n"
-            f"75-min trend (info): {bias_75} {agree_icon} ({cross_note})\n"
-            f"────────────────\n"
-        )
-
     # MACD — informational only. Shows raw MACD/Signal values and bias,
     # plus a divergence note if one was detected (see strategy.py).
     macd_line = signal.get("macd_line")
@@ -114,7 +93,7 @@ def send_alert(signal):
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
         f"{fno_line}"
-        f"Timeframe: 3-min | {date_part} {time_part}\n"
+        f"Timeframe: 75-min | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
         f"{trade_plan_block}"
@@ -125,7 +104,6 @@ def send_alert(signal):
         f"{vwap_line}"
         f"{pcr_line}"
         f"{pivot_block}"
-        f"{trend_75_block}"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
         f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
     )
