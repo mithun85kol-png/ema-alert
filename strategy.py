@@ -44,11 +44,19 @@ trading day, so no extra day-boundary handling is needed). Purely
 informational — never blocks a signal. Attached inline inside
 _evaluate_candle since it needs the same df/idx already in scope, no
 separate API call or extra fetch required.
+
+MACD Divergence (added): standard MACD(12,26,9) is computed on the
+same 3-min df already in scope (indicators.add_macd) — no extra fetch.
+_detect_macd_divergence() checks the trailing
+config.MACD_DIVERGENCE_LOOKBACK_CANDLES window for a bullish or
+bearish divergence between price and the MACD line. Purely
+informational — raw MACD values and any divergence note are attached
+to the signal but never block it from firing.
 """
 
 import config
 from indicators import (
-    add_emas, add_rsi, add_volume_avg, add_ema50,
+    add_emas, add_rsi, add_volume_avg, add_ema50, add_macd,
     is_strong_candle, detect_candle_pattern,
 )
 
@@ -58,7 +66,48 @@ PIVOT_PROXIMITY_PCT = 0.3
 
 
 def _min_required_len(lookback):
-    return max(config.EMA_SLOW, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, 50) + lookback + 1
+    return max(config.EMA_SLOW, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, config.MACD_SLOW, 50) + lookback + 1
+
+
+def _detect_macd_divergence(df, idx, lookback):
+    """
+    Simple half-window divergence check: splits the trailing `lookback`
+    candles (ending at idx) into two halves and compares the extreme
+    price point in each half against the MACD line at that same index.
+      Bullish divergence: price's lowest low in the recent half is LOWER
+      than its lowest low in the earlier half, but the MACD line at that
+      recent low is HIGHER than the MACD line at the earlier low (price
+      falling faster than downside momentum — weakening downtrend).
+      Bearish divergence: mirror, using highs and MACD peaks (price
+      rising to a new high while MACD makes a lower high — weakening
+      uptrend).
+    Returns {"bullish": bool, "bearish": bool} — both False if the
+    window is too short or no divergence is present.
+    """
+    window_start = max(0, idx - lookback + 1)
+    window = df.iloc[window_start: idx + 1]
+    if len(window) < 4:
+        return {"bullish": False, "bearish": False}
+
+    mid = len(window) // 2
+    first_half = window.iloc[:mid]
+    second_half = window.iloc[mid:]
+
+    first_low_pos = first_half["low"].idxmin()
+    second_low_pos = second_half["low"].idxmin()
+    bullish = (
+        df.loc[second_low_pos, "low"] < df.loc[first_low_pos, "low"]
+        and df.loc[second_low_pos, "macd_line"] > df.loc[first_low_pos, "macd_line"]
+    )
+
+    first_high_pos = first_half["high"].idxmax()
+    second_high_pos = second_half["high"].idxmax()
+    bearish = (
+        df.loc[second_high_pos, "high"] > df.loc[first_high_pos, "high"]
+        and df.loc[second_high_pos, "macd_line"] < df.loc[first_high_pos, "macd_line"]
+    )
+
+    return {"bullish": bool(bullish), "bearish": bool(bearish)}
 
 
 def _compute_vwap_at(df, idx):
@@ -175,6 +224,17 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
         position = "Above VWAP" if close_price >= vwap else "Below VWAP"
         vwap_note = f"{position} ({vwap_diff_pct:+.2f}%)"
 
+    # MACD — informational only. macd_line/signal/hist are shown as raw
+    # values; macd_divergence flags a bullish/bearish divergence within
+    # the trailing config.MACD_DIVERGENCE_LOOKBACK_CANDLES window, if
+    # any (see _detect_macd_divergence). Never blocks a signal.
+    macd_div = _detect_macd_divergence(df, idx, config.MACD_DIVERGENCE_LOOKBACK_CANDLES)
+    macd_divergence_note = None
+    if macd_div["bullish"]:
+        macd_divergence_note = "Bullish Divergence (price lower low, MACD higher low)"
+    elif macd_div["bearish"]:
+        macd_divergence_note = "Bearish Divergence (price higher high, MACD lower high)"
+
     return {
         "symbol": symbol,
         "direction": direction,
@@ -199,6 +259,10 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
         "pivot_note": pivot_note,
         "vwap": round(vwap, 2) if vwap is not None else None,
         "vwap_note": vwap_note,
+        "macd_line": round(float(curr["macd_line"]), 2),
+        "macd_signal": round(float(curr["macd_signal"]), 2),
+        "macd_hist": round(float(curr["macd_hist"]), 2),
+        "macd_divergence": macd_divergence_note,
     }
 
 
@@ -233,6 +297,7 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     df = add_rsi(df, config.RSI_PERIOD)
     df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
     df = add_ema50(df)
+    df = add_macd(df, config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL)
 
     signals = []
     n = len(df)
@@ -282,7 +347,7 @@ def debug_ema_gap(df, symbol):
     }
 
 
-def get_75min_trend_info(df_75min, symbol, lookback_candles=5):
+def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
     """
     Informative-only check on 75-min candles — no filters (no strong
     candle, no volume, no trend-agreement, no gap threshold). Just
@@ -296,6 +361,8 @@ def get_75min_trend_info(df_75min, symbol, lookback_candles=5):
     """
     if len(df_75min) < config.EMA_SLOW + 2:
         return None
+
+    lookback_candles = lookback_candles or config.TREND_75MIN_LOOKBACK_CANDLES
 
     df = add_emas(df_75min, config.EMA_FAST, config.EMA_SLOW)
     n = len(df)
@@ -323,88 +390,15 @@ def get_75min_trend_info(df_75min, symbol, lookback_candles=5):
     }
 
 
-def check_signals_75min(df_75min, symbol, lookback=None):
-    """
-    STANDALONE 75-min alert — pure EMA9/EMA20 crossover on the 75-min
-    chart. No strong-candle filter, no EMA50 trend-agreement
-    requirement, no min-gap filter. Fires independently of check_signals()
-    (the 3-min logic): a 75-min cross can alert here even when nothing
-    crossed on the 3-min chart this run, and vice versa. These are two
-    separate alerts, deduped separately (see main.py — the 75-min state
-    key is namespaced with "::75m" so it never collides with the 3-min
-    state entry for the same symbol/direction).
-
-    Uses the same catch-up-window approach as check_signals(): scans the
-    last `lookback` closed 75-min candles (default:
-    config.CROSS_LOOKBACK_CANDLES), not just the latest one.
-
-    Returns a list of signal dicts (oldest first), each tagged
-    timeframe="75-min". Empty list if nothing qualifies or there isn't
-    enough 75-min history yet.
-    """
-    lookback = lookback or config.CROSS_LOOKBACK_CANDLES
-
-    if len(df_75min) < config.EMA_SLOW + 2:
-        return []
-
-    max_possible_lookback = len(df_75min) - (config.EMA_SLOW + 1)
-    lookback = max(1, min(lookback, max_possible_lookback))
-
-    df = add_emas(df_75min, config.EMA_FAST, config.EMA_SLOW)
-    df = add_rsi(df, config.RSI_PERIOD)
-    df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
-
-    signals = []
-    n = len(df)
-    start = max(1, n - lookback)
-    for idx in range(start, n):
-        curr = df.iloc[idx]
-        prev = df.iloc[idx - 1]
-
-        bullish_cross = prev["ema_fast"] <= prev["ema_slow"] and curr["ema_fast"] > curr["ema_slow"]
-        bearish_cross = prev["ema_fast"] >= prev["ema_slow"] and curr["ema_fast"] < curr["ema_slow"]
-
-        if not (bullish_cross or bearish_cross):
-            continue
-
-        direction = "BULLISH" if bullish_cross else "BEARISH"
-
-        curr_vol = curr["volume"]
-        prev_vol = prev["volume"]
-        vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1) if prev_vol else None
-        rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
-
-        cross_pattern = detect_candle_pattern(curr)
-        prev_pattern = detect_candle_pattern(prev)
-
-        signals.append({
-            "symbol": symbol,
-            "timeframe": "75-min",
-            "direction": direction,
-            "close": round(float(curr["close"]), 2),
-            "rsi": round(float(rsi_val), 1) if rsi_val is not None else None,
-            "volume": int(curr["volume"]),
-            "vol_avg": round(float(curr["vol_avg"]), 0) if not pd_isna(curr["vol_avg"]) else None,
-            "vol_change_pct": vol_change_pct,
-            "ema_fast": round(float(curr["ema_fast"]), 2),
-            "ema_slow": round(float(curr["ema_slow"]), 2),
-            "candle_time": str(curr.get("timestamp", "")),
-            "cross_candle_pattern": cross_pattern,
-            "prev_candle_pattern": prev_pattern,
-        })
-
-    return signals
-
-
 def check_signals_15min(df_15min, symbol, lookback=None):
     """
     STANDALONE 15-min alert — pure EMA9/EMA20 crossover on the 15-min
-    chart. Same design as check_signals_75min: no strong-candle filter,
-    no EMA50 trend-agreement requirement, no min-gap filter. Intended
-    for config.COMMODITIES only (see main.py — the caller filters by
-    symbol), so it is not restricted here. Fires independently of
-    check_signals()/check_signals_75min. Deduped separately in main.py
-    with state key namespaced "::15m".
+    chart. Same design as the retired standalone 75-min alert used to
+    be: no strong-candle filter, no EMA50 trend-agreement requirement,
+    no min-gap filter. Intended for config.COMMODITIES only (see
+    main.py — the caller filters by symbol), so it is not restricted
+    here. Fires independently of check_signals(). Deduped separately
+    in main.py with state key namespaced "::15m".
 
     Uses the same catch-up-window approach: scans the last `lookback`
     closed 15-min candles (default: config.CROSS_LOOKBACK_CANDLES), not
