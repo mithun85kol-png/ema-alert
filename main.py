@@ -553,7 +553,7 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     """
     raw = fetch_1min_candles(instrument_key)
     if raw is None or len(raw) < 30:
-        return symbol, None, None
+        return symbol, None, None, None
     df3 = resample_3min(raw)
     df3 = drop_unclosed_candle(df3, now_ist, candle_minutes=3)
 
