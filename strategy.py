@@ -31,12 +31,19 @@ because it's no longer the "latest" candle. main.py's dedup is keyed
 on (symbol, direction, candle_time), so a candle already alerted is
 never re-sent even though it's re-checked on every later run.
 
-75-min informative trend: get_75min_trend_info() is a separate,
-filter-free helper — no strong-candle/volume/trend-agreement/gap checks
-— that just reports EMA9/20 bias on 75-min candles and how recently
-(within a lookback window) they crossed. It never fires its own signal
-and never blocks the 3-min check_signals() logic; main.py attaches its
-result to a signal dict purely as context for the alert message.
+NOTE (timeframe): check_signals() itself is timeframe-agnostic — it
+just evaluates whatever OHLCV df it's handed. main.py currently passes
+in df75 (1-min data resampled to 75-min candles), so this is the
+PRIMARY signal timeframe now, not the old 3-min. Everything above
+(strong candle, gap filter, EMA50 trend agreement, RSI/volume/VWAP/
+MACD/pivot context) works exactly the same, just on 75-min bars.
+
+get_75min_trend_info() below is a separate, filter-free helper that
+just reports EMA9/20 bias on 75-min candles — it predates the change
+above and is currently UNUSED by main.py (it used to add a 75-min
+context block to a 3-min alert, which is redundant now that the main
+signal already runs on 75-min). Left in place in case a different
+timeframe's context block is wanted again later.
 
 VWAP (added): computed cumulatively from the start of the current
 session's df (Upstox intraday endpoint only returns the current
