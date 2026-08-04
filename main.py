@@ -7,17 +7,36 @@ NOTE: the daily-candle endpoint used for Camarilla R3/S3 pivots is built
 by analogy with the intraday endpoint below — verify the exact path
 against current Upstox docs if pivot values look wrong.
 
-This script scans the ~50 F&O stock/index/commodity watchlist every
-3-minute workflow run.
+This script scans the ~50 F&O stock/index/commodity watchlist on every
+workflow run (the workflow itself can still run as often as every few
+minutes — see "when alerts actually fire" below).
 
-75-min informative trend (added): every fetched instrument's raw 1-min
-data is ALSO resampled to 75-min locally (no extra API call) and passed
-through strategy.get_75min_trend_info(), which is filter-free and never
-blocks a signal from firing. The result is attached to each signal dict
-as signal["trend_75min"] before send_alert() so it shows up as a
-purely-informational block in the Telegram message. There is no
-separate standalone 75-min alert — 75-min context only ever appears
-attached to a regular 3-min alert.
+75-min PRIMARY signal (changed): the main EMA9/EMA20 crossover check
+(strategy.check_signals — strong-candle filter, min-gap filter, EMA50
+trend agreement for stocks/commodities) now runs on df75, the 1-min
+data resampled to 75-min candles, instead of the old 3-min df3. Every
+fetched instrument's raw 1-min data is still resampled to 3-min (df3)
+and 15-min (df15) too — df15 still drives the separate standalone
+commodity alert below, df3 is currently unused by the main signal but
+kept around cheaply in case it's wanted again.
+
+WHEN ALERTS ACTUALLY FIRE (75-min primary signal):
+- A 75-min candle only CLOSES 5 times a trading day (09:15, 10:30,
+  11:45, 13:00, 14:15 IST start-times; the 14:15-15:30 bar is the
+  session's last). drop_unclosed_candle(..., candle_minutes=75) makes
+  sure a still-forming 75-min bar is never evaluated, so a signal can
+  only appear right after one of those 5 candles closes.
+- The workflow can keep running every few minutes as before — most
+  runs simply find "no new closed 75-min candle" and send nothing.
+  Whichever run happens to execute first AFTER one of the 5 close
+  times is the one that will alert (if the cross qualifies).
+- check_signals() re-checks the last config.CROSS_LOOKBACK_CANDLES
+  closed 75-min candles (not just the newest), so a delayed/skipped
+  run still catches a cross that closed while nothing was running.
+- Expect roughly 0-5 candle closes/instrument/day to even be eligible,
+  and only a fraction of those will pass the strong-candle + min-gap +
+  trend-agreement filters — so alerts on this timeframe are inherently
+  much less frequent than the old 3-min version, by design.
 
 Retry/backoff (added): every Upstox HTTP call goes through
 _request_with_retry(), which retries on 429 (rate-limit) and transient
@@ -45,7 +64,7 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signals, check_signals_15min, debug_ema_gap, get_75min_trend_info
+from strategy import check_signals, check_signals_15min, debug_ema_gap
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
@@ -685,7 +704,7 @@ def run_fo_scan(now_ist):
             s3 = levels["s3"] if levels else None
 
             require_trend = symbol not in index_symbols
-            signals = check_signals(df3, symbol, r3=r3, s3=s3, require_trend_confirmation=require_trend)
+            signals = check_signals(df75, symbol, r3=r3, s3=s3, require_trend_confirmation=require_trend)
             for signal in signals:
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
                     continue
@@ -700,13 +719,6 @@ def run_fo_scan(now_ist):
                     if symbol not in pcr_cache_this_run:
                         pcr_cache_this_run[symbol] = fetch_pcr(watchlist[symbol])
                     signal["pcr"] = pcr_cache_this_run[symbol]
-
-                # 75-min informative trend — never blocks the alert;
-                # get_75min_trend_info returns None if there isn't
-                # enough 75-min history yet, in which case no 75-min
-                # block is shown on the message.
-                if df75 is not None:
-                    signal["trend_75min"] = get_75min_trend_info(df75, symbol)
 
                 send_alert(signal)
                 state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
@@ -748,13 +760,14 @@ def run_fo_scan(now_ist):
         except Exception as e:
             print(f"Error on {symbol} (15-min): {e}")
 
-    # Debug visibility: show the instruments whose EMA9/EMA20 are
+    # Debug visibility: show the instruments whose EMA9/EMA20 (on the
+    # 75-min timeframe, same one the actual signal now uses) are
     # currently closest together, even though none of them crossed this
     # run. Helps confirm the scanner is working when 0 alerts fire.
     gaps = []
     for symbol, (df3, df75, df15) in dfs.items():
         try:
-            g = debug_ema_gap(df3, symbol)
+            g = debug_ema_gap(df75, symbol)
             if g is not None:
                 gaps.append(g)
         except Exception:
