@@ -47,15 +47,20 @@ from strategy import check_signals, check_signals_75min, check_signals_15min, de
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
-UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
-UPSTOX_DAILY_URL = "https://api.upstox.com/v2/historical-candle/{instrument_key}/day/{to_date}/{from_date}"
+# Migrated 2026-08-04: Upstox deprecated the v2 Historical/Intraday Candle
+# Data APIs in favor of v3 (see their Developer API > Announcements >
+# "Deprecation Notice: Several v2 APIs Being Phased Out"). This was the
+# cause of the "214/214 failed to fetch" scan warnings — every instrument
+# failed identically because the endpoint itself stopped working, not
+# because of any per-symbol issue. v3 uses a unit/interval pair
+# (minutes/1, minutes/3, days/1, ...) instead of a single interval string.
+UPSTOX_INTRADAY_URL = "https://api.upstox.com/v3/historical-candle/intraday/{instrument_key}/minutes/1"
+UPSTOX_DAILY_URL = "https://api.upstox.com/v3/historical-candle/{instrument_key}/days/1/{to_date}/{from_date}"
 
-# NOTE: verify against current Upstox docs — same historical-candle
-# family as UPSTOX_DAILY_URL above, just with a 1-minute interval.
 # Used only to warm up EMA9/EMA20 on the 75-min timeframe (see
 # build_hist1min_cache below); a failure here degrades gracefully to
 # "not enough 75-min history yet" rather than blocking the 3-min scan.
-UPSTOX_HISTORICAL_1MIN_URL = "https://api.upstox.com/v2/historical-candle/{instrument_key}/1minute/{to_date}/{from_date}"
+UPSTOX_HISTORICAL_1MIN_URL = "https://api.upstox.com/v3/historical-candle/{instrument_key}/minutes/1/{to_date}/{from_date}"
 
 # NOTE: verify these two paths/params against current Upstox docs before
 # relying on them — used only to compute PCR (Put-Call Ratio) for
