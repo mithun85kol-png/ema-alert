@@ -90,16 +90,34 @@ def send_alert(signal):
         if macd_divergence:
             macd_block += f"MACD {macd_divergence}\n"
 
+    # 75-min context — informational only, never blocks or triggers
+    # anything (see strategy.get_75min_trend_info). Reports the 75-min
+    # EMA9/20 bias and, if a cross happened within
+    # config.TREND_75MIN_LOOKBACK_CANDLES candles, how many candles ago.
+    # None if there isn't enough 75-min history yet, in which case the
+    # line is simply omitted.
+    trend_75min = signal.get("trend_75min")
+    trend_75min_line = ""
+    if trend_75min is not None:
+        bias_icon = "📈" if trend_75min["bias"] == "BULLISH" else "📉"
+        candles_since = trend_75min.get("candles_since_cross")
+        if candles_since is not None:
+            cross_note = f"cross {candles_since} candle(s) ago" if candles_since > 0 else "cross on latest candle"
+            trend_75min_line = f"75-min: {trend_75min['bias']} {bias_icon} ({cross_note})\n"
+        else:
+            trend_75min_line = f"75-min: {trend_75min['bias']} {bias_icon} (no recent cross)\n"
+
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
         f"{fno_line}"
-        f"Timeframe: 75-min | {date_part} {time_part}\n"
+        f"Timeframe: {signal.get('timeframe', '3-min')} | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
         f"{trade_plan_block}"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"{macd_block}"
         f"Trend: {trend_label} {trend_icon}\n"
+        f"{trend_75min_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{vwap_line}"
         f"{pcr_line}"
