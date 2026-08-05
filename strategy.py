@@ -32,18 +32,16 @@ on (symbol, direction, candle_time), so a candle already alerted is
 never re-sent even though it's re-checked on every later run.
 
 NOTE (timeframe): check_signals() itself is timeframe-agnostic — it
-just evaluates whatever OHLCV df it's handed. main.py currently passes
-in df75 (1-min data resampled to 75-min candles), so this is the
-PRIMARY signal timeframe now, not the old 3-min. Everything above
-(strong candle, gap filter, EMA50 trend agreement, RSI/volume/VWAP/
-MACD/pivot context) works exactly the same, just on 75-min bars.
+just evaluates whatever OHLCV df it's handed. main.py calls it on df3
+(3-min candles) for index/stock/commodity — this is the only alert
+that fires; there is no separate filtered 75-min alert.
 
 get_75min_trend_info() below is a separate, filter-free helper that
-just reports EMA9/20 bias on 75-min candles — it predates the change
-above and is currently UNUSED by main.py (it used to add a 75-min
-context block to a 3-min alert, which is redundant now that the main
-signal already runs on 75-min). Left in place in case a different
-timeframe's context block is wanted again later.
+just reports EMA9/20 bias on 75-min candles, and whether/how-recently
+a 75-min cross happened. main.py calls it once per 3-min signal and
+attaches the result as signal["trend_75min"] — purely a context line
+on the 3-min alert message (see telegram_notifier.py), never a
+trigger and never a separate alert of its own.
 
 VWAP (added): computed cumulatively from the start of the current
 session's df (Upstox intraday endpoint only returns the current
