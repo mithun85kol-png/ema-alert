@@ -61,6 +61,16 @@ def send_alert(signal):
     else:
         fno_line = ""
 
+    # Day change % — informational only, vs previous trading day's
+    # close (see strategy.py / main.py). Omitted entirely if
+    # prev_close wasn't available for this symbol today.
+    day_change_pct = signal.get("day_change_pct")
+    if day_change_pct is not None:
+        day_change_icon = "🟢" if day_change_pct >= 0 else "🔴"
+        day_change_line = f"Day Change: {day_change_pct:+.2f}% {day_change_icon}\n"
+    else:
+        day_change_line = ""
+
     r3 = signal.get("r3")
     s3 = signal.get("s3")
     pivot_note = signal.get("pivot_note")
@@ -138,6 +148,7 @@ def send_alert(signal):
         f"{fno_line}"
         f"Timeframe: 3-min | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
+        f"{day_change_line}"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
         f"{trend75_block}"
         f"Trend: {trend_label} {trend_icon}\n"
