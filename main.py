@@ -25,13 +25,18 @@ signal["trend_75min"], showing:
   - how close EMA9/20 currently are to crossing on the 75-min chart
     (gap_pct — smaller = closer to a cross), useful even when no recent
     75-min cross has happened
-CONDITIONAL (added): the 75-min bias must now AGREE with the 3-min
-signal's direction for the alert to fire — a bullish 3-min cross only
-alerts if the 75-min chart's EMA9/20 bias is also BULLISH, and likewise
-for bearish. If there isn't enough 75-min history yet to compute a bias
-(info75 is None), the signal is allowed through unfiltered rather than
-blocked, since "not enough data" isn't the same as "disagrees" — the
-alert just won't have a 75-min line in that case.
+CONDITIONAL (tightened): the alert only fires if BOTH are true —
+  1. the 75-min bias agrees with the 3-min signal's direction (bullish
+     3-min cross needs 75-min BULLISH, bearish needs 75-min BEARISH)
+  2. the 75-min chart has ALSO actually crossed within the last
+     config.TREND_75MIN_LOOKBACK_CANDLES (5) 75-min candles — a
+     symbol that's simply been leaning bullish/bearish on 75-min for
+     a while with no recent cross does NOT qualify anymore; only a
+     genuinely fresh, agreeing 75-min cross does.
+If there isn't enough 75-min history yet to compute a bias (info75 is
+None), the signal is allowed through unfiltered rather than blocked,
+since "not enough data" isn't the same as "disagrees" — the alert
+just won't have a 75-min line in that case.
 
 COMMODITIES (GOLD/SILVER/CRUDEOIL etc.): follow the exact same rule as
 stocks — the 3-min loop is their only alert (EMA9/20 cross + mandatory
@@ -816,14 +821,22 @@ def run_fo_scan(now_ist):
             info75 = get_75min_trend_info(df75, symbol) if (signals and df75 is not None) else None
 
             for signal in signals:
-                # 75-min CONDITIONAL (added): the bigger-timeframe bias
-                # must agree with this 3-min signal's direction, or the
-                # signal doesn't qualify. If info75 is None (not enough
-                # 75-min history yet), we don't have anything to
-                # disagree with, so the signal is allowed through
+                # 75-min CONDITIONAL (tightened): bias agreement alone
+                # isn't enough — the 75-min chart must ALSO have
+                # actually crossed within the last
+                # config.TREND_75MIN_LOOKBACK_CANDLES (5) 75-min
+                # candles (info75["candles_since_cross"] is not None).
+                # A symbol that's been BULLISH on 75-min for a long
+                # time with no recent cross no longer qualifies — only
+                # a genuinely fresh 75-min cross, agreeing in
+                # direction, does. If info75 is None (not enough
+                # 75-min history yet), the signal is allowed through
                 # unfiltered — it just won't carry a trend_75min block
                 # below.
-                if info75 and info75["bias"] != signal["direction"]:
+                if info75 and (
+                    info75["bias"] != signal["direction"]
+                    or info75["candles_since_cross"] is None
+                ):
                     continue
 
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
