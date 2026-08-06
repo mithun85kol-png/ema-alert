@@ -152,7 +152,7 @@ def _compute_vwap_at(df, idx):
     return float((typical_price * window["volume"]).sum() / cum_vol)
 
 
-def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
+def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None):
     curr = df.iloc[idx]
     prev = df.iloc[idx - 1]
 
@@ -251,6 +251,14 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
     elif macd_div["bearish"]:
         macd_divergence_note = "Bearish Divergence (price higher high, MACD lower high)"
 
+    # Day change % — purely informational, vs previous trading day's
+    # close (same prev-day close already fetched for R3/S3). None if
+    # prev_close wasn't available (e.g. pivot fetch failed for this
+    # symbol that day) — the alert simply omits this line then.
+    day_change_pct = None
+    if prev_close:
+        day_change_pct = round((close_price - prev_close) / prev_close * 100, 2)
+
     return {
         "symbol": symbol,
         "direction": direction,
@@ -273,6 +281,8 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
         "r3": r3,
         "s3": s3,
         "pivot_note": pivot_note,
+        "prev_close": round(float(prev_close), 2) if prev_close else None,
+        "day_change_pct": day_change_pct,
         "vwap": round(vwap, 2) if vwap is not None else None,
         "vwap_note": vwap_note,
         "macd_line": round(float(curr["macd_line"]), 2),
@@ -282,7 +292,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
     }
 
 
-def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True):
+def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True, prev_close=None):
     """
     Scans the last `lookback` closed candles (default:
     config.CROSS_LOOKBACK_CANDLES) for EMA9/20 crossovers — not just the
@@ -319,7 +329,11 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     n = len(df)
     start = max(1, n - lookback)
     for idx in range(start, n):
-        sig = _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=require_trend_confirmation)
+        sig = _evaluate_candle(
+            df, idx, symbol, r3, s3,
+            require_trend_confirmation=require_trend_confirmation,
+            prev_close=prev_close,
+        )
         if sig is not None:
             signals.append(sig)
     return signals
