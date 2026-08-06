@@ -52,28 +52,75 @@ def _normalize(s):
     return "".join(ch for ch in s.upper() if ch.isalnum())
 
 
+def _normalize_index_name(s):
+    """
+    Like _normalize, but also treats '&' and the word 'AND' as
+    equivalent (and drops both), so 'Nifty Oil & Gas' and
+    'NIFTY OIL AND GAS' compare equal regardless of which spelling
+    Upstox's master file or our own config.py happens to use.
+    """
+    s = s.upper().replace("&", " AND ")
+    words = [w for w in s.split() if w != "AND"]
+    return "".join(ch for ch in "".join(words) if ch.isalnum())
+
+
 def resolve_indices(index_names):
     print(f"Resolving {len(index_names)} indices...", flush=True)
     master = _load_master()
+    index_rows = [r for r in master if r.get("segment") in ("NSE_INDEX", "BSE_INDEX")]
     out = {}
+
     for display, search in index_names.items():
         found = False
-        search_upper = search.upper()
-        for row in master:
-            if row.get("segment") not in ("NSE_INDEX", "BSE_INDEX"):
-                continue
-            # Some BSE_INDEX entries (e.g. SENSEX) don't have a 'name'
-            # field that matches the display name exactly — fall back to
-            # trading_symbol so those still resolve.
-            name_match = row.get("name", "").upper() == search_upper
-            symbol_match = row.get("trading_symbol", "").upper() == search_upper
-            if name_match or symbol_match:
-                out[display] = row["instrument_key"]
-                found = True
+        # Try both the configured display name and search name against
+        # both 'name'/'trading_symbol'/'short_name' fields — whichever
+        # side happens to match Upstox's actual spelling wins.
+        candidates_to_try = [search, display]
+
+        # Pass 1: exact (case-insensitive) match on name / trading_symbol / short_name
+        for term in candidates_to_try:
+            term_upper = term.upper()
+            for row in index_rows:
+                fields = (row.get("name", ""), row.get("trading_symbol", ""), row.get("short_name", ""))
+                if term_upper in {f.upper() for f in fields if f}:
+                    out[display] = row["instrument_key"]
+                    found = True
+                    break
+            if found:
                 break
+
+        # Pass 2: normalized match, treating '&' and 'AND' as equivalent
+        if not found:
+            for term in candidates_to_try:
+                term_norm = _normalize_index_name(term)
+                for row in index_rows:
+                    fields = (row.get("name", ""), row.get("trading_symbol", ""), row.get("short_name", ""))
+                    if term_norm and term_norm in {_normalize_index_name(f) for f in fields if f}:
+                        out[display] = row["instrument_key"]
+                        found = True
+                        break
+                if found:
+                    break
+
+        # Pass 3: normalized substring containment (last resort before
+        # giving up), e.g. search misses a word the master name has.
+        if not found:
+            for term in candidates_to_try:
+                term_norm = _normalize_index_name(term)
+                if not term_norm:
+                    continue
+                for row in index_rows:
+                    name_norm = _normalize_index_name(row.get("name", ""))
+                    if name_norm and (term_norm in name_norm or name_norm in term_norm):
+                        out[display] = row["instrument_key"]
+                        found = True
+                        break
+                if found:
+                    break
+
         if not found:
             print(f"  NOT RESOLVED (index): display='{display}' searched_name='{search}'", flush=True)
-            if search_upper == "SENSEX":
+            if search.upper() == "SENSEX":
                 # Last-resort fallback: Upstox documents SENSEX's
                 # instrument_key as the fixed string "BSE_INDEX|SENSEX"
                 # (not derived from the master file's 'name'/
@@ -82,6 +129,22 @@ def resolve_indices(index_names):
                 out[display] = "BSE_INDEX|SENSEX"
                 print(f"  Using known fallback instrument_key for '{display}': BSE_INDEX|SENSEX", flush=True)
                 found = True
+            else:
+                # Diagnostic: print near-matching index names actually
+                # present in the master file, so the correct search
+                # string can be copied straight into config.py.
+                search_words = {w for w in search.upper().replace("&", " ").split() if w != "AND"}
+                near = []
+                for row in index_rows:
+                    name = row.get("name", "")
+                    if not name:
+                        continue
+                    name_words = {w for w in name.upper().replace("&", " ").split() if w != "AND"}
+                    if search_words & name_words:
+                        near.append(name)
+                if near:
+                    print(f"    Possible matches in master: {near[:5]}", flush=True)
+
     print(f"Resolved {len(out)} indices.", flush=True)
     return out
 
