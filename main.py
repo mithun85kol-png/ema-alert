@@ -46,6 +46,15 @@ WHEN ALERTS ACTUALLY FIRE (3-min primary signal):
   fires — this is inherently much more frequent than the old 75-min
   version, by design, since 3-min candles close 25x as often.
 
+Sector index trend (added): every stock alert with a config.
+STOCK_SECTOR_MAP entry gets a "Sector: ..." line showing whether its
+sector index (e.g. NIFTY BANK for HDFCBANK/ICICIBANK, NIFTY IT for
+TCS/INFY) is currently in an UPTREND or DOWNTREND, and whether that
+agrees with the stock's own EMA50 trend. Computed once per run via
+fetch_sector_trends() (below) — informational only, never blocks a
+stock's alert, and stocks with no sector mapping simply don't get this
+line.
+
 Retry/backoff (added): every Upstox HTTP call goes through
 _request_with_retry(), which retries on 429 (rate-limit) and transient
 5xx errors a few times with a short increasing wait (config.py:
@@ -72,7 +81,7 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signals, check_signals_15min, debug_ema_gap, get_75min_trend_info
+from strategy import check_signals, check_signals_15min, debug_ema_gap, get_75min_trend_info, get_sector_trend
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
@@ -642,6 +651,59 @@ def fetch_all(watchlist, now_ist, workers, hist_cache=None):
 
 
 # ---------------------------------------------------------------------
+# Sector index trend (added) — informational context for stock alerts
+# ---------------------------------------------------------------------
+
+def fetch_sector_trends(now_ist):
+    """
+    Fetches today's 1-min data for every sector index in
+    config.SECTOR_INDICES, resamples to 3-min, and reads each one's
+    current EMA50 trend via strategy.get_sector_trend(). Sector indices
+    never fire their own alert — this purely produces a lookup table
+    that individual stock alerts attach themselves to (via
+    config.STOCK_SECTOR_MAP), same pattern as build_pivot_levels().
+
+    Returns {display_name: "UPTREND"/"DOWNTREND"/None}. None means
+    either the fetch failed or the index doesn't have ~50 3-min bars
+    yet today to warm up EMA50 — a stock whose sector maps to None
+    simply gets no sector-trend line on its alert (see
+    telegram_notifier.py), never an error.
+
+    Resolving the sector index names to instrument_keys reuses
+    instruments.py's in-process instrument-master cache, so this incurs
+    no extra download after the first index/stock resolution earlier in
+    the same run.
+    """
+    sector_watchlist = instruments.resolve_indices(config.SECTOR_INDICES)
+    trends = {}
+    if not sector_watchlist:
+        return trends
+
+    def _fetch_one_sector(display, instrument_key):
+        try:
+            raw = fetch_1min_candles(instrument_key)
+            if raw is None or len(raw) < 30:
+                return display, None
+            df3 = resample_3min(raw)
+            df3 = drop_unclosed_candle(df3, now_ist, candle_minutes=3)
+            return display, get_sector_trend(df3)
+        except Exception as e:
+            print(f"Sector index fetch failed for {display}: {e}")
+            return display, None
+
+    with ThreadPoolExecutor(max_workers=config.FETCH_WORKERS) as pool:
+        futures = {
+            pool.submit(_fetch_one_sector, display, key): display
+            for display, key in sector_watchlist.items()
+        }
+        for future in as_completed(futures):
+            display, trend = future.result()
+            trends[display] = trend
+
+    return trends
+
+
+# ---------------------------------------------------------------------
 # Fetch-failure summary alert
 # ---------------------------------------------------------------------
 
@@ -703,7 +765,26 @@ def run_fo_scan(now_ist):
     pcr_cache_this_run = {}
 
     hist_cache = build_hist1min_cache(watchlist)
-    dfs, failed_symbols = fetch_all(watchlist, now_ist, config.FETCH_WORKERS, hist_cache=hist_cache)
+
+    # Run the main stock/index/commodity fetch and the sector-index
+    # fetch AT THE SAME TIME (not one after another) — they're
+    # completely independent of each other. This means the sector
+    # feature adds ~zero extra wait before alerts go out: the sector
+    # fetch is only ~14 lightweight index calls and finishes well
+    # before the much bigger stock fetch does, so the overall run time
+    # is still just however long the stock fetch alone takes. A sector
+    # fetch failure/timeout is also fully isolated — wrapped in
+    # try/except below — so it can never delay or block the main
+    # stock alerts even in the worst case.
+    with ThreadPoolExecutor(max_workers=2) as outer_pool:
+        main_future = outer_pool.submit(fetch_all, watchlist, now_ist, config.FETCH_WORKERS, hist_cache)
+        sector_future = outer_pool.submit(fetch_sector_trends, now_ist)
+        dfs, failed_symbols = main_future.result()
+        try:
+            sector_trends = sector_future.result()
+        except Exception as e:
+            print(f"Sector trend fetch failed this run (non-blocking): {e}")
+            sector_trends = {}
 
     for symbol, (df3, df75, df15) in dfs.items():
         try:
@@ -730,6 +811,14 @@ def run_fo_scan(now_ist):
 
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
+
+                    # Sector index trend — stocks only (indices/
+                    # commodities aren't in STOCK_SECTOR_MAP, so this is
+                    # a no-op for them even if reached).
+                    sector_name = config.STOCK_SECTOR_MAP.get(symbol.upper())
+                    if sector_name:
+                        signal["sector_index"] = sector_name
+                        signal["sector_trend"] = sector_trends.get(sector_name)
 
                 if symbol in index_symbols:
                     # PCR is informational only — fetch_pcr() never
