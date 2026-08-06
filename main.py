@@ -99,6 +99,7 @@ import requests
 import config
 import instruments
 import state
+import delivery_data
 from strategy import check_signals, debug_ema_gap, get_75min_trend_info, get_sector_trend
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
@@ -771,6 +772,13 @@ def run_fo_scan(now_ist):
 
     pivots = build_pivot_levels(watchlist)
 
+    # Previous trading day's NSE delivery % per stock (see
+    # delivery_data.py). Cached on disk, so this only actually
+    # downloads the NSE bhavcopy once per calendar day, not once per
+    # run. {} on failure — never blocks the scan, just means no
+    # "Delivery %" line on alerts for the day.
+    delivery_map = delivery_data.get_delivery_data(now_ist.date())
+
     saved_state = state.load_state()
     alerts_sent = 0
 
@@ -852,6 +860,14 @@ def run_fo_scan(now_ist):
 
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
+
+                    # Delivery % — stocks only, previous trading day's
+                    # NSE delivery percentage. Omitted if the symbol
+                    # isn't in the bhavcopy (e.g. new listing) or the
+                    # fetch failed for the day.
+                    deliv = delivery_map.get(symbol.upper())
+                    if deliv is not None:
+                        signal["delivery_pct"] = deliv
 
                     # Sector index trend — stocks only (indices/
                     # commodities aren't in STOCK_SECTOR_MAP, so this is
