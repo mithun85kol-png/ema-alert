@@ -146,9 +146,7 @@ def send_alert(signal):
         f"{sector_line}"
         f"{trade_plan_block}"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
-        f"{macd_block}"
         f"{pcr_line}"
-        f"{pivot_block}"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
         f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}\n"
     ).rstrip()
