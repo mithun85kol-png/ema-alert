@@ -16,23 +16,29 @@ check (strategy.check_signals — EMA50 trend agreement for stocks/
 commodities, mandatory volume confirmation) runs on df3, the 1-min data
 resampled to 3-min candles. This is the timeframe that actually decides
 whether/when a Telegram alert is sent. df75 (75-min) is still built for
-every instrument, but it no longer drives its own alert — instead,
-strategy.get_75min_trend_info(df75, symbol) is attached to EVERY 3-min
-alert as signal["trend_75min"], a purely informational block showing:
+every instrument; strategy.get_75min_trend_info(df75, symbol) is
+computed for every qualifying 3-min signal and attached as
+signal["trend_75min"], showing:
   - whether EMA9/20 has crossed on the 75-min chart recently (and how
     many 75-min candles ago), or hasn't crossed within the lookback
     window at all
   - how close EMA9/20 currently are to crossing on the 75-min chart
     (gap_pct — smaller = closer to a cross), useful even when no recent
     75-min cross has happened
-This block never blocks or delays the 3-min alert — it's shown for
-context only.
+CONDITIONAL (added): the 75-min bias must now AGREE with the 3-min
+signal's direction for the alert to fire — a bullish 3-min cross only
+alerts if the 75-min chart's EMA9/20 bias is also BULLISH, and likewise
+for bearish. If there isn't enough 75-min history yet to compute a bias
+(info75 is None), the signal is allowed through unfiltered rather than
+blocked, since "not enough data" isn't the same as "disagrees" — the
+alert just won't have a 75-min line in that case.
 
 COMMODITIES (GOLD/SILVER/CRUDEOIL etc.): follow the exact same rule as
 stocks — the 3-min loop is their only alert (EMA9/20 cross + mandatory
-EMA50 trend agreement + mandatory rising volume), with 75-min attached
-purely as informational context. There is no separate standalone
-commodity-only alert anymore (a 15-min standalone version used to
+EMA50 trend agreement + mandatory rising volume + 75-min bias
+agreement), with 75-min shown as context on the alert. There is no
+separate standalone commodity-only alert anymore (a 15-min standalone
+version used to
 exist here; it has been removed so commodities are on the same 3-min
 primary / 75-min informational footing as everything else). df15 is
 still resampled per-instrument but is no longer read anywhere.
@@ -810,6 +816,16 @@ def run_fo_scan(now_ist):
             info75 = get_75min_trend_info(df75, symbol) if (signals and df75 is not None) else None
 
             for signal in signals:
+                # 75-min CONDITIONAL (added): the bigger-timeframe bias
+                # must agree with this 3-min signal's direction, or the
+                # signal doesn't qualify. If info75 is None (not enough
+                # 75-min history yet), we don't have anything to
+                # disagree with, so the signal is allowed through
+                # unfiltered — it just won't carry a trend_75min block
+                # below.
+                if info75 and info75["bias"] != signal["direction"]:
+                    continue
+
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
                     continue
 
