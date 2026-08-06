@@ -132,7 +132,12 @@ def resolve_indices(index_names):
             else:
                 # Diagnostic: print near-matching index names actually
                 # present in the master file, so the correct search
-                # string can be copied straight into config.py.
+                # string/trading_symbol can be copied straight into
+                # config.py. Try whole-word overlap first; Upstox
+                # sometimes abbreviates words (e.g. "CONSR" for
+                # "CONSUMER", "DURBL" for "DURABLES"), so fall back to
+                # a 4-character word-prefix match, which still catches
+                # those cases.
                 search_words = {w for w in search.upper().replace("&", " ").split() if w != "AND"}
                 near = []
                 for row in index_rows:
@@ -141,9 +146,17 @@ def resolve_indices(index_names):
                         continue
                     name_words = {w for w in name.upper().replace("&", " ").split() if w != "AND"}
                     if search_words & name_words:
-                        near.append(name)
+                        near.append((name, row.get("trading_symbol", "")))
+                if not near:
+                    search_prefixes = {w[:4] for w in search_words if len(w) >= 4}
+                    for row in index_rows:
+                        name = row.get("name", "")
+                        symbol = row.get("trading_symbol", "")
+                        combined_words = {w[:4] for w in f"{name} {symbol}".upper().replace("&", " ").split() if len(w) >= 4}
+                        if search_prefixes & combined_words:
+                            near.append((name, symbol))
                 if near:
-                    print(f"    Possible matches in master: {near[:5]}", flush=True)
+                    print(f"    Possible matches in master (name, trading_symbol): {near[:5]}", flush=True)
 
     print(f"Resolved {len(out)} indices.", flush=True)
     return out
