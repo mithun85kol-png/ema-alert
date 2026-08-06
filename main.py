@@ -546,7 +546,7 @@ def build_pivot_levels(watchlist):
             if ohlc is None:
                 return symbol, None
             r3, s3 = calculate_r3_s3(ohlc["high"], ohlc["low"], ohlc["close"])
-            return symbol, {"r3": r3, "s3": s3}
+            return symbol, {"r3": r3, "s3": s3, "prev_close": ohlc["close"]}
 
         with ThreadPoolExecutor(max_workers=config.FETCH_WORKERS) as pool:
             futures = {
@@ -809,9 +809,14 @@ def run_fo_scan(now_ist):
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
+            prev_close = levels.get("prev_close") if levels else None
 
             require_trend = symbol not in index_symbols
-            signals = check_signals(df3, symbol, r3=r3, s3=s3, require_trend_confirmation=require_trend)
+            signals = check_signals(
+                df3, symbol, r3=r3, s3=s3,
+                require_trend_confirmation=require_trend,
+                prev_close=prev_close,
+            )
 
             # Informational-only 75-min context, attached to every
             # 3-min signal below. None if there isn't enough 75-min
