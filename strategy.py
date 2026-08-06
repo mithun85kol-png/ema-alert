@@ -53,6 +53,15 @@ see at a glance whether the bigger 75-min picture agrees, and — if no
 crossing on that timeframe. It never gates or blocks the 3-min alert;
 it is informational only.
 
+Sector index trend (added): get_sector_trend() below reports whether a
+stock's sector index (e.g. NIFTY BANK for HDFCBANK, NIFTY IT for TCS —
+see config.STOCK_SECTOR_MAP) is currently in an UPTREND or DOWNTREND
+(close vs EMA50, same rule as a stock's own trend). main.py computes
+this once per sector index per run and attaches it to every matching
+stock's alert as signal["sector_index"] / signal["sector_trend"].
+Purely informational — never blocks a stock's alert, and stocks with
+no sector mapping simply don't get this line.
+
 VWAP (added): computed cumulatively from the start of the current
 session's df (Upstox intraday endpoint only returns the current
 trading day, so no extra day-boundary handling is needed). Purely
@@ -402,6 +411,28 @@ def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
         "gap_pct": gap_pct,  # how close to a cross right now, on 75-min
         "candles_since_cross": candles_since_cross,  # None = no cross in lookback window
     }
+
+
+def get_sector_trend(df):
+    """
+    Sector-index trend reading (added) — same rule the stock-level
+    trend uses (stock_trend in _evaluate_candle): close above EMA50 =
+    UPTREND, close below = DOWNTREND. No cross logic, no filters, just
+    the current trend on the sector index's own 3-min data. Meant to be
+    called on a sector index's df3 (today's 1-min resampled to 3-min,
+    same as any stock) and attached to a related stock's alert in
+    main.py via config.STOCK_SECTOR_MAP.
+
+    Returns None if there isn't enough 3-min history yet today to warm
+    up EMA50 (same ~50-candle / ~150-minute-into-session constraint the
+    main per-stock signal already has) — the caller treats None as
+    "not available yet", never an error.
+    """
+    if len(df) < 51:
+        return None
+    df = add_ema50(df)
+    curr = df.iloc[-1]
+    return "UPTREND" if curr["close"] > curr["ema_trend"] else "DOWNTREND"
 
 
 def check_signals_15min(df_15min, symbol, lookback=None):
