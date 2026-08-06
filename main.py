@@ -26,9 +26,16 @@ alert as signal["trend_75min"], a purely informational block showing:
     (gap_pct — smaller = closer to a cross), useful even when no recent
     75-min cross has happened
 This block never blocks or delays the 3-min alert — it's shown for
-context only. df15 is still resampled too and continues to drive the
-separate standalone commodity alert further below (unrelated to this
-change).
+context only.
+
+COMMODITIES (GOLD/SILVER/CRUDEOIL etc.): follow the exact same rule as
+stocks — the 3-min loop is their only alert (EMA9/20 cross + mandatory
+EMA50 trend agreement + mandatory rising volume), with 75-min attached
+purely as informational context. There is no separate standalone
+commodity-only alert anymore (a 15-min standalone version used to
+exist here; it has been removed so commodities are on the same 3-min
+primary / 75-min informational footing as everything else). df15 is
+still resampled per-instrument but is no longer read anywhere.
 
 WHEN ALERTS ACTUALLY FIRE (3-min primary signal):
 - A 3-min candle closes every 3 minutes during the trading session.
@@ -81,7 +88,7 @@ import requests
 import config
 import instruments
 import state
-from strategy import check_signals, check_signals_15min, debug_ema_gap, get_75min_trend_info, get_sector_trend
+from strategy import check_signals, debug_ema_gap, get_75min_trend_info, get_sector_trend
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
@@ -842,31 +849,16 @@ def run_fo_scan(now_ist):
     # signal["trend_75min"] (set from get_75min_trend_info(df75, ...)),
     # so you can see the bigger picture without a second, separate ping.
 
-    # ---- 15-min STANDALONE alert — COMMODITIES ONLY (added) ----
-    # Pure EMA9/EMA20 crossover on the 15-min chart, same pattern as the
-    # 75-min standalone alert above, but scoped to config.COMMODITIES
-    # only (GOLD/SILVER/CRUDEOIL etc.) since that's what was asked for —
-    # it does NOT run for stocks/indices. Fires independently of the
-    # 3-min and 75-min checks. State is namespaced "::15m" so it never
-    # collides with the 3-min or 75-min dedup entries for the same
-    # symbol/direction.
-    commodity_symbols = set(config.COMMODITIES.keys())
-    for symbol, (df3, df75, df15) in dfs.items():
-        if symbol not in commodity_symbols or df15 is None:
-            continue
-        try:
-            signals_15 = check_signals_15min(df15, symbol)
-            for signal in signals_15:
-                state_symbol = f"{symbol}::15m"
-                if state.already_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"]):
-                    continue
-
-                send_alert(signal)
-                state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
-                alerts_sent += 1
-
-        except Exception as e:
-            print(f"Error on {symbol} (15-min): {e}")
+    # ---- 15-min standalone commodity alert: REMOVED ----
+    # Commodities (GOLD/SILVER/CRUDEOIL etc.) no longer get a separate
+    # 15-min EMA cross alert. They now follow the exact same rule as
+    # stocks: the 3-min loop above is their ONLY alert (EMA9/20 cross +
+    # mandatory EMA50 trend agreement + mandatory rising volume — see
+    # strategy.check_signals / require_trend_confirmation, which is
+    # True for commodities), with 75-min shown purely as informational
+    # context via signal["trend_75min"], same as every other instrument.
+    # df15 is still resampled per-instrument (see _fetch_and_resample_one)
+    # but is no longer read anywhere in this function.
 
     # Debug visibility: show the instruments whose EMA9/EMA20 (on the
     # 3-min timeframe, same one the actual signal now uses) are
