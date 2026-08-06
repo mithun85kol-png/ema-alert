@@ -114,6 +114,25 @@ def send_alert(signal):
             f"{cross_note}{gap_note}\n"
         )
 
+    # Sector index trend (added) — informational only, present only for
+    # stocks whose symbol is in config.STOCK_SECTOR_MAP (see main.py).
+    # Notes whether the sector is UPTREND/DOWNTREND and whether that
+    # agrees with the stock's own EMA50 trend (stock_trend above).
+    sector_index = signal.get("sector_index")
+    sector_trend = signal.get("sector_trend")
+    sector_line = ""
+    if sector_index:
+        if sector_trend:
+            sector_icon = "📈" if sector_trend == "UPTREND" else "📉"
+            stock_trend_as_sector = "UPTREND" if stock_trend == "BULLISH" else "DOWNTREND"
+            agree_note = (
+                " (agrees with stock trend ✅)" if sector_trend == stock_trend_as_sector
+                else " (diverges from stock trend ⚠️)"
+            )
+            sector_line = f"Sector ({sector_index}): {sector_trend} {sector_icon}{agree_note}\n"
+        else:
+            sector_line = f"Sector ({sector_index}): not enough data yet\n"
+
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
         f"{fno_line}"
@@ -124,6 +143,7 @@ def send_alert(signal):
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"{macd_block}"
         f"Trend: {trend_label} {trend_icon}\n"
+        f"{sector_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{vwap_line}"
         f"{pcr_line}"
