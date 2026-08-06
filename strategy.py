@@ -1,24 +1,30 @@
 """
-EMA9/EMA20 line crossover with trend confirmation: a signal fires for a
-given closed candle only when ALL of these hold on that candle —
+EMA9/EMA20 line crossover with trend + volume confirmation: a signal
+fires for a given closed candle only when ALL of these hold on that
+candle —
   1. EMA9 crosses EMA20 (matching the visual cross point on the chart)
-  2. The crossing candle is strong in the cross direction
-  3. EMA9/EMA20 are a meaningful distance apart at the moment of
-     crossover (filters out whipsaw crosses that are invisible on the
-     chart, e.g. 0.005% apart)
-  4. The cross direction agrees with the broader trend (EMA50) — a
+     — a plain crossover, nothing more. There is no longer a strong-
+     candle filter or a minimum EMA-gap filter; any qualifying cross
+     is eligible as soon as it happens.
+  2. The cross direction agrees with the broader trend (EMA50) — a
      bullish cross only fires if the stock is in an uptrend, and a
      bearish cross only fires if the stock is in a downtrend.
      This condition is MANDATORY for stocks and commodities, but is
      SKIPPED for indices (NIFTY 50, NIFTY BANK, SENSEX) — every
      qualifying EMA cross alerts on an index regardless of EMA50 trend.
+  3. Volume confirmation — MANDATORY for all instrument types. The
+     crossing candle's volume must be strictly greater than the
+     previous candle's volume. If the previous candle has no/zero
+     volume to compare against, the signal does not qualify.
 Fires for stocks, indices, and commodities alike — no separate rule per
 instrument type, other than the trend-condition exception above.
 
-RSI, volume-vs-previous-candle %, candle patterns, VWAP position, and
-Camarilla R3/S3 pivot proximity are attached to the signal as
-informational fields only. They are shown in the alert message but
-never block it from firing.
+RSI, candle patterns, VWAP position, and Camarilla R3/S3 pivot
+proximity are attached to the signal as informational fields only.
+They are shown in the alert message but never block it from firing.
+(vol_change_pct is also attached for the message, but — unlike before
+— it is now guaranteed positive/qualifying, since Condition 3 above
+already requires curr volume > prev volume.)
 
 IMPORTANT — catch-up window:
 check_signals() scans the last config.CROSS_LOOKBACK_CANDLES closed
@@ -32,16 +38,20 @@ on (symbol, direction, candle_time), so a candle already alerted is
 never re-sent even though it's re-checked on every later run.
 
 NOTE (timeframe): check_signals() itself is timeframe-agnostic — it
-just evaluates whatever OHLCV df it's handed. main.py calls it on df3
-(3-min candles) for index/stock/commodity — this is the only alert
-that fires; there is no separate filtered 75-min alert.
+just evaluates whatever OHLCV df it's handed. main.py passes in df3
+(1-min data resampled to 3-min candles) — 3-min is the PRIMARY/ALERTING
+timeframe. Every condition above (EMA9/20 cross, EMA50 trend agreement,
+mandatory volume confirmation, RSI/VWAP/MACD/pivot context) is
+evaluated on 3-min bars.
 
 get_75min_trend_info() below is a separate, filter-free helper that
-just reports EMA9/20 bias on 75-min candles, and whether/how-recently
-a 75-min cross happened. main.py calls it once per 3-min signal and
-attaches the result as signal["trend_75min"] — purely a context line
-on the 3-min alert message (see telegram_notifier.py), never a
-trigger and never a separate alert of its own.
+reports EMA9/20 bias (and how close price is to the next cross) on
+75-min candles. It is USED by main.py: every 3-min alert has a 75-min
+context block attached via signal["trend_75min"], purely so you can
+see at a glance whether the bigger 75-min picture agrees, and — if no
+75-min cross has happened yet — how close EMA9/20 currently are to
+crossing on that timeframe. It never gates or blocks the 3-min alert;
+it is informational only.
 
 VWAP (added): computed cumulatively from the start of the current
 session's df (Upstox intraday endpoint only returns the current
@@ -62,7 +72,7 @@ to the signal but never block it from firing.
 import config
 from indicators import (
     add_emas, add_rsi, add_volume_avg, add_ema50, add_macd,
-    is_strong_candle, detect_candle_pattern,
+    detect_candle_pattern,
 )
 
 # How close price needs to be to R3/S3 (as a % of price) to be flagged
@@ -146,22 +156,9 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
 
     direction = "BULLISH" if bullish_cross else "BEARISH"
     bullish = bullish_cross
-
-    # Condition 2: candle must be strong in the cross direction.
-    if not is_strong_candle(curr, config.STRONG_CANDLE_BODY_RATIO, bullish=bullish):
-        return None
-
-    # Condition 3: EMA9/EMA20 must actually be a meaningful distance
-    # apart on this candle, not just touching. Without this, sideways/
-    # choppy price action produces "crosses" where the two lines are
-    # 0.005-0.01% apart — mathematically a cross, but invisible on the
-    # chart and not a real signal.
     close_price = float(curr["close"])
-    ema_gap_pct = abs(float(curr["ema_fast"]) - float(curr["ema_slow"])) / close_price * 100
-    if ema_gap_pct < config.MIN_EMA_CROSS_GAP_PCT:
-        return None
 
-    # Condition 4: cross direction must agree with the broader trend
+    # Condition 2: cross direction must agree with the broader trend
     # (EMA50) — a bullish cross only fires in an uptrend, a bearish
     # cross only fires in a downtrend. This is MANDATORY for stocks and
     # commodities, but SKIPPED for indices (require_trend_confirmation
@@ -173,11 +170,16 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True):
     if require_trend_confirmation and direction != stock_trend:
         return None
 
-    # Volume is informational only — computed for the message but does
-    # not block a signal from firing.
+    # Condition 3: volume confirmation — MANDATORY. The crossing
+    # candle's volume must be greater than the previous candle's
+    # volume (i.e. the cross happens on rising participation). If the
+    # previous candle's volume is 0/unavailable, there is nothing to
+    # compare against, so the signal does not qualify.
     curr_vol = curr["volume"]
     prev_vol = prev["volume"]
-    vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1) if prev_vol else None
+    if not prev_vol or curr_vol <= prev_vol:
+        return None
+    vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1)
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
 
     cross_pattern = detect_candle_pattern(curr)
@@ -355,14 +357,18 @@ def debug_ema_gap(df, symbol):
 def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
     """
     Informative-only check on 75-min candles — no filters (no strong
-    candle, no volume, no trend-agreement, no gap threshold). Just
-    reports EMA9/20 position and whether a cross happened recently, so
-    it can be attached as context to a 3-min alert. Never blocks or
-    fires its own alert.
+    candle, no volume, no trend-agreement, no gap threshold). Reports:
+      - bias: which side EMA9 is currently on relative to EMA20
+      - candles_since_cross: how many 75-min candles ago EMA9/20 last
+        crossed, within lookback_candles (None = no cross in that
+        window — i.e. the 75-min chart has NOT crossed recently)
+      - gap_pct: how close EMA9/EMA20 currently are to crossing, as a
+        % of close price (0 = touching/about to cross; bigger = further
+        from a cross)
+    Attached as context to a 3-min alert. Never blocks or fires its own
+    alert.
 
-    Returns None if there isn't enough 75-min history yet, else a dict
-    with the current bias and how many 75-min candles ago (if any) the
-    last cross happened within lookback_candles.
+    Returns None if there isn't enough 75-min history yet.
     """
     if len(df_75min) < config.EMA_SLOW + 2:
         return None
@@ -374,6 +380,8 @@ def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
 
     curr = df.iloc[-1]
     bias = "BULLISH" if curr["ema_fast"] > curr["ema_slow"] else "BEARISH"
+    close_price = float(curr["close"])
+    gap_pct = round(abs(float(curr["ema_fast"]) - float(curr["ema_slow"])) / close_price * 100, 3) if close_price else None
 
     candles_since_cross = None
     start = max(1, n - lookback_candles)
@@ -391,6 +399,7 @@ def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
         "bias": bias,
         "ema_fast": round(float(curr["ema_fast"]), 2),
         "ema_slow": round(float(curr["ema_slow"]), 2),
+        "gap_pct": gap_pct,  # how close to a cross right now, on 75-min
         "candles_since_cross": candles_since_cross,  # None = no cross in lookback window
     }
 
