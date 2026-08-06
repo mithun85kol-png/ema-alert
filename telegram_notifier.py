@@ -90,38 +90,45 @@ def send_alert(signal):
         if macd_divergence:
             macd_block += f"MACD {macd_divergence}\n"
 
-    # 75-min context — informational only, never blocks or triggers
-    # anything (see strategy.get_75min_trend_info). Reports the 75-min
-    # EMA9/20 bias and, if a cross happened within
-    # config.TREND_75MIN_LOOKBACK_CANDLES candles, how many candles ago.
-    # None if there isn't enough 75-min history yet, in which case the
-    # line is simply omitted.
-    trend_75min = signal.get("trend_75min")
-    trend_75min_line = ""
-    if trend_75min is not None:
-        bias_icon = "📈" if trend_75min["bias"] == "BULLISH" else "📉"
-        candles_since = trend_75min.get("candles_since_cross")
-        if candles_since is not None:
-            cross_note = f"cross {candles_since} candle(s) ago" if candles_since > 0 else "cross on latest candle"
-            trend_75min_line = f"75-min: {trend_75min['bias']} {bias_icon} ({cross_note})\n"
+    # 75-min context — informational only (see strategy.get_75min_trend_info,
+    # attached in main.py as signal["trend_75min"]). Shows the bigger-
+    # timeframe EMA9/20 bias, whether/when it last crossed, and how
+    # close it currently is to crossing. Omitted entirely if there
+    # wasn't enough 75-min history warmed up yet for this symbol.
+    trend75 = signal.get("trend_75min")
+    trend75_block = ""
+    if trend75:
+        bias_icon = "📈" if trend75["bias"] == "BULLISH" else "📉"
+        since = trend75.get("candles_since_cross")
+        if since is None:
+            cross_note = f"no cross in last {config.TREND_75MIN_LOOKBACK_CANDLES} candles"
+        elif since == 0:
+            cross_note = "crossed on the latest 75-min candle"
         else:
-            trend_75min_line = f"75-min: {trend_75min['bias']} {bias_icon} (no recent cross)\n"
+            cross_note = f"crossed {since} candle(s) ago"
+        gap = trend75.get("gap_pct")
+        gap_note = f", currently {gap}% apart" if gap is not None else ""
+        trend75_block = (
+            f"75-min: {trend75['bias']} {bias_icon} "
+            f"(EMA9 {trend75['ema_fast']} / EMA20 {trend75['ema_slow']}) — "
+            f"{cross_note}{gap_note}\n"
+        )
 
     text = (
         f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
         f"{fno_line}"
-        f"Timeframe: {signal.get('timeframe', '3-min')} | {date_part} {time_part}\n"
+        f"Timeframe: 3-min | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
         f"{trade_plan_block}"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"{macd_block}"
         f"Trend: {trend_label} {trend_icon}\n"
-        f"{trend_75min_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{vwap_line}"
         f"{pcr_line}"
         f"{pivot_block}"
+        f"{trend75_block}"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
         f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}"
     )
