@@ -124,7 +124,7 @@ SECTOR_INDICES = {
     "NIFTY REALTY": "Nifty Realty",
     "NIFTY FIN SERVICE": "Nifty Financial Services",
     "NIFTY MEDIA": "Nifty Media",
-    "NIFTY CONSUMER DURABLES": "Nifty Consumer Durables",
+    "NIFTY CONSUMER DURABLES": "NIFTY CONSR DURBL",
     "NIFTY INFRA": "Nifty Infrastructure",
 }
 
