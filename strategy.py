@@ -1,7 +1,6 @@
 """
-EMA9/EMA20 line crossover with trend + volume confirmation: a signal
-fires for a given closed candle only when ALL of these hold on that
-candle —
+EMA9/EMA20 line crossover with trend confirmation: a signal fires for
+a given closed candle only when ALL of these hold on that candle —
   1. EMA9 crosses EMA20 (matching the visual cross point on the chart)
      — a plain crossover, nothing more. There is no longer a strong-
      candle filter or a minimum EMA-gap filter; any qualifying cross
@@ -12,19 +11,17 @@ candle —
      This condition is MANDATORY for stocks and commodities, but is
      SKIPPED for indices (NIFTY 50, NIFTY BANK, SENSEX) — every
      qualifying EMA cross alerts on an index regardless of EMA50 trend.
-  3. Volume confirmation — MANDATORY for all instrument types. The
-     crossing candle's volume must be strictly greater than the
-     previous candle's volume. If the previous candle has no/zero
-     volume to compare against, the signal does not qualify.
 Fires for stocks, indices, and commodities alike — no separate rule per
 instrument type, other than the trend-condition exception above.
 
 RSI, candle patterns, VWAP position, and Camarilla R3/S3 pivot
 proximity are attached to the signal as informational fields only.
 They are shown in the alert message but never block it from firing.
-(vol_change_pct is also attached for the message, but — unlike before
-— it is now guaranteed positive/qualifying, since Condition 3 above
-already requires curr volume > prev volume.)
+Volume (vol_change_pct) is ALSO now informational only (no longer a
+gating condition) — the crossing candle's volume vs the previous
+candle's is shown in the message, but a signal fires whether volume
+rose or not. If the previous candle's volume is 0/unavailable,
+vol_change_pct is simply None on the signal/message.
 
 IMPORTANT — catch-up window:
 check_signals() scans the last config.CROSS_LOOKBACK_CANDLES closed
@@ -40,9 +37,9 @@ never re-sent even though it's re-checked on every later run.
 NOTE (timeframe): check_signals() itself is timeframe-agnostic — it
 just evaluates whatever OHLCV df it's handed. main.py passes in df3
 (1-min data resampled to 3-min candles) — 3-min is the PRIMARY/ALERTING
-timeframe. Every condition above (EMA9/20 cross, EMA50 trend agreement,
-mandatory volume confirmation, RSI/VWAP/MACD/pivot context) is
-evaluated on 3-min bars.
+timeframe. Every gating condition above (EMA9/20 cross, EMA50 trend
+agreement) is evaluated on 3-min bars; RSI/volume/VWAP/MACD/pivot
+context is also computed on 3-min bars but is informational only.
 
 get_75min_trend_info() below is a separate, filter-free helper that
 reports EMA9/20 bias (and how close price is to the next cross) on
@@ -179,16 +176,15 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
     if require_trend_confirmation and direction != stock_trend:
         return None
 
-    # Condition 3: volume confirmation — MANDATORY. The crossing
-    # candle's volume must be greater than the previous candle's
-    # volume (i.e. the cross happens on rising participation). If the
-    # previous candle's volume is 0/unavailable, there is nothing to
-    # compare against, so the signal does not qualify.
+    # Volume — INFORMATIONAL ONLY (no longer a gating condition). The
+    # crossing candle's volume vs the previous candle's is still
+    # computed and shown in the alert (vol_change_pct), but a signal no
+    # longer requires curr volume > prev volume to fire. If prev_vol is
+    # 0/unavailable, vol_change_pct is simply None — the alert still
+    # fires, just without that line's %.
     curr_vol = curr["volume"]
     prev_vol = prev["volume"]
-    if not prev_vol or curr_vol <= prev_vol:
-        return None
-    vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1)
+    vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1) if prev_vol else None
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
 
     cross_pattern = detect_candle_pattern(curr)
