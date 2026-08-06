@@ -11,12 +11,12 @@ This script scans the ~50 F&O stock/index/commodity watchlist on every
 workflow run (the workflow itself can still run as often as every few
 minutes — see "when alerts actually fire" below).
 
-3-min PRIMARY/ALERTING signal (reverted): the main EMA9/EMA20 crossover
-check (strategy.check_signals — EMA50 trend agreement for stocks/
-commodities, mandatory volume confirmation) runs on df3, the 1-min data
-resampled to 3-min candles. This is the timeframe that actually decides
-whether/when a Telegram alert is sent. df75 (75-min) is still built for
-every instrument; strategy.get_75min_trend_info(df75, symbol) is
+3-min PRIMARY/ALERTING signal: the main EMA9/EMA20 crossover check
+(strategy.check_signals — EMA50 trend agreement for stocks/
+commodities; volume is informational only, no longer gating) runs on
+df3, the 1-min data resampled to 3-min candles. This is the timeframe
+that actually decides whether/when a Telegram alert is sent. df75
+(75-min) is still built for every instrument; strategy.get_75min_trend_info(df75, symbol) is
 computed for every qualifying 3-min signal and attached as
 signal["trend_75min"], showing:
   - whether EMA9/20 has crossed on the 75-min chart recently (and how
@@ -25,23 +25,29 @@ signal["trend_75min"], showing:
   - how close EMA9/20 currently are to crossing on the 75-min chart
     (gap_pct — smaller = closer to a cross), useful even when no recent
     75-min cross has happened
-CONDITIONAL (tightened): the alert only fires if BOTH are true —
-  1. the 75-min bias agrees with the 3-min signal's direction (bullish
+MANDATORY (tightened further — no more pass-through): the alert only
+fires if ALL THREE are true —
+  1. 75-min data must actually be available/warmed up for this symbol
+     (info75 is not None). If there isn't enough 75-min history yet,
+     the signal is now BLOCKED outright — this used to be let through
+     unfiltered ("not enough data" treated as "not disagreeing"), but
+     that pass-through has been removed. No exceptions.
+  2. the 75-min bias agrees with the 3-min signal's direction (bullish
      3-min cross needs 75-min BULLISH, bearish needs 75-min BEARISH)
-  2. the 75-min chart has ALSO actually crossed within the last
+  3. the 75-min chart has ALSO actually crossed within the last
      config.TREND_75MIN_LOOKBACK_CANDLES (5) 75-min candles — a
      symbol that's simply been leaning bullish/bearish on 75-min for
-     a while with no recent cross does NOT qualify anymore; only a
-     genuinely fresh, agreeing 75-min cross does.
-If there isn't enough 75-min history yet to compute a bias (info75 is
-None), the signal is allowed through unfiltered rather than blocked,
-since "not enough data" isn't the same as "disagrees" — the alert
-just won't have a 75-min line in that case.
+     a while with no recent cross does NOT qualify; only a genuinely
+     fresh, agreeing 75-min cross does.
+Because of (1), info75 is guaranteed non-None on every signal that
+survives to send_alert() — so every alert message now ALWAYS carries
+the 75-min block (see telegram_notifier.py); it can no longer be
+silently missing from a sent alert.
 
 COMMODITIES (GOLD/SILVER/CRUDEOIL etc.): follow the exact same rule as
 stocks — the 3-min loop is their only alert (EMA9/20 cross + mandatory
-EMA50 trend agreement + mandatory rising volume + 75-min bias
-agreement), with 75-min shown as context on the alert. There is no
+EMA50 trend agreement + mandatory 75-min bias/cross agreement; volume
+is informational only), with 75-min shown as context on the alert. There is no
 separate standalone commodity-only alert anymore (a 15-min standalone
 version used to
 exist here; it has been removed so commodities are on the same 3-min
@@ -60,7 +66,8 @@ WHEN ALERTS ACTUALLY FIRE (3-min primary signal):
   closed 3-min candles (not just the newest), so a delayed/skipped run
   still catches a cross that closed while nothing was running.
 - Every qualifying cross (EMA9/20 cross + EMA50 trend agreement for
-  stocks/commodities, skipped for indices + mandatory rising volume)
+  stocks/commodities, skipped for indices; volume shown but informational
+  only) plus the mandatory 75-min gate (see above)
   fires — this is inherently much more frequent than the old 75-min
   version, by design, since 3-min candles close 25x as often.
 
@@ -826,37 +833,47 @@ def run_fo_scan(now_ist):
                 prev_close=prev_close,
             )
 
-            # Informational-only 75-min context, attached to every
-            # 3-min signal below. None if there isn't enough 75-min
-            # history warmed up yet for this symbol (see
-            # build_hist1min_cache) — the alert still fires without it,
-            # just without the 75-min block in the message.
+            # 75-min context, attached to every 3-min signal below.
+            # None if there isn't enough 75-min history warmed up yet
+            # for this symbol (see build_hist1min_cache) OR df75 itself
+            # is None. This is now a HARD REQUIREMENT (Condition 4
+            # below) — unlike before, a missing/not-yet-warmed-up
+            # 75-min chart no longer lets the signal through
+            # unfiltered; it blocks it outright.
             info75 = get_75min_trend_info(df75, symbol) if (signals and df75 is not None) else None
 
             for signal in signals:
-                # 75-min CONDITIONAL (tightened): bias agreement alone
-                # isn't enough — the 75-min chart must ALSO have
-                # actually crossed within the last
-                # config.TREND_75MIN_LOOKBACK_CANDLES (5) 75-min
-                # candles (info75["candles_since_cross"] is not None).
-                # A symbol that's been BULLISH on 75-min for a long
-                # time with no recent cross no longer qualifies — only
-                # a genuinely fresh 75-min cross, agreeing in
-                # direction, does. If info75 is None (not enough
-                # 75-min history yet), the signal is allowed through
-                # unfiltered — it just won't carry a trend_75min block
-                # below.
-                if info75 and (
-                    info75["bias"] != signal["direction"]
-                    or info75["candles_since_cross"] is None
-                ):
-                    continue
+                # 75-min gating — ALL THREE of the following are now
+                # mandatory (any one failing blocks the alert
+                # completely; none of this is optional/informational
+                # anymore):
+                #   4. info75 must exist at all — i.e. 75-min data/
+                #      warmup must be available for this symbol. If
+                #      info75 is None, block outright (previously this
+                #      case was let through with no 75-min block).
+                #   5. 75-min bias must agree with the 3-min signal's
+                #      direction.
+                #   6. the 75-min chart must have ALSO actually crossed
+                #      within the last config.TREND_75MIN_LOOKBACK_CANDLES
+                #      (5) 75-min candles (info75["candles_since_cross"]
+                #      is not None) — a symbol that's simply been
+                #      leaning bullish/bearish on 75-min for a long
+                #      time with no recent cross doesn't qualify; only
+                #      a genuinely fresh, agreeing 75-min cross does.
+                if info75 is None:
+                    continue  # Condition 4 failed: no 75-min data yet — block
+                if info75["bias"] != signal["direction"]:
+                    continue  # Condition 5 failed: 75-min bias disagrees — block
+                if info75["candles_since_cross"] is None:
+                    continue  # Condition 6 failed: no recent 75-min cross — block
 
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
                     continue
 
-                if info75:
-                    signal["trend_75min"] = info75
+                # Guaranteed present now (Condition 4 above ensures
+                # info75 is never None by this point), so every alert
+                # message always carries the 75-min block.
+                signal["trend_75min"] = info75
 
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
@@ -903,7 +920,7 @@ def run_fo_scan(now_ist):
     # Commodities (GOLD/SILVER/CRUDEOIL etc.) no longer get a separate
     # 15-min EMA cross alert. They now follow the exact same rule as
     # stocks: the 3-min loop above is their ONLY alert (EMA9/20 cross +
-    # mandatory EMA50 trend agreement + mandatory rising volume — see
+    # mandatory EMA50 trend agreement (volume informational only) — see
     # strategy.check_signals / require_trend_confirmation, which is
     # True for commodities), with 75-min shown purely as informational
     # context via signal["trend_75min"], same as every other instrument.
