@@ -102,6 +102,94 @@ FO_STOCK_WATCHLIST = [
     "SBIN", "AXISBANK", "KOTAKBANK", "TATAMOTORS", "BAJFINANCE",
 ]
 
+# ---------- Sector Index mapping (added) ----------
+# Maps a display name (used on the alert message and as the key of
+# STOCK_SECTOR_MAP's values below) to the search name
+# instruments.resolve_indices() looks up in the Upstox instrument
+# master (NSE_INDEX segment, matched against 'name' or
+# 'trading_symbol') — same resolution mechanism as INDICES above, just
+# a separate dict so sector indices don't get mixed into the main
+# scan/alert loop (they never fire their own EMA-cross alert; they
+# only supply a trend reading to related stocks' alerts).
+SECTOR_INDICES = {
+    "NIFTY BANK": "Nifty Bank",
+    "NIFTY PSU BANK": "Nifty PSU Bank",
+    "NIFTY IT": "Nifty IT",
+    "NIFTY AUTO": "Nifty Auto",
+    "NIFTY PHARMA": "Nifty Pharma",
+    "NIFTY FMCG": "Nifty FMCG",
+    "NIFTY METAL": "Nifty Metal",
+    "NIFTY ENERGY": "Nifty Energy",
+    "NIFTY OIL AND GAS": "Nifty Oil & Gas",
+    "NIFTY REALTY": "Nifty Realty",
+    "NIFTY FIN SERVICE": "Nifty Financial Services",
+    "NIFTY MEDIA": "Nifty Media",
+    "NIFTY CONSUMER DURABLES": "Nifty Consumer Durables",
+    "NIFTY INFRA": "Nifty Infrastructure",
+}
+
+# Maps each stock's NSE trading symbol (upper-case) to the sector index
+# display name above (a key of SECTOR_INDICES) it belongs to. A stock
+# with no entry here simply gets no sector-trend line on its alert —
+# never an error, just gracefully omitted (see main.py). NOT exhaustive
+# — the full F&O list runs to 180+ names; this covers the most liquid/
+# commonly traded F&O stocks across the major sectors. Extend freely;
+# any symbol left unmapped just degrades gracefully.
+STOCK_SECTOR_MAP = {
+    # Banking (private)
+    "HDFCBANK": "NIFTY BANK", "ICICIBANK": "NIFTY BANK", "AXISBANK": "NIFTY BANK",
+    "KOTAKBANK": "NIFTY BANK", "INDUSINDBK": "NIFTY BANK", "FEDERALBNK": "NIFTY BANK",
+    "IDFCFIRSTB": "NIFTY BANK", "BANDHANBNK": "NIFTY BANK", "AUBANK": "NIFTY BANK",
+    # Banking (PSU)
+    "SBIN": "NIFTY PSU BANK", "PNB": "NIFTY PSU BANK", "BANKBARODA": "NIFTY PSU BANK",
+    "CANBK": "NIFTY PSU BANK", "UNIONBANK": "NIFTY PSU BANK",
+    # IT
+    "TCS": "NIFTY IT", "INFY": "NIFTY IT", "WIPRO": "NIFTY IT", "HCLTECH": "NIFTY IT",
+    "TECHM": "NIFTY IT", "LTIM": "NIFTY IT", "MPHASIS": "NIFTY IT", "COFORGE": "NIFTY IT",
+    "PERSISTENT": "NIFTY IT",
+    # Auto
+    "TATAMOTORS": "NIFTY AUTO", "MARUTI": "NIFTY AUTO", "M&M": "NIFTY AUTO",
+    "BAJAJ-AUTO": "NIFTY AUTO", "EICHERMOT": "NIFTY AUTO", "HEROMOTOCO": "NIFTY AUTO",
+    "TVSMOTOR": "NIFTY AUTO", "ASHOKLEY": "NIFTY AUTO", "BHARATFORG": "NIFTY AUTO",
+    "MOTHERSON": "NIFTY AUTO",
+    # Pharma
+    "SUNPHARMA": "NIFTY PHARMA", "CIPLA": "NIFTY PHARMA", "DRREDDY": "NIFTY PHARMA",
+    "DIVISLAB": "NIFTY PHARMA", "AUROPHARMA": "NIFTY PHARMA", "LUPIN": "NIFTY PHARMA",
+    "BIOCON": "NIFTY PHARMA", "TORNTPHARM": "NIFTY PHARMA", "ALKEM": "NIFTY PHARMA",
+    # FMCG
+    "HINDUNILVR": "NIFTY FMCG", "ITC": "NIFTY FMCG", "NESTLEIND": "NIFTY FMCG",
+    "BRITANNIA": "NIFTY FMCG", "TATACONSUM": "NIFTY FMCG", "DABUR": "NIFTY FMCG",
+    "GODREJCP": "NIFTY FMCG", "MARICO": "NIFTY FMCG", "COLPAL": "NIFTY FMCG",
+    "VBL": "NIFTY FMCG",
+    # Metal
+    "TATASTEEL": "NIFTY METAL", "JSWSTEEL": "NIFTY METAL", "HINDALCO": "NIFTY METAL",
+    "VEDL": "NIFTY METAL", "JINDALSTEL": "NIFTY METAL", "SAIL": "NIFTY METAL",
+    "NMDC": "NIFTY METAL", "NATIONALUM": "NIFTY METAL", "HINDCOPPER": "NIFTY METAL",
+    # Energy / Oil & Gas
+    "RELIANCE": "NIFTY ENERGY", "POWERGRID": "NIFTY ENERGY", "NTPC": "NIFTY ENERGY",
+    "ADANIGREEN": "NIFTY ENERGY", "TATAPOWER": "NIFTY ENERGY", "ADANIENSOL": "NIFTY ENERGY",
+    "ONGC": "NIFTY OIL AND GAS", "IOC": "NIFTY OIL AND GAS", "BPCL": "NIFTY OIL AND GAS",
+    "GAIL": "NIFTY OIL AND GAS",
+    # Realty
+    "DLF": "NIFTY REALTY", "GODREJPROP": "NIFTY REALTY", "OBEROIRLTY": "NIFTY REALTY",
+    "PHOENIXLTD": "NIFTY REALTY", "PRESTIGE": "NIFTY REALTY", "LODHA": "NIFTY REALTY",
+    # Financial Services (NBFC / insurance / broking — non-bank)
+    "BAJFINANCE": "NIFTY FIN SERVICE", "BAJAJFINSV": "NIFTY FIN SERVICE",
+    "HDFCLIFE": "NIFTY FIN SERVICE", "SBILIFE": "NIFTY FIN SERVICE",
+    "ICICIGI": "NIFTY FIN SERVICE", "ICICIPRULI": "NIFTY FIN SERVICE",
+    "SHRIRAMFIN": "NIFTY FIN SERVICE", "CHOLAFIN": "NIFTY FIN SERVICE",
+    "MUTHOOTFIN": "NIFTY FIN SERVICE", "PFC": "NIFTY FIN SERVICE", "RECLTD": "NIFTY FIN SERVICE",
+    # Media
+    "SUNTV": "NIFTY MEDIA", "ZEEL": "NIFTY MEDIA", "PVRINOX": "NIFTY MEDIA",
+    # Consumer Durables
+    "TITAN": "NIFTY CONSUMER DURABLES", "HAVELLS": "NIFTY CONSUMER DURABLES",
+    "VOLTAS": "NIFTY CONSUMER DURABLES", "CROMPTON": "NIFTY CONSUMER DURABLES",
+    # Infra / Cement / Capital goods / Ports (grouped under Infra)
+    "LT": "NIFTY INFRA", "ULTRACEMCO": "NIFTY INFRA", "GRASIM": "NIFTY INFRA",
+    "SHREECEM": "NIFTY INFRA", "AMBUJACEM": "NIFTY INFRA", "ACC": "NIFTY INFRA",
+    "ADANIPORTS": "NIFTY INFRA",
+}
+
 # ---------- 75-min timeframe warmup (informational context only) ----------
 # 3-min is the PRIMARY/alerting timeframe again — 75-min is only used
 # for strategy.get_75min_trend_info(), the informational context block
