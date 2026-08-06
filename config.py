@@ -210,7 +210,10 @@ HIST_1MIN_CACHE_FILE = "historical_1min_cache.json"
 # report "a cross happened N candles ago" (None if no cross in this
 # window). Used again now that 3-min is primary and every 3-min alert
 # gets a 75-min context block — see strategy.get_75min_trend_info().
-TREND_75MIN_LOOKBACK_CANDLES = 5
+# Also the MANDATORY window for Condition 6 in main.py's 75-min gate:
+# the 75-min chart must show an actual EMA9/20 cross within these last
+# N candles, or the alert is blocked outright.
+TREND_75MIN_LOOKBACK_CANDLES = 10
 
 # ---------- State / alert de-dup ----------
 STATE_FILE = "alert_state.json"
