@@ -24,6 +24,9 @@ def send_alert(signal):
     stock_trend = signal.get("stock_trend", "UNKNOWN")
     trend_icon = "📈" if stock_trend == "BULLISH" else "📉"
     trend_label = "UPTREND" if stock_trend == "BULLISH" else "DOWNTREND"
+    # Bolded (HTML parse_mode) so the EMA50 trend direction stands out
+    # instead of blending into the rest of the message.
+    trend_label_bold = f"<b>{trend_label} {trend_icon}</b>"
 
     volume = signal["volume"]
     volume_str = f"{volume:,}"
@@ -105,6 +108,8 @@ def send_alert(signal):
     # timeframe EMA9/20 bias, whether/when it last crossed, and how
     # close it currently is to crossing. Omitted entirely if there
     # wasn't enough 75-min history warmed up yet for this symbol.
+    # Highlighted (bold + divider lines, HTML parse_mode) so it's easy
+    # to spot at a glance instead of blending into the rest of the text.
     trend75 = signal.get("trend_75min")
     trend75_block = ""
     if trend75:
@@ -119,9 +124,11 @@ def send_alert(signal):
         gap = trend75.get("gap_pct")
         gap_note = f", currently {gap}% apart" if gap is not None else ""
         trend75_block = (
-            f"75-min: {trend75['bias']} {bias_icon} "
+            f"━━━━━━━━━━━━━━━\n"
+            f"⭐ <b>75-MIN TREND: {trend75['bias']} {bias_icon}</b>\n"
             f"(EMA9 {trend75['ema_fast']} / EMA20 {trend75['ema_slow']}) — "
             f"{cross_note}{gap_note}\n"
+            f"━━━━━━━━━━━━━━━\n"
         )
 
     # Sector index trend (added) — informational only, present only for
@@ -143,17 +150,25 @@ def send_alert(signal):
         else:
             sector_line = f"Sector ({sector_index}): not enough data yet\n"
 
+    # Delivery % — informational only, previous trading day's NSE
+    # delivery percentage (see main.py / delivery_data.py). Stocks
+    # only — indices/commodities never set this key, so it's simply
+    # omitted for them. None if the bhavcopy fetch failed/skipped.
+    delivery_pct = signal.get("delivery_pct")
+    delivery_line = f"Delivery % (prev day): {delivery_pct}%\n" if delivery_pct is not None else ""
+
     text = (
-        f"{arrow} {signal['symbol']} — EMA {direction} crossover\n"
+        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover\n"
         f"{fno_line}"
         f"Timeframe: 3-min | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"{day_change_line}"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
         f"{trend75_block}"
-        f"Trend: {trend_label} {trend_icon}\n"
+        f"Trend: {trend_label_bold}\n"
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
+        f"{delivery_line}"
         f"{sector_line}"
         f"{trade_plan_block}"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
@@ -167,6 +182,7 @@ def send_alert(signal):
         r = requests.post(url, data={
             "chat_id": config.TELEGRAM_CHAT_ID,
             "text": text,
+            "parse_mode": "HTML",
         }, timeout=15)
         r.raise_for_status()
     except Exception as e:
