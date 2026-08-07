@@ -403,6 +403,7 @@ def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
     gap_pct = round(abs(float(curr["ema_fast"]) - float(curr["ema_slow"])) / close_price * 100, 3) if close_price else None
 
     candles_since_cross = None
+    cross_time = None
     start = max(1, n - lookback_candles)
     for idx in range(n - 1, start - 1, -1):
         prev = df.iloc[idx - 1]
@@ -411,6 +412,11 @@ def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
         bear_cross = prev["ema_fast"] >= prev["ema_slow"] and cur["ema_fast"] < cur["ema_slow"]
         if bull_cross or bear_cross:
             candles_since_cross = (n - 1) - idx
+            # Timestamp (candle open time, from df's datetime index) of the
+            # 75-min candle on which the cross actually happened — lets the
+            # Telegram message show an exact date/time instead of just
+            # "crossed N candle(s) ago".
+            cross_time = df.index[idx]
             break
 
     return {
@@ -420,6 +426,7 @@ def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
         "ema_slow": round(float(curr["ema_slow"]), 2),
         "gap_pct": gap_pct,  # how close to a cross right now, on 75-min
         "candles_since_cross": candles_since_cross,  # None = no cross in lookback window
+        "cross_time": cross_time,  # exact 75-min candle timestamp of the cross, or None
     }
 
 
