@@ -115,12 +115,24 @@ def send_alert(signal):
     if trend75:
         bias_icon = "📈" if trend75["bias"] == "BULLISH" else "📉"
         since = trend75.get("candles_since_cross")
+        cross_time = trend75.get("cross_time")
+        # Format the exact crossover timestamp (if we have one) as
+        # "YYYY-MM-DD HH:MM" so the message doesn't just say "N candle(s)
+        # ago" and force the reader to do the math themselves.
+        if cross_time is not None:
+            cross_time_str = str(cross_time)
+            cross_date_part = cross_time_str.split(" ")[0]
+            cross_time_part = cross_time_str.split(" ")[1][:5]
+            cross_time_note = f" ({cross_date_part} {cross_time_part})"
+        else:
+            cross_time_note = ""
+
         if since is None:
             cross_note = f"no cross in last {config.TREND_75MIN_LOOKBACK_CANDLES} candles"
         elif since == 0:
-            cross_note = "crossed on the latest 75-min candle"
+            cross_note = f"crossed on the latest 75-min candle{cross_time_note}"
         else:
-            cross_note = f"crossed {since} candle(s) ago"
+            cross_note = f"crossed {since} candle(s) ago{cross_time_note}"
         gap = trend75.get("gap_pct")
         gap_note = f", currently {gap}% apart" if gap is not None else ""
         trend75_block = (
