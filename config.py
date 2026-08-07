@@ -25,6 +25,22 @@ LOOKBACK_CANDLES = 60         # enough history for EMA20 + RSI14 + volume avg to
 # scan comfortably fast even if Upstox is briefly slow to respond.
 FETCH_WORKERS = 30
 
+# ---------- Historical 1-min fetch (75-min EMA warmup, main.py's
+# build_hist1min_cache / fetch_historical_1min) ----------
+# Deliberately much gentler than FETCH_WORKERS above. This hits
+# Upstox's historical-candle endpoint once per symbol per day for the
+# full ~214-instrument watchlist, and that endpoint has a noticeably
+# tighter rate limit than the intraday one — running it at
+# FETCH_WORKERS (30) concurrency caused mass "429 Too Many Requests"
+# errors (visible in scan logs) even with per-call retries, because
+# all 30 threads retried in lockstep and collided again. A smaller
+# worker pool + a hard combined-rate cap (see main.py's _RateLimiter /
+# _hist_fetch_limiter) fixes this. This step is not latency-sensitive
+# (once a day, not on the 3-min hot path), so trading some speed here
+# for reliability is free.
+HIST_FETCH_WORKERS = 6
+HIST_FETCH_MAX_PER_SECOND = 4   # hard cap on combined outbound rate to this endpoint, across all HIST_FETCH_WORKERS threads
+
 # ---------- Upstox request retry/backoff (applies to ALL Upstox calls:
 # intraday candles, daily OHLC for pivots) ----------
 # If Upstox returns 429 (rate-limited) or a transient 5xx, retry a few
