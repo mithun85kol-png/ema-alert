@@ -97,6 +97,8 @@ is visible instead of only living in the GitHub Actions log.
 import sys
 import json
 import time
+import random
+import threading
 import datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -169,8 +171,12 @@ def _request_with_retry(method, url, **kwargs):
     callers don't need to change their exception handling.
 
     Total attempts = 1 + config.UPSTOX_MAX_RETRIES.
-    Wait before attempt N (N>=2) = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * (N-1)
-    e.g. base=0.6s -> waits of 0.6s, 1.2s, 1.8s before attempts 2, 3, 4.
+    Wait before attempt N (N>=2) = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * (N-1),
+    plus up to 50% random jitter on top. The jitter matters when many
+    worker threads hit the same endpoint concurrently and all get
+    429'd together (thundering herd) — without jitter every thread
+    retries at the exact same instant and collides again; with it,
+    retries spread out over time instead of re-syncing.
     """
     last_exc = None
     attempts = 1 + config.UPSTOX_MAX_RETRIES
@@ -184,12 +190,14 @@ def _request_with_retry(method, url, **kwargs):
             last_exc = e
             if attempt < attempts:
                 wait = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * attempt
+                wait += random.uniform(0, wait * 0.5)
                 time.sleep(wait)
                 continue
             raise
 
         if resp.status_code in config.UPSTOX_RETRY_STATUS_CODES and attempt < attempts:
             wait = config.UPSTOX_RETRY_BACKOFF_BASE_SECONDS * attempt
+            wait += random.uniform(0, wait * 0.5)
             time.sleep(wait)
             continue
 
@@ -338,6 +346,42 @@ def fetch_prev_day_ohlc(instrument_key):
     return {"high": last[2], "low": last[3], "close": last[4]}
 
 
+class _RateLimiter:
+    """
+    Thread-safe rate limiter: makes callers (across any number of
+    worker threads) block so that no more than `max_per_second` calls
+    actually go out in any 1-second window. Unlike per-thread
+    sleep/backoff, this caps the TRUE combined outbound rate no matter
+    how many threads are calling it concurrently — which is what a
+    server-side rate limit (Upstox's 429) actually cares about.
+    """
+
+    def __init__(self, max_per_second):
+        self._lock = threading.Lock()
+        self._min_interval = 1.0 / max_per_second
+        self._next_slot = 0.0
+
+    def wait(self):
+        with self._lock:
+            now = time.monotonic()
+            start = max(now, self._next_slot)
+            self._next_slot = start + self._min_interval
+            sleep_for = start - now
+        if sleep_for > 0:
+            time.sleep(sleep_for)
+
+
+# Caps outbound requests to Upstox's historical-candle endpoint (used
+# only by fetch_historical_1min, for the once-daily 75-min-warmup
+# fetch) to config.HIST_FETCH_MAX_PER_SECOND combined across every
+# worker thread — see build_hist1min_cache, which also uses a smaller
+# dedicated worker pool (config.HIST_FETCH_WORKERS) for this same
+# reason. This endpoint was getting mass 429'd when all
+# config.FETCH_WORKERS (30) threads hit it at once for ~214
+# instruments.
+_hist_fetch_limiter = _RateLimiter(config.HIST_FETCH_MAX_PER_SECOND)
+
+
 def fetch_historical_1min(instrument_key, days_back):
     """
     Fetches PRE-TODAY 1-minute candles for the last `days_back` calendar
@@ -345,7 +389,16 @@ def fetch_historical_1min(instrument_key, days_back):
     EMA9/EMA20 on the 75-min timeframe (a single trading day alone only
     yields ~5 bars — nowhere near enough). Returns the raw candle list
     (JSON-serializable) or None on failure.
+
+    Rate-limited via _hist_fetch_limiter (see below) — this endpoint
+    has a tighter Upstox rate limit than the intraday one, and with
+    config.FETCH_WORKERS (30) threads all calling it at once for the
+    ~214-instrument watchlist, it was returning mass 429s even with
+    per-call retries (all 30 threads retry in lockstep and collide
+    again). The limiter caps the actual outbound request rate across
+    ALL threads combined, so retries aren't needed nearly as often.
     """
+    _hist_fetch_limiter.wait()
     headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
     today = _now_ist().date()
     to_date = today - dt.timedelta(days=1)
@@ -405,7 +458,7 @@ def build_hist1min_cache(watchlist):
                 print(f"Historical 1-min fetch failed for {symbol}: {e}")
                 return symbol, None
 
-        with ThreadPoolExecutor(max_workers=config.FETCH_WORKERS) as pool:
+        with ThreadPoolExecutor(max_workers=config.HIST_FETCH_WORKERS) as pool:
             futures = {
                 pool.submit(_fetch_one_hist, symbol, instrument_key): symbol
                 for symbol, instrument_key in missing.items()
