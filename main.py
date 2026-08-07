@@ -906,19 +906,18 @@ def run_fo_scan(now_ist):
                 #      case was let through with no 75-min block).
                 #   5. 75-min bias must agree with the 3-min signal's
                 #      direction.
-                #   6. the 75-min chart must have ALSO actually crossed
-                #      within the last config.TREND_75MIN_LOOKBACK_CANDLES
-                #      (5) 75-min candles (info75["candles_since_cross"]
-                #      is not None) — a symbol that's simply been
-                #      leaning bullish/bearish on 75-min for a long
-                #      time with no recent cross doesn't qualify; only
-                #      a genuinely fresh, agreeing 75-min cross does.
+                #   6. the 75-min chart must have crossed on the
+                #      LATEST 75-min candle or the one just before it
+                #      (info75["candles_since_cross"] in (0, 1)) — a
+                #      cross older than that (2+ candles ago) no longer
+                #      qualifies; only a fresh cross within the last
+                #      2 candles does.
                 if info75 is None:
                     continue  # Condition 4 failed: no 75-min data yet — block
                 if info75["bias"] != signal["direction"]:
                     continue  # Condition 5 failed: 75-min bias disagrees — block
-                if info75["candles_since_cross"] is None:
-                    continue  # Condition 6 failed: no recent 75-min cross — block
+                if info75["candles_since_cross"] not in (0, 1):
+                    continue  # Condition 6 failed: 75-min cross not within last 2 candles — block
 
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
                     continue
