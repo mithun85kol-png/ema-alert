@@ -8,11 +8,22 @@ a given closed candle only when ALL of these hold on that candle —
   2. The cross direction agrees with the broader trend (EMA50) — a
      bullish cross only fires if the stock is in an uptrend, and a
      bearish cross only fires if the stock is in a downtrend.
-     This condition is MANDATORY for stocks and commodities, but is
-     SKIPPED for indices (NIFTY 50, NIFTY BANK, SENSEX) — every
-     qualifying EMA cross alerts on an index regardless of EMA50 trend.
-Fires for stocks, indices, and commodities alike — no separate rule per
-instrument type, other than the trend-condition exception above.
+     This condition is MANDATORY for stocks and commodities. It does
+     NOT apply to indices at all — indices don't use check_signals()
+     on 75-min data anymore; see below.
+
+INDICES (NIFTY 50, NIFTY BANK, SENSEX) are NOT evaluated by
+check_signals() on 75-min data. main.py instead calls check_signals()
+directly on 3-min data (df3) with require_trend_confirmation=False, so
+an index alert is a PURE EMA9/EMA20 crossover on the 3-min chart — no
+EMA50 trend requirement, no 75-min involvement at all. RSI/volume/
+VWAP/MACD/pivot context fields are still computed the same way (since
+_evaluate_candle is timeframe-agnostic — see the NOTE below), just on
+3-min bars for indices instead of 75-min bars.
+Fires for stocks, indices, and commodities alike via the same
+check_signals()/_evaluate_candle() code path — only the timeframe
+passed in and the require_trend_confirmation flag differ per
+instrument type (set by main.py).
 
 RSI, candle patterns, VWAP position, and Camarilla R3/S3 pivot
 proximity are attached to the signal as informational fields only.
@@ -37,16 +48,24 @@ never re-sent even though it's re-checked on every later run.
 NOTE (timeframe — FLIPPED): check_signals() itself is timeframe-agnostic
 — it just evaluates whatever OHLCV df it's handed. main.py now passes
 in df75 (1-min data, historical + today, resampled to 75-min candles)
-— 75-min is the PRIMARY/ALERTING timeframe. Every gating condition
-above (EMA9/20 cross, EMA50 trend agreement) is evaluated on 75-min
-bars; RSI/volume/VWAP/MACD/pivot context is also computed on 75-min
-bars but is informational only. This means an alert now fires right
-when a 75-min candle closes with a qualifying cross — it no longer
-waits for a 3-min cross to also line up, which used to delay alerts
-well after the 75-min cross had already happened.
+for STOCKS/COMMODITIES — 75-min is their PRIMARY/ALERTING timeframe.
+Every gating condition above (EMA9/20 cross, EMA50 trend agreement) is
+evaluated on 75-min bars for them; RSI/volume/VWAP/MACD/pivot context
+is also computed on 75-min bars but is informational only. This means
+a stock/commodity alert fires right when a 75-min candle closes with a
+qualifying cross.
+For INDICES, main.py instead passes df3 (3-min candles) into the exact
+same check_signals(), with require_trend_confirmation=False — so an
+index alert fires right when a 3-min candle closes with a qualifying
+EMA9/20 cross, and all the RSI/volume/VWAP/MACD/pivot context on that
+alert is computed on 3-min bars too (still informational only).
 
 get_3min_trend_info() below is a separate, filter-free helper that
 reports EMA9/20 bias (and how close price is to the next cross) on
+3-min candles. It is only used as supporting context UNDERNEATH a
+STOCK/COMMODITY 75-min alert (main.py attaches it as
+signal["trend_3min"]); it is not used for indices, since an index
+alert already IS the 3-min signal.
 3-min candles. It is USED by main.py: every 75-min alert has a 3-min
 context block attached via signal["trend_3min"], purely so you can see
 at a glance what the shorter-term 3-min picture is doing right now. It
