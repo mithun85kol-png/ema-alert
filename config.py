@@ -72,11 +72,27 @@ MIN_EMA_CROSS_GAP_PCT = 0.05
 # every run (not just the single latest one). This is what lets the bot
 # "catch up" if a scheduled run is skipped or delayed — any cross that
 # happened on an in-between candle still gets alerted on the next run,
-# instead of silently disappearing. Applies to 3-min candles (the
-# primary/alerting timeframe) — 5 candles x 3-min = 15 minutes, so a
-# missed run still catches a cross from up to ~15 minutes earlier. Each
-# candle already alerted is never re-sent (see state.py).
+# instead of silently disappearing. Each candle already alerted is
+# never re-sent (see state.py). Still used by the unused/dormant
+# check_signals_15min() — kept for reference.
 CROSS_LOOKBACK_CANDLES = 5
+
+# ---------- 75-min = PRIMARY/ALERTING timeframe (flipped) ----------
+# 75-min is now what actually decides whether/when an alert fires; the
+# EMA9/20 cross + EMA50 trend-agreement conditions in strategy.py run
+# on 75-min candles. Catch-up window: how many of the most recent
+# CLOSED 75-min candles to re-check on every run, in case a run was
+# skipped/delayed. Kept small (2 candles = 150 min) since the workflow
+# runs every 1-3 minutes, so a missed 75-min candle close is caught
+# almost immediately on the next run anyway.
+PRIMARY_LOOKBACK_CANDLES = 2
+
+# How many trailing 3-min candles the informational 3-min context block
+# (strategy.get_3min_trend_info) scans to report "a cross happened N
+# candles ago" and how close EMA9/20 currently are to crossing on the
+# 3-min chart. 5 candles x 3-min = 15 minutes. Purely informational —
+# attached to every 75-min alert but never blocks it.
+INFO_3MIN_LOOKBACK_CANDLES = 5
 
 # Informational trade-plan fields (computed in strategy.py, currently
 # not shown in the Telegram message — see telegram_notifier.py):
@@ -93,8 +109,10 @@ MACD_SIGNAL = 9
 # How many trailing candles to scan for a MACD bullish/bearish
 # divergence (the window is split into two halves; price extremes and
 # MACD-line values in each half are compared — see
-# strategy._detect_macd_divergence). 20 candles x 3-min = 60 minutes.
-MACD_DIVERGENCE_LOOKBACK_CANDLES = 20
+# strategy._detect_macd_divergence). Now computed on 75-min candles (the
+# primary timeframe): 8 candles x 75-min = 600 minutes (~2 trading
+# days).
+MACD_DIVERGENCE_LOOKBACK_CANDLES = 8
 
 # ---------- Indices (cash/index segment, no expiry) ----------
 INDICES = {
@@ -206,30 +224,22 @@ STOCK_SECTOR_MAP = {
     "ADANIPORTS": "NIFTY INFRA",
 }
 
-# ---------- 75-min timeframe warmup (informational context only) ----------
-# 3-min is the PRIMARY/alerting timeframe again — 75-min is only used
-# for strategy.get_75min_trend_info(), the informational context block
-# attached to every 3-min alert (EMA9/20 bias + how close to a cross on
-# the bigger timeframe). That helper only needs EMA9/EMA20 warmed up,
-# i.e. EMA_SLOW + 2 = 22 bars minimum on the 75-min timeframe — roughly
-# 4-5 TRADING days (~7-8 CALENDAR days with weekends). 25 calendar days
-# is more than enough margin. This many calendar days of PRE-TODAY
-# 1-minute history are fetched once per day (cached) and combined with
-# today's intraday data before resampling to 75-min. (NOTE: verify
-# Upstox's historical-candle endpoint allows a 25-day 1-minute range in
-# one request against current docs — if it caps out lower, this fetch
-# will need to be split into chunks.)
-HISTORICAL_1MIN_LOOKBACK_DAYS = 25
+# ---------- 75-min timeframe warmup (now the PRIMARY/alerting timeframe) ----------
+# 75-min is now what the EMA9/20 cross + EMA50 trend-agreement
+# conditions actually run on (see strategy.check_signals, called with
+# df75 in main.py). It needs EMA_SLOW=20, RSI_PERIOD=14,
+# VOLUME_AVG_PERIOD=20, MACD_SLOW=26, and the 50-period trend EMA all
+# warmed up — i.e. ~50+ bars minimum on the 75-min timeframe. At ~5
+# bars/trading day, that's ~10-12 trading days (~14-17 calendar days
+# with weekends). 35 calendar days gives comfortable margin, including
+# a holiday-heavy stretch. This many calendar days of PRE-TODAY 1-minute
+# history are fetched once per day (cached) and combined with today's
+# intraday data before resampling to 75-min. (NOTE: verify Upstox's
+# historical-candle endpoint allows a 35-day 1-minute range in one
+# request against current docs — if it caps out lower, this fetch will
+# need to be split into chunks.)
+HISTORICAL_1MIN_LOOKBACK_DAYS = 35
 HIST_1MIN_CACHE_FILE = "historical_1min_cache.json"
-
-# How many trailing 75-min candles get_75min_trend_info() scans to
-# report "a cross happened N candles ago" (None if no cross in this
-# window). Used again now that 3-min is primary and every 3-min alert
-# gets a 75-min context block — see strategy.get_75min_trend_info().
-# Also the MANDATORY window for Condition 6 in main.py's 75-min gate:
-# the 75-min chart must show an actual EMA9/20 cross within these last
-# N candles, or the alert is blocked outright.
-TREND_75MIN_LOOKBACK_CANDLES = 10
 
 # ---------- State / alert de-dup ----------
 STATE_FILE = "alert_state.json"
