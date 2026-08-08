@@ -103,19 +103,17 @@ def send_alert(signal):
         if macd_divergence:
             macd_block += f"MACD {macd_divergence}\n"
 
-    # 75-min context — informational only (see strategy.get_75min_trend_info,
-    # attached in main.py as signal["trend_75min"]). Shows the bigger-
+    # 3-min context — informational only (see strategy.get_3min_trend_info,
+    # attached in main.py as signal["trend_3min"]). Shows the shorter-
     # timeframe EMA9/20 bias, whether/when it last crossed, and how
     # close it currently is to crossing. Omitted entirely if there
-    # wasn't enough 75-min history warmed up yet for this symbol.
-    # Highlighted (bold + divider lines, HTML parse_mode) so it's easy
-    # to spot at a glance instead of blending into the rest of the text.
-    trend75 = signal.get("trend_75min")
-    trend75_block = ""
-    if trend75:
-        bias_icon = "📈" if trend75["bias"] == "BULLISH" else "📉"
-        since = trend75.get("candles_since_cross")
-        cross_time = trend75.get("cross_time")
+    # wasn't enough 3-min history warmed up yet for this symbol.
+    trend3 = signal.get("trend_3min")
+    trend3_block = ""
+    if trend3:
+        bias_icon = "📈" if trend3["bias"] == "BULLISH" else "📉"
+        since = trend3.get("candles_since_cross")
+        cross_time = trend3.get("cross_time")
         # Format the exact crossover timestamp (if we have one) as
         # "YYYY-MM-DD HH:MM" so the message doesn't just say "N candle(s)
         # ago" and force the reader to do the math themselves.
@@ -128,19 +126,17 @@ def send_alert(signal):
             cross_time_note = ""
 
         if since is None:
-            cross_note = f"no cross in last {config.TREND_75MIN_LOOKBACK_CANDLES} candles"
+            cross_note = f"no cross in last {config.INFO_3MIN_LOOKBACK_CANDLES} candles"
         elif since == 0:
-            cross_note = f"crossed on the latest 75-min candle{cross_time_note}"
+            cross_note = f"crossed on the latest 3-min candle{cross_time_note}"
         else:
             cross_note = f"crossed {since} candle(s) ago{cross_time_note}"
-        gap = trend75.get("gap_pct")
+        gap = trend3.get("gap_pct")
         gap_note = f", currently {gap}% apart" if gap is not None else ""
-        trend75_block = (
-            f"━━━━━━━━━━━━━━━\n"
-            f"⭐ <b>75-MIN TREND: {trend75['bias']} {bias_icon}</b>\n"
-            f"(EMA9 {trend75['ema_fast']} / EMA20 {trend75['ema_slow']}) — "
+        trend3_block = (
+            f"3-min: {trend3['bias']} {bias_icon} "
+            f"(EMA9 {trend3['ema_fast']} / EMA20 {trend3['ema_slow']}) — "
             f"{cross_note}{gap_note}\n"
-            f"━━━━━━━━━━━━━━━\n"
         )
 
     # Sector index trend (added) — informational only, present only for
@@ -170,13 +166,12 @@ def send_alert(signal):
     delivery_line = f"Delivery % (prev day): {delivery_pct}%\n" if delivery_pct is not None else ""
 
     text = (
-        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover\n"
+        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover (75-min)\n"
         f"{fno_line}"
-        f"Timeframe: 3-min | {date_part} {time_part}\n"
+        f"Timeframe: 75-min | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"{day_change_line}"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
-        f"{trend75_block}"
         f"Trend: {trend_label_bold}\n"
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
@@ -187,6 +182,7 @@ def send_alert(signal):
         f"{pcr_line}"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
         f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}\n"
+        f"{trend3_block}"
     ).rstrip()
 
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
