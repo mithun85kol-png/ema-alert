@@ -17,6 +17,12 @@ def send_alert(signal):
     direction = signal["direction"]  # "BULLISH" or "BEARISH"
     arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
 
+    # Timeframe label — "75-min" for stocks/commodities, "3-min" for
+    # indices (see strategy.py / main.py: indices run check_signals()
+    # directly on 3-min data). Defaults to "75-min" for backward
+    # compatibility if an older caller didn't set this.
+    timeframe_label = signal.get("timeframe", "75-min")
+
     candle_time = signal["candle_time"]
     # candle_time expected like "2026-07-29 12:15:00+05:30" -> split date/time
     date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
@@ -166,9 +172,9 @@ def send_alert(signal):
     delivery_line = f"Delivery % (prev day): {delivery_pct}%\n" if delivery_pct is not None else ""
 
     text = (
-        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover (75-min)\n"
+        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label})\n"
         f"{fno_line}"
-        f"Timeframe: 75-min | {date_part} {time_part}\n"
+        f"Timeframe: {timeframe_label} | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"{day_change_line}"
         f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
