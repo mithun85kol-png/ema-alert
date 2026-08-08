@@ -53,10 +53,33 @@ def send_alert(signal):
     # you want it shown again.
     trade_plan_block = ""
 
-    # PCR (Put-Call Ratio) — informational only, present only on index
-    # signals (see main.py). Not shown for stocks/commodities.
+    # PCR (Put-Call Ratio) — informational only, present on index
+    # signals (every run) and F&O stock signals (on-demand, see
+    # main.py). Not shown for cash-only stocks/commodities (no option
+    # chain).
     pcr = signal.get("pcr")
     pcr_line = f"PCR: {pcr}\n" if pcr is not None else ""
+
+    # Call/Put writing buildup (added) — informational only. Indices:
+    # computed every run (see main.py's update_oi_buildup), so this is
+    # always a tight ~3-min comparison. F&O stocks: computed ON-DEMAND
+    # only when this alert fires (see get_stock_oi_buildup), so the
+    # comparison window can be minutes to days — oi_buildup_since_hours
+    # (stocks only) is shown so that's clear rather than implying a
+    # tight window. Omitted entirely if there's no previous snapshot to
+    # compare against yet, or nothing crossed the noise threshold.
+    oi_buildup = signal.get("oi_buildup")
+    oi_buildup_line = ""
+    if oi_buildup:
+        bias = oi_buildup["bias"]
+        bias_icon = "📉" if bias == "BEARISH" else ("📈" if bias == "BULLISH" else "➖")
+        since_hours = signal.get("oi_buildup_since_hours")
+        since_note = f" (vs snapshot {since_hours}h ago)" if since_hours is not None else ""
+        oi_buildup_line = (
+            f"OI Buildup: {bias} {bias_icon} ({oi_buildup['note']}){since_note}\n"
+            f"  Call writing: {oi_buildup['call_writing_oi']:,}  "
+            f"Put writing: {oi_buildup['put_writing_oi']:,}\n"
+        )
 
     # F&O / Cash flag — shown at the TOP of the message, right under the
     # header line. Only present for actual stock signals (both the F&O
@@ -186,6 +209,7 @@ def send_alert(signal):
         f"{trade_plan_block}"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"{pcr_line}"
+        f"{oi_buildup_line}"
         f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
         f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}\n"
         f"{trend3_block}"
