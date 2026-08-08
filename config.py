@@ -255,6 +255,31 @@ HIST_1MIN_CACHE_FILE = "historical_1min_cache.json"
 STATE_FILE = "alert_state.json"
 DEDUPE_MINUTES = 30
 
+# ---------- Call/Put writing buildup (added) — informational only ----------
+# Strike band around the current spot price to include when comparing
+# option-chain OI snapshots (see main.py's fetch_option_chain_snapshot).
+# Strikes far OTM/ITM have thin, noisy OI that isn't useful for a
+# writing-buildup read.
+OI_STRIKE_RANGE_PCT = 3.0
+
+# Minimum OI change (%) on a strike, between two snapshots, before it
+# counts as a genuine buildup rather than noise (see main.py's
+# compute_oi_buildup).
+OI_BUILDUP_MIN_CHANGE_PCT = 3.0
+
+# Indices: snapshotted every run regardless of whether an alert fires
+# (see main.py's update_oi_buildup) — comparison is always ~one run
+# apart (~3 min).
+OI_BUILDUP_CACHE_FILE = "oi_buildup_cache.json"
+
+# F&O stocks: snapshotted ON-DEMAND only when an alert is about to fire
+# for that stock (see main.py's get_stock_oi_buildup) — re-fetching
+# option chains for all ~180 F&O stocks every run would multiply
+# Upstox API calls far past what the existing scan already uses.
+# Comparison is therefore "since this stock's last alert", which can be
+# minutes to days, not a fixed run-to-run window.
+STOCK_OI_BUILDUP_CACHE_FILE = "oi_buildup_stock_cache.json"
+
 # ---------- Fetch-failure visibility ----------
 # After a run, if the number of instruments that failed to fetch (even
 # after retries) is >= this many, a single short Telegram warning is
