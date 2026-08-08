@@ -34,21 +34,23 @@ because it's no longer the "latest" candle. main.py's dedup is keyed
 on (symbol, direction, candle_time), so a candle already alerted is
 never re-sent even though it's re-checked on every later run.
 
-NOTE (timeframe): check_signals() itself is timeframe-agnostic — it
-just evaluates whatever OHLCV df it's handed. main.py passes in df3
-(1-min data resampled to 3-min candles) — 3-min is the PRIMARY/ALERTING
-timeframe. Every gating condition above (EMA9/20 cross, EMA50 trend
-agreement) is evaluated on 3-min bars; RSI/volume/VWAP/MACD/pivot
-context is also computed on 3-min bars but is informational only.
+NOTE (timeframe — FLIPPED): check_signals() itself is timeframe-agnostic
+— it just evaluates whatever OHLCV df it's handed. main.py now passes
+in df75 (1-min data, historical + today, resampled to 75-min candles)
+— 75-min is the PRIMARY/ALERTING timeframe. Every gating condition
+above (EMA9/20 cross, EMA50 trend agreement) is evaluated on 75-min
+bars; RSI/volume/VWAP/MACD/pivot context is also computed on 75-min
+bars but is informational only. This means an alert now fires right
+when a 75-min candle closes with a qualifying cross — it no longer
+waits for a 3-min cross to also line up, which used to delay alerts
+well after the 75-min cross had already happened.
 
-get_75min_trend_info() below is a separate, filter-free helper that
+get_3min_trend_info() below is a separate, filter-free helper that
 reports EMA9/20 bias (and how close price is to the next cross) on
-75-min candles. It is USED by main.py: every 3-min alert has a 75-min
-context block attached via signal["trend_75min"], purely so you can
-see at a glance whether the bigger 75-min picture agrees, and — if no
-75-min cross has happened yet — how close EMA9/20 currently are to
-crossing on that timeframe. It never gates or blocks the 3-min alert;
-it is informational only.
+3-min candles. It is USED by main.py: every 75-min alert has a 3-min
+context block attached via signal["trend_3min"], purely so you can see
+at a glance what the shorter-term 3-min picture is doing right now. It
+never gates or blocks the 75-min alert; it is informational only.
 
 Sector index trend (added): get_sector_trend() below reports whether a
 stock's sector index (e.g. NIFTY BANK for HDFCBANK, NIFTY IT for TCS —
@@ -373,28 +375,29 @@ def debug_ema_gap(df, symbol):
     }
 
 
-def get_75min_trend_info(df_75min, symbol, lookback_candles=None):
+def get_3min_trend_info(df_3min, symbol, lookback_candles=None):
     """
-    Informative-only check on 75-min candles — no filters (no strong
+    Informative-only check on 3-min candles — no filters (no strong
     candle, no volume, no trend-agreement, no gap threshold). Reports:
       - bias: which side EMA9 is currently on relative to EMA20
-      - candles_since_cross: how many 75-min candles ago EMA9/20 last
+      - candles_since_cross: how many 3-min candles ago EMA9/20 last
         crossed, within lookback_candles (None = no cross in that
-        window — i.e. the 75-min chart has NOT crossed recently)
+        window — i.e. the 3-min chart has NOT crossed recently)
       - gap_pct: how close EMA9/EMA20 currently are to crossing, as a
         % of close price (0 = touching/about to cross; bigger = further
         from a cross)
-    Attached as context to a 3-min alert. Never blocks or fires its own
+    Attached as context to a 75-min alert (the PRIMARY/ALERTING
+    timeframe — see check_signals above). Never blocks or fires its own
     alert.
 
-    Returns None if there isn't enough 75-min history yet.
+    Returns None if there isn't enough 3-min history yet.
     """
-    if len(df_75min) < config.EMA_SLOW + 2:
+    if len(df_3min) < config.EMA_SLOW + 2:
         return None
 
-    lookback_candles = lookback_candles or config.TREND_75MIN_LOOKBACK_CANDLES
+    lookback_candles = lookback_candles or config.INFO_3MIN_LOOKBACK_CANDLES
 
-    df = add_emas(df_75min, config.EMA_FAST, config.EMA_SLOW)
+    df = add_emas(df_3min, config.EMA_FAST, config.EMA_SLOW)
     n = len(df)
 
     curr = df.iloc[-1]
