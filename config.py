@@ -94,6 +94,16 @@ PRIMARY_LOOKBACK_CANDLES = 2
 # attached to every 75-min alert but never blocks it.
 INFO_3MIN_LOOKBACK_CANDLES = 5
 
+# ---------- Index-only pure 3-min EMA cross alert ----------
+# INDICES (NIFTY 50, NIFTY BANK, SENSEX) don't use the 75-min flow at
+# all. main.py calls strategy.check_signals() directly on 3-min data
+# (df3) with require_trend_confirmation=False — a plain EMA9/20 cross
+# on the 3-min chart, no trend requirement, no 75-min gate. This is how
+# many trailing CLOSED 3-min candles are re-checked on every run (catch-
+# up window, same idea as PRIMARY_LOOKBACK_CANDLES below but for the
+# index's 3-min alert specifically).
+INDEX_3MIN_ALERT_LOOKBACK_CANDLES = 5
+
 # Informational trade-plan fields (computed in strategy.py, currently
 # not shown in the Telegram message — see telegram_notifier.py):
 # Stop Loss = EMA20 (on the cross candle), Target = highest high
