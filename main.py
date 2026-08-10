@@ -1,4 +1,5 @@
 
+
 """
 NOTE: verify Upstox's intraday endpoint/interval support against current
 docs before relying on this — API versions change. This pulls 1-minute
