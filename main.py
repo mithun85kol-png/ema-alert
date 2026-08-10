@@ -1186,8 +1186,10 @@ def run_fo_scan(now_ist):
                 signals = check_signals(
                     df75, symbol, r3=r3, s3=s3,
                     lookback=config.PRIMARY_LOOKBACK_CANDLES,
-                    require_trend_confirmation=True,
+                    require_trend_confirmation=False,
                     prev_close=prev_close,
+                    ema_fast=config.EMA_FAST,
+                    ema_slow=config.PRIMARY_EMA_SLOW,
                 )
                 for sig in signals:
                     sig["timeframe"] = "75-min"
@@ -1373,7 +1375,7 @@ def run_nifty500_scan(now_ist):
             signals = check_signals(
                 df75, symbol, r3=r3, s3=s3,
                 lookback=config.PRIMARY_LOOKBACK_CANDLES,
-                require_trend_confirmation=True,
+                require_trend_confirmation=False,
                 prev_close=prev_close,
                 ema_fast=config.NIFTY500_EMA_FAST,
                 ema_slow=config.NIFTY500_EMA_SLOW,
