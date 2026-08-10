@@ -6,14 +6,18 @@ master file Upstox publishes.
 Also exposes the current set of F&O-eligible underlying stocks.
 """
 
+import csv
 import gzip
 import io
 import json
+import os
 import datetime as dt
 
 import requests
 
 import config
+
+NIFTY500_LIST_URL = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
 
 INSTRUMENT_MASTER_URL = "https://assets.upstox.com/market-quote/instruments/exchange/complete.json.gz"
 
@@ -223,6 +227,81 @@ def _fno_underlyings_from_master(master):
             if sym:
                 underlyings.add(sym.upper())
     return underlyings
+
+
+def _load_nifty500_cache():
+    try:
+        with open(config.NIFTY500_LIST_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"date": None, "symbols": []}
+
+
+def _save_nifty500_cache(cache):
+    with open(config.NIFTY500_LIST_CACHE_FILE, "w") as f:
+        json.dump(cache, f)
+
+
+def fetch_nifty500_symbols():
+    """
+    Fetches the current Nifty 500 constituent list (trading symbols)
+    from NSE's public archives, so the watchlist stays correct across
+    NSE's periodic index rebalances instead of relying on a hardcoded
+    list here. Cached to disk (config.NIFTY500_LIST_CACHE_FILE), so this
+    is only actually downloaded once per calendar day, not once per run
+    — same pattern as delivery_data.py's bhavcopy cache.
+
+    Falls back to yesterday's cached list if today's fetch fails (NSE's
+    archive server occasionally blocks/errors) rather than returning
+    nothing, since the constituent list changes rarely. Returns []
+    (never raises) only if there's no fetch AND no prior cache at all —
+    callers should treat that as "Nifty 500 scan unavailable this run".
+    """
+    cache = _load_nifty500_cache()
+    today_str = dt.date.today().isoformat()
+
+    if cache.get("date") == today_str and cache.get("symbols"):
+        return cache["symbols"]
+
+    print("Fetching Nifty 500 constituent list from NSE...", flush=True)
+    try:
+        resp = requests.get(NIFTY500_LIST_URL, headers=NSE_HEADERS, timeout=20)
+        resp.raise_for_status()
+        reader = csv.DictReader(io.StringIO(resp.text))
+        symbols = []
+        for row in reader:
+            sym = (row.get("Symbol") or row.get("SYMBOL") or "").strip().upper()
+            if sym:
+                symbols.append(sym)
+        if symbols:
+            print(f"Fetched {len(symbols)} Nifty 500 symbols.", flush=True)
+            _save_nifty500_cache({"date": today_str, "symbols": symbols})
+            return symbols
+        print("Nifty 500 list fetch returned no symbols.", flush=True)
+    except Exception as e:
+        print(f"Nifty 500 list fetch failed: {e}", flush=True)
+
+    if cache.get("symbols"):
+        print(f"Using stale cached Nifty 500 list from {cache.get('date')} ({len(cache['symbols'])} symbols).", flush=True)
+        return cache["symbols"]
+
+    return []
+
+
+def resolve_nifty500_stocks():
+    """
+    Resolves the live Nifty 500 constituent list (see
+    fetch_nifty500_symbols) to {trading_symbol: instrument_key} via the
+    Upstox NSE_EQ instrument master — same resolution mechanism
+    resolve_fo_stock_list uses for an explicit watchlist. A constituent
+    not found in the master (e.g. a very recent listing Upstox hasn't
+    indexed yet) is simply omitted, never an error.
+    """
+    symbols = fetch_nifty500_symbols()
+    if not symbols:
+        print("Nifty 500 list unavailable — skipping Nifty 500 cash scan this run.", flush=True)
+        return {}
+    return resolve_fo_stock_list(symbols)
 
 
 def get_fno_underlyings():
