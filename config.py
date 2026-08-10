@@ -146,6 +146,21 @@ FO_STOCK_WATCHLIST = [
     "SBIN", "AXISBANK", "KOTAKBANK", "TATAMOTORS", "BAJFINANCE",
 ]
 
+# ---------- Nifty 500 cash-stock scan (added) ----------
+# Runs the exact same signal logic as the F&O 75-min flow (EMA cross +
+# mandatory EMA50 trend agreement, RSI/volume/VWAP/MACD/pivot as
+# informational context only — see strategy.check_signals) but on the
+# full Nifty 500 constituent list (cash/EQ segment) and with EMA9/21
+# instead of EMA9/20. The Nifty 500 list itself is fetched live from
+# NSE's archives (see instruments.resolve_nifty500_stocks) rather than
+# hardcoded here, since NSE rebalances the index periodically and a
+# static list here would silently go stale. A stock that happens to
+# also be F&O-eligible still gets scanned here too (with 9/21) in
+# addition to the F&O scan (with 9/20) — they're independent alerts,
+# deduped separately (see main.py's run_nifty500_scan).
+NIFTY500_EMA_FAST = 9
+NIFTY500_EMA_SLOW = 21
+
 # ---------- Sector Index mapping (added) ----------
 # Maps a display name (used on the alert message and as the key of
 # STOCK_SECTOR_MAP's values below) to the search name
@@ -256,6 +271,11 @@ HIST_1MIN_CACHE_FILE = "historical_1min_cache.json"
 # ---------- State / alert de-dup ----------
 STATE_FILE = "alert_state.json"
 DEDUPE_MINUTES = 30
+
+# Nifty 500 constituent list, fetched from NSE archives and cached here
+# (see instruments.resolve_nifty500_stocks) — refetched at most once per
+# calendar day, same pattern as the other daily caches above.
+NIFTY500_LIST_CACHE_FILE = "nifty500_list_cache.json"
 
 # ---------- Call/Put writing buildup (added) — informational only ----------
 # Strike band around the current spot price to include when comparing
