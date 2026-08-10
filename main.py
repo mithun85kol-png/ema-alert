@@ -1066,8 +1066,9 @@ def send_telegram_text(text):
         print("Telegram summary send failed:", e)
 
 
-def maybe_send_failure_summary(fo_failed, fo_total):
-    total_failed = len(fo_failed)
+def maybe_send_failure_summary(fo_failed, fo_total, n500_failed=None, n500_total=0):
+    n500_failed = n500_failed or []
+    total_failed = len(fo_failed) + len(n500_failed)
     if total_failed < config.FAILURE_ALERT_MIN_COUNT:
         return
 
@@ -1075,8 +1076,10 @@ def maybe_send_failure_summary(fo_failed, fo_total):
         f"⚠️ Scan warning: {total_failed} instrument(s) failed to fetch this run "
         f"(after retries) and were skipped.",
         f"F&O/Index/Commodity scan: {len(fo_failed)}/{fo_total} failed",
-        "They will be retried automatically on the next 3-min run.",
     ]
+    if n500_total:
+        lines.append(f"Nifty 500 cash scan: {len(n500_failed)}/{n500_total} failed")
+    lines.append("They will be retried automatically on the next run.")
 
     send_telegram_text("\n".join(lines))
 
@@ -1297,6 +1300,120 @@ def run_fo_scan(now_ist):
     return alerts_sent, failed_symbols, len(watchlist)
 
 
+# ---------------------------------------------------------------------
+# Nifty 500 cash-stock scan (added)
+# ---------------------------------------------------------------------
+# Same signal logic/conditions as the F&O 75-min flow above — EMA cross
+# + mandatory EMA50 trend agreement on df75, with df3 shown as
+# informational 3-min context — just on the full Nifty 500 constituent
+# list (cash/EQ, fetched live from NSE — see
+# instruments.resolve_nifty500_stocks) and EMA9/21
+# (config.NIFTY500_EMA_FAST/EMA_SLOW) instead of EMA9/20. No PCR/OI
+# writing-buildup here (cash-focused scan; most Nifty 500 names have no
+# option chain anyway) — the "F&O: Yes/No" flag on the alert still
+# tells you whether a given name also happens to be F&O-eligible.
+# Deduped independently from the F&O scan (state key suffixed "::N500"),
+# so a stock that's in both lists can alert separately under each
+# EMA pair without one suppressing the other.
+
+def build_nifty500_watchlist(now_ist=None):
+    now_ist = now_ist or _now_ist()
+    if not _in_stock_session(now_ist):
+        return {}
+    return instruments.resolve_nifty500_stocks()
+
+
+def run_nifty500_scan(now_ist):
+    watchlist = build_nifty500_watchlist(now_ist)
+    if not watchlist:
+        print("Nifty 500 scan: empty watchlist (outside session or list unavailable) — skipping.")
+        return 0, [], 0
+
+    print(f"Scanning {len(watchlist)} Nifty 500 cash stocks (EMA{config.NIFTY500_EMA_FAST}/{config.NIFTY500_EMA_SLOW})...")
+
+    pivots = build_pivot_levels(watchlist)
+    delivery_map = delivery_data.get_delivery_data(now_ist.date())
+    saved_state = state.load_state()
+    alerts_sent = 0
+
+    fno_underlyings = instruments.get_fno_underlyings()
+    hist_cache = build_hist1min_cache(watchlist)
+
+    with ThreadPoolExecutor(max_workers=2) as outer_pool:
+        main_future = outer_pool.submit(fetch_all, watchlist, now_ist, config.FETCH_WORKERS, hist_cache)
+        sector_future = outer_pool.submit(fetch_sector_trends, now_ist)
+        dfs, failed_symbols = main_future.result()
+        try:
+            sector_trends = sector_future.result()
+        except Exception as e:
+            print(f"Sector trend fetch failed this run (non-blocking): {e}")
+            sector_trends = {}
+
+    for symbol, (df3, df75, df15) in dfs.items():
+        try:
+            levels = pivots.get(symbol)
+            r3 = levels["r3"] if levels else None
+            s3 = levels["s3"] if levels else None
+            prev_close = levels.get("prev_close") if levels else None
+
+            if df75 is None:
+                continue
+            signals = check_signals(
+                df75, symbol, r3=r3, s3=s3,
+                lookback=config.PRIMARY_LOOKBACK_CANDLES,
+                require_trend_confirmation=True,
+                prev_close=prev_close,
+                ema_fast=config.NIFTY500_EMA_FAST,
+                ema_slow=config.NIFTY500_EMA_SLOW,
+            )
+            for sig in signals:
+                sig["timeframe"] = "75-min"
+
+            if not signals:
+                continue
+
+            info3 = None
+            if df3 is not None:
+                info3 = get_3min_trend_info(
+                    df3, symbol,
+                    ema_fast=config.NIFTY500_EMA_FAST,
+                    ema_slow=config.NIFTY500_EMA_SLOW,
+                )
+
+            state_symbol = f"{symbol}::N500"
+
+            for signal in signals:
+                if state.already_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"]):
+                    continue
+
+                if info3 is not None:
+                    signal["trend_3min"] = info3
+
+                signal["is_fno"] = symbol.upper() in fno_underlyings
+
+                deliv = delivery_map.get(symbol.upper())
+                if deliv is not None:
+                    signal["delivery_pct"] = deliv
+
+                sector_name = config.STOCK_SECTOR_MAP.get(symbol.upper())
+                if sector_name:
+                    signal["sector_index"] = sector_name
+                    signal["sector_trend"] = sector_trends.get(sector_name)
+
+                send_alert(signal)
+                state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
+                alerts_sent += 1
+
+        except Exception as e:
+            print(f"Error on {symbol} (Nifty 500 scan): {e}")
+
+    state.save_state(saved_state)
+    if failed_symbols:
+        print(f"{len(failed_symbols)} Nifty 500 instrument(s) failed to fetch this run: {failed_symbols}")
+    print(f"Nifty 500 scan done. {alerts_sent} alert(s) sent.")
+    return alerts_sent, failed_symbols, len(watchlist)
+
+
 def run():
     # TEMP DEBUG — remove once we confirm why "Run scan" finished in ~1s
     # with zero stdout beyond the auto-generated env dump: this print
@@ -1322,9 +1439,17 @@ def run():
 
     _, fo_failed, fo_total = run_fo_scan(now_ist)
 
+    # ---- Nifty 500 cash-stock scan (same conditions, EMA9/21) ----
+    n500_failed, n500_total = [], 0
+    if _in_stock_session(now_ist):
+        try:
+            _, n500_failed, n500_total = run_nifty500_scan(now_ist)
+        except Exception as e:
+            print(f"Nifty 500 scan failed this run (non-blocking): {e}", flush=True)
+
     # ---- Fetch-failure visibility: one summary alert if enough
     # instruments failed to fetch this run ----
-    maybe_send_failure_summary(fo_failed, fo_total)
+    maybe_send_failure_summary(fo_failed, fo_total, n500_failed, n500_total)
 
 
 if __name__ == "__main__":
