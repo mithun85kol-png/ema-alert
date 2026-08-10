@@ -162,9 +162,11 @@ def send_alert(signal):
             cross_note = f"crossed {since} candle(s) ago{cross_time_note}"
         gap = trend3.get("gap_pct")
         gap_note = f", currently {gap}% apart" if gap is not None else ""
+        trend3_fast_p = trend3.get("ema_fast_period", 9)
+        trend3_slow_p = trend3.get("ema_slow_period", 20)
         trend3_block = (
             f"3-min: {trend3['bias']} {bias_icon} "
-            f"(EMA9 {trend3['ema_fast']} / EMA20 {trend3['ema_slow']}) — "
+            f"(EMA{trend3_fast_p} {trend3['ema_fast']} / EMA{trend3_slow_p} {trend3['ema_slow']}) — "
             f"{cross_note}{gap_note}\n"
         )
 
@@ -194,13 +196,19 @@ def send_alert(signal):
     delivery_pct = signal.get("delivery_pct")
     delivery_line = f"Delivery % (prev day): {delivery_pct}%\n" if delivery_pct is not None else ""
 
+    # EMA period labels — default to 9/20 (F&O scan) for backward
+    # compatibility if an older caller didn't set these; the Nifty 500
+    # cash scan sets them to 9/21 (see strategy.py / main.py).
+    ema_fast_p = signal.get("ema_fast_period", 9)
+    ema_slow_p = signal.get("ema_slow_period", 20)
+
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label})\n"
         f"{fno_line}"
         f"Timeframe: {timeframe_label} | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"{day_change_line}"
-        f"EMA9: {signal['ema_fast']}  EMA20: {signal['ema_slow']}\n"
+        f"EMA{ema_fast_p}: {signal['ema_fast']}  EMA{ema_slow_p}: {signal['ema_slow']}\n"
         f"Trend: {trend_label_bold}\n"
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
