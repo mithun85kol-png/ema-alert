@@ -107,8 +107,9 @@ from indicators import (
 PIVOT_PROXIMITY_PCT = 0.3
 
 
-def _min_required_len(lookback):
-    return max(config.EMA_SLOW, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, config.MACD_SLOW, 50) + lookback + 1
+def _min_required_len(lookback, ema_slow=None):
+    ema_slow = ema_slow if ema_slow is not None else config.EMA_SLOW
+    return max(ema_slow, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, config.MACD_SLOW, 50) + lookback + 1
 
 
 def _detect_macd_divergence(df, idx, lookback):
@@ -170,7 +171,11 @@ def _compute_vwap_at(df, idx):
     return float((typical_price * window["volume"]).sum() / cum_vol)
 
 
-def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None):
+def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None,
+                      ema_fast_period=None, ema_slow_period=None):
+    ema_fast_period = ema_fast_period if ema_fast_period is not None else config.EMA_FAST
+    ema_slow_period = ema_slow_period if ema_slow_period is not None else config.EMA_SLOW
+
     curr = df.iloc[idx]
     prev = df.iloc[idx - 1]
 
@@ -290,6 +295,8 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         "vol_change_pct": vol_change_pct,
         "ema_fast": round(float(curr["ema_fast"]), 2),
         "ema_slow": round(float(curr["ema_slow"]), 2),
+        "ema_fast_period": ema_fast_period,
+        "ema_slow_period": ema_slow_period,
         "ema_trend": round(float(curr["ema_trend"]), 2),
         "stock_trend": stock_trend,
         "candle_time": str(curr.get("timestamp", "")),
@@ -309,12 +316,19 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
     }
 
 
-def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True, prev_close=None):
+def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True, prev_close=None,
+                   ema_fast=None, ema_slow=None):
     """
     Scans the last `lookback` closed candles (default:
-    config.CROSS_LOOKBACK_CANDLES) for EMA9/20 crossovers — not just the
+    config.CROSS_LOOKBACK_CANDLES) for EMA crossovers — not just the
     single latest candle — so a run that was skipped/delayed still
     catches up on any cross it would otherwise have missed.
+
+    ema_fast/ema_slow: the EMA periods to use for the crossover +
+    labeling (defaults to config.EMA_FAST/EMA_SLOW, i.e. 9/20 — the F&O
+    scan's periods). Pass config.NIFTY500_EMA_FAST/EMA_SLOW (9/21) for
+    the Nifty 500 cash-stock scan. EMA50 trend-agreement, RSI, volume,
+    MACD etc. are unaffected — only the crossover pair itself changes.
 
     require_trend_confirmation=False disables condition 4 (EMA50 trend
     agreement) — used for indices, where every qualifying crossover
@@ -327,16 +341,18 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     state.py) before sending each one.
     """
     lookback = lookback or config.CROSS_LOOKBACK_CANDLES
+    ema_fast = ema_fast if ema_fast is not None else config.EMA_FAST
+    ema_slow = ema_slow if ema_slow is not None else config.EMA_SLOW
 
-    if len(df) < _min_required_len(1):
+    if len(df) < _min_required_len(1, ema_slow):
         return []
 
     # Shrink the lookback window if we don't have enough history yet
     # (e.g. right after market open) rather than returning nothing.
-    max_possible_lookback = len(df) - _min_required_len(0)
+    max_possible_lookback = len(df) - _min_required_len(0, ema_slow)
     lookback = max(1, min(lookback, max_possible_lookback))
 
-    df = add_emas(df, config.EMA_FAST, config.EMA_SLOW)
+    df = add_emas(df, ema_fast, ema_slow)
     df = add_rsi(df, config.RSI_PERIOD)
     df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
     df = add_ema50(df)
@@ -350,6 +366,8 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
             df, idx, symbol, r3, s3,
             require_trend_confirmation=require_trend_confirmation,
             prev_close=prev_close,
+            ema_fast_period=ema_fast,
+            ema_slow_period=ema_slow,
         )
         if sig is not None:
             signals.append(sig)
@@ -367,34 +385,37 @@ def check_signal(df, symbol, r3=None, s3=None):
     return signals[-1] if signals else None
 
 
-def debug_ema_gap(df, symbol):
+def debug_ema_gap(df, symbol, ema_fast=None, ema_slow=None):
     """
     Debug helper only — NOT used in the firing decision. Returns how far
     apart EMA9/EMA20 are on the latest closed candle, as a % of price, so
     you can see in the Action logs which instruments are "close" to a
     cross even when none has fired yet.
     """
-    if len(df) < config.EMA_SLOW + 2:
+    ema_fast_period = ema_fast if ema_fast is not None else config.EMA_FAST
+    ema_slow_period = ema_slow if ema_slow is not None else config.EMA_SLOW
+
+    if len(df) < ema_slow_period + 2:
         return None
 
-    df = add_emas(df, config.EMA_FAST, config.EMA_SLOW)
+    df = add_emas(df, ema_fast_period, ema_slow_period)
     curr = df.iloc[-1]
 
-    ema_fast = float(curr["ema_fast"])
-    ema_slow = float(curr["ema_slow"])
+    ema_fast_val = float(curr["ema_fast"])
+    ema_slow_val = float(curr["ema_slow"])
     close_price = float(curr["close"])
-    gap_pct = abs(ema_fast - ema_slow) / close_price * 100
+    gap_pct = abs(ema_fast_val - ema_slow_val) / close_price * 100
 
     return {
         "symbol": symbol,
-        "ema_fast": round(ema_fast, 2),
-        "ema_slow": round(ema_slow, 2),
+        "ema_fast": round(ema_fast_val, 2),
+        "ema_slow": round(ema_slow_val, 2),
         "gap_pct": round(gap_pct, 3),
-        "leaning": "BULLISH (EMA9 above)" if ema_fast > ema_slow else "BEARISH (EMA9 below)",
+        "leaning": f"BULLISH (EMA{ema_fast_period} above)" if ema_fast_val > ema_slow_val else f"BEARISH (EMA{ema_fast_period} below)",
     }
 
 
-def get_3min_trend_info(df_3min, symbol, lookback_candles=None):
+def get_3min_trend_info(df_3min, symbol, lookback_candles=None, ema_fast=None, ema_slow=None):
     """
     Informative-only check on 3-min candles — no filters (no strong
     candle, no volume, no trend-agreement, no gap threshold). Reports:
@@ -411,12 +432,15 @@ def get_3min_trend_info(df_3min, symbol, lookback_candles=None):
 
     Returns None if there isn't enough 3-min history yet.
     """
-    if len(df_3min) < config.EMA_SLOW + 2:
+    ema_fast_period = ema_fast if ema_fast is not None else config.EMA_FAST
+    ema_slow_period = ema_slow if ema_slow is not None else config.EMA_SLOW
+
+    if len(df_3min) < ema_slow_period + 2:
         return None
 
     lookback_candles = lookback_candles or config.INFO_3MIN_LOOKBACK_CANDLES
 
-    df = add_emas(df_3min, config.EMA_FAST, config.EMA_SLOW)
+    df = add_emas(df_3min, ema_fast_period, ema_slow_period)
     n = len(df)
 
     curr = df.iloc[-1]
@@ -446,6 +470,8 @@ def get_3min_trend_info(df_3min, symbol, lookback_candles=None):
         "bias": bias,
         "ema_fast": round(float(curr["ema_fast"]), 2),
         "ema_slow": round(float(curr["ema_slow"]), 2),
+        "ema_fast_period": ema_fast_period,
+        "ema_slow_period": ema_slow_period,
         "gap_pct": gap_pct,  # how close to a cross right now, on 75-min
         "candles_since_cross": candles_since_cross,  # None = no cross in lookback window
         "cross_time": cross_time,  # exact 75-min candle timestamp of the cross, or None
