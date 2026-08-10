@@ -5,9 +5,14 @@ on:
   repository_dispatch:
     types: [run-scan]
 
+concurrency:
+  group: ema-alert-scan
+  cancel-in-progress: false
+
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
@@ -27,10 +32,4 @@ jobs:
         run: python main.py
 
       - name: Commit updated state files
-        run: |
-          git config user.name "ema-alert-bot"
-          git config user.email "actions@github.com"
-          git add alert_state.json
-          if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
-          git diff --cached --quiet || git commit -m "update alert state [skip ci]"
-          git push
+        run: | git config user.name "ema-alert-bot" git config user.email "actions@github.com" git add alert_state.json if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi git diff --cached --quiet || git commit -m "update alert state [skip ci]" git push
