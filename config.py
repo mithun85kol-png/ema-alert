@@ -241,14 +241,16 @@ STOCK_SECTOR_MAP = {
 # VOLUME_AVG_PERIOD=20, MACD_SLOW=26, and the 50-period trend EMA all
 # warmed up — i.e. ~50+ bars minimum on the 75-min timeframe. At ~5
 # bars/trading day, that's ~10-12 trading days (~14-17 calendar days
-# with weekends). 35 calendar days gives comfortable margin, including
-# a holiday-heavy stretch. This many calendar days of PRE-TODAY 1-minute
+# with weekends). 28 calendar days gives comfortable margin (including
+# a holiday-heavy stretch) while staying safely inside Upstox's max
+# retrieval limit for the 1-15 minute interval band on the v3
+# historical-candle endpoint, which is capped at "1 month leading up
+# to to_date" — the previous value of 35 exceeded that cap and was
+# why every instrument's 1-min warmup fetch was failing with
+# "400 Bad Request". This many calendar days of PRE-TODAY 1-minute
 # history are fetched once per day (cached) and combined with today's
-# intraday data before resampling to 75-min. (NOTE: verify Upstox's
-# historical-candle endpoint allows a 35-day 1-minute range in one
-# request against current docs — if it caps out lower, this fetch will
-# need to be split into chunks.)
-HISTORICAL_1MIN_LOOKBACK_DAYS = 35
+# intraday data before resampling to 75-min.
+HISTORICAL_1MIN_LOOKBACK_DAYS = 28
 HIST_1MIN_CACHE_FILE = "historical_1min_cache.json"
 
 # ---------- State / alert de-dup ----------
