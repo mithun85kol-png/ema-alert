@@ -41,6 +41,17 @@ FETCH_WORKERS = 30
 HIST_FETCH_WORKERS = 6
 HIST_FETCH_MAX_PER_SECOND = 4   # hard cap on combined outbound rate to this endpoint, across all HIST_FETCH_WORKERS threads
 
+# ---------- Daily-candle fetch for R3/S3 pivots (main.py's
+# fetch_prev_day_ohlc / build_pivot_levels) ----------
+# Same reasoning/pattern as HIST_FETCH_WORKERS/HIST_FETCH_MAX_PER_SECOND
+# above, for Upstox's daily-candle endpoint. Was safe to run unrated at
+# FETCH_WORKERS (30) concurrency while this only covered the
+# ~214-instrument F&O/index/commodity list, but started returning mass
+# "429 Too Many Requests" once the Nifty 500 scan added ~500 more names
+# hitting this same endpoint in the same run.
+PIVOT_FETCH_WORKERS = 6
+PIVOT_FETCH_MAX_PER_SECOND = 4
+
 # ---------- Upstox request retry/backoff (applies to ALL Upstox calls:
 # intraday candles, daily OHLC for pivots) ----------
 # If Upstox returns 429 (rate-limited) or a transient 5xx, retry a few
