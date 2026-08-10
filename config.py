@@ -66,6 +66,14 @@ UPSTOX_RETRY_BACKOFF_BASE_SECONDS = 0.6   # attempt 1 wait ~0.6s, attempt 2 ~1.2
 # ---------- Indicator settings ----------
 EMA_FAST = 9
 EMA_SLOW = 20
+
+# EMA9/EMA50 cross on 75-min candles — the 75-min F&O stock/commodity
+# alert's crossover pair (replaces the old 9/20 pair). EMA_FAST (9)
+# above is reused as the fast leg; this is only the new slow leg.
+# require_trend_confirmation is turned OFF for this pair in main.py's
+# 75-min call, since an EMA9 x EMA50 cross already IS the trend signal
+# — a separate EMA50 trend-agreement check would be near-redundant.
+PRIMARY_EMA_SLOW = 50
 RSI_PERIOD = 14
 RSI_BULLISH_MIN = 55          # unused by current strategy.py (informational-only design); kept for reference
 RSI_BEARISH_MAX = 45          # unused by current strategy.py (informational-only design); kept for reference
@@ -170,7 +178,7 @@ FO_STOCK_WATCHLIST = [
 # addition to the F&O scan (with 9/20) — they're independent alerts,
 # deduped separately (see main.py's run_nifty500_scan).
 NIFTY500_EMA_FAST = 9
-NIFTY500_EMA_SLOW = 21
+NIFTY500_EMA_SLOW = 50   # was 21 — now EMA9 x EMA50 on 75-min, same as the F&O scan
 
 # ---------- Sector Index mapping (added) ----------
 # Maps a display name (used on the alert message and as the key of
