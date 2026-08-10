@@ -343,6 +343,7 @@ def fetch_prev_day_ohlc(instrument_key):
         to_date=to_date.isoformat(),
         from_date=from_date.isoformat(),
     )
+    _pivot_fetch_limiter.wait()
     resp = _get_with_retry(url, headers=headers, timeout=20)
     resp.raise_for_status()
     payload = resp.json()
@@ -389,6 +390,17 @@ class _RateLimiter:
 # config.FETCH_WORKERS (30) threads hit it at once for ~214
 # instruments.
 _hist_fetch_limiter = _RateLimiter(config.HIST_FETCH_MAX_PER_SECOND)
+
+# Caps outbound requests to Upstox's daily-candle endpoint (used only by
+# fetch_prev_day_ohlc, for R3/S3 pivot levels — see build_pivot_levels).
+# This was fine unrated at config.FETCH_WORKERS (30) concurrency back
+# when it only covered the ~214-instrument F&O/index/commodity list,
+# but started returning mass 429s once the Nifty 500 scan added ~500
+# more names hitting the same endpoint in the same run (same "thundering
+# herd" issue HIST_FETCH_MAX_PER_SECOND already solves for the
+# historical 1-min endpoint above — retries alone don't help because
+# every thread retries in lockstep and collides again).
+_pivot_fetch_limiter = _RateLimiter(config.PIVOT_FETCH_MAX_PER_SECOND)
 
 
 def fetch_historical_1min(instrument_key, days_back):
@@ -868,7 +880,7 @@ def build_pivot_levels(watchlist):
             r3, s3 = calculate_r3_s3(ohlc["high"], ohlc["low"], ohlc["close"])
             return symbol, {"r3": r3, "s3": s3, "prev_close": ohlc["close"]}
 
-        with ThreadPoolExecutor(max_workers=config.FETCH_WORKERS) as pool:
+        with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
             futures = {
                 pool.submit(_fetch_pivot, symbol, instrument_key): symbol
                 for symbol, instrument_key in missing.items()
