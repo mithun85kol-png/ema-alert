@@ -27,14 +27,18 @@ agreement) now fires the alert directly, as soon as that 75-min candle
 closes.
 
 INDICES (NIFTY 50, NIFTY BANK, SENSEX): completely separate rule, not
-tied to df75 at all. An index alert fires on a PURE EMA9/20 crossover
-on the 3-min chart (df3) — no EMA50 trend requirement, no 75-min
-involvement. strategy.check_signals(df3, ..., require_trend_confirmation
-=False) is called directly on df3, scanning the trailing
-config.INDEX_3MIN_ALERT_LOOKBACK_CANDLES closed 3-min candles. The
-resulting signal is tagged timeframe="3-min" (telegram_notifier uses
+tied to df75 at all, and checked by its OWN dedicated 5-min cron
+trigger (SCAN_MODE=index -> run_fo_scan(index_only=True) — see run()),
+fully independent of the 75-min F&O/Nifty500/commodity scan. An index
+alert fires on a PURE EMA9/20 crossover on the 5-min chart (df5) — no
+EMA50 trend requirement, no 75-min involvement.
+strategy.check_signals(df5, ..., require_trend_confirmation=False) is
+called directly on df5, scanning the trailing
+config.INDEX_ALERT_LOOKBACK_CANDLES closed 5-min candles. The
+resulting signal is tagged timeframe="5-min" (telegram_notifier uses
 this to label the message correctly) and does NOT get a trend_3min
-context block, since the alert itself already is the 3-min signal.
+context block, since the alert itself already is the short-timeframe
+signal.
 
 df3 (3-min) is still built for every instrument. For STOCKS/COMMODITIES,
 strategy.get_3min_trend_info(df3, symbol) is computed for every
@@ -65,9 +69,10 @@ WHEN ALERTS ACTUALLY FIRE:
   config.PRIMARY_LOOKBACK_CANDLES (2) closed 75-min candles (not just
   the newest), so a delayed/skipped run still catches a cross that
   closed while nothing was running.
-- INDICES (3-min): a 3-min candle closes far more often — every 3
-  minutes during the session. check_signals() re-checks the last
-  config.INDEX_3MIN_ALERT_LOOKBACK_CANDLES closed 3-min candles, so a
+- INDICES (5-min): a 5-min candle closes every 5 minutes during the
+  session, checked by its own dedicated 5-min cron trigger
+  (SCAN_MODE=index). check_signals() re-checks the last
+  config.INDEX_ALERT_LOOKBACK_CANDLES closed 5-min candles, so a
   delayed/skipped run still catches up. No trend/gate condition beyond
   the plain EMA9/20 cross itself.
 - The workflow still runs every 1-3 minutes; a run simply finds "no new
@@ -99,6 +104,7 @@ is visible instead of only living in the GitHub Actions log.
 """
 
 import sys
+import os
 import json
 import time
 import random
@@ -224,6 +230,17 @@ def _get_with_retry(url, **kwargs):
 
 
 def fetch_1min_candles(instrument_key):
+    """
+    Rate-limited via _intraday_fetch_limiter (defined below) — this
+    endpoint has its own Upstox budget (25/sec, 250/min, 1000/30min)
+    separate from the historical/pivot endpoints. With FETCH_WORKERS
+    (30) threads calling it unrated for the combined ~714-instrument
+    F&O+Nifty500 watchlist, a single run could burst past the 250/min
+    cap and get mass 429'd (instruments silently skipped for that run).
+    The limiter caps the true combined outbound rate across all worker
+    threads so nothing gets dropped — see _intraday_fetch_limiter.
+    """
+    _intraday_fetch_limiter.wait()
     headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
     url = UPSTOX_INTRADAY_URL.format(instrument_key=instrument_key)
     resp = _get_with_retry(url, headers=headers, timeout=20)
@@ -242,6 +259,21 @@ def fetch_1min_candles(instrument_key):
 def resample_3min(df):
     df = df.set_index("timestamp")
     out = df.resample("3min").agg({
+        "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
+    }).dropna().reset_index()
+    return out
+
+
+def resample_5min(df):
+    """
+    Resamples 1-minute candles to 5-minute bars — drives the standalone
+    index (NIFTY 50 / NIFTY BANK / SENSEX) EMA9/EMA20 cross alert (see
+    run_fo_scan, index_only mode). No per-day origin alignment needed:
+    the session start 09:15 IST (555 min from midnight) is already a
+    clean multiple of 5 minutes, same reasoning as resample_3min.
+    """
+    df = df.set_index("timestamp")
+    out = df.resample("5min").agg({
         "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
     }).dropna().reset_index()
     return out
@@ -401,6 +433,19 @@ _hist_fetch_limiter = _RateLimiter(config.HIST_FETCH_MAX_PER_SECOND)
 # historical 1-min endpoint above — retries alone don't help because
 # every thread retries in lockstep and collides again).
 _pivot_fetch_limiter = _RateLimiter(config.PIVOT_FETCH_MAX_PER_SECOND)
+
+# Caps outbound requests to Upstox's intraday-candle endpoint (used by
+# fetch_1min_candles — the hot path called on EVERY scan run for every
+# instrument in the watchlist, up to ~714 combined for F&O+Nifty500).
+# This endpoint has its own separate Upstox budget (25/sec, 250/min,
+# 1000/30min). Unrated at FETCH_WORKERS (30) concurrency, a single run
+# could burst past the 250/min cap and get mass 429'd — this is what
+# caused the "224 instruments failed to fetch" warning. Capping the
+# combined outbound rate at config.INTRADAY_FETCH_MAX_PER_SECOND
+# (4/sec = 240/min, safely under the 250/min cap) means the ~714-call
+# fetch now takes ~3 minutes instead of ~30 seconds, but nothing gets
+# dropped — every instrument gets fetched and checked every run.
+_intraday_fetch_limiter = _RateLimiter(config.INTRADAY_FETCH_MAX_PER_SECOND)
 
 
 def fetch_historical_1min(instrument_key, days_back):
@@ -916,10 +961,12 @@ def build_watchlist(now_ist=None):
 
 def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     """
-    Returns (symbol, df3, df75, df15) — df3 drives the actual 3-min
-    signal logic (unchanged); df75 is used for the informative 75-min
-    trend check attached to 3-min alerts; df15 is used for the
-    standalone 15-min commodity EMA cross alert.
+    Returns (symbol, df3, df5, df75, df15) — df3 is kept purely as
+    informational 3-min context attached to 75-min stock/commodity
+    alerts (get_3min_trend_info); df5 drives the standalone index
+    (NIFTY 50/BANK/SENSEX) EMA9/EMA20 cross alert; df75 is the primary
+    75-min signal timeframe for stocks/commodities/cash; df15 is
+    resampled but currently unused (kept for reference).
 
     df75 combines cached PRE-TODAY 1-min history (hist_candles, from
     build_hist1min_cache — enough days to warm up EMA9/EMA20) with
@@ -939,6 +986,9 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     df3 = resample_3min(raw)
     df3 = drop_unclosed_candle(df3, now_ist, candle_minutes=3)
 
+    df5 = resample_5min(raw)
+    df5 = drop_unclosed_candle(df5, now_ist, candle_minutes=5)
+
     df15 = resample_15min(raw)
     df15 = drop_unclosed_candle(df15, now_ist, candle_minutes=15)
 
@@ -955,7 +1005,7 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
 
     df75 = resample_75min(combined_75)
     df75 = drop_unclosed_candle(df75, now_ist, candle_minutes=75)
-    return symbol, df3, df75, df15
+    return symbol, df3, df5, df75, df15
 
 
 def fetch_all(watchlist, now_ist, workers, hist_cache=None):
@@ -969,7 +1019,7 @@ def fetch_all(watchlist, now_ist, workers, hist_cache=None):
     up. Optional — omitting it just means 75-min features stay dormant.
 
     Returns (dfs, failed_symbols):
-      dfs            -- {symbol: (df3, df75, df15)} for every instrument
+      dfs            -- {symbol: (df3, df5, df75, df15)} for every instrument
                          that fetched successfully (with enough history).
       failed_symbols -- list of symbols whose fetch raised an exception
                          even after the retry/backoff in
@@ -991,9 +1041,9 @@ def fetch_all(watchlist, now_ist, workers, hist_cache=None):
         for future in as_completed(futures):
             symbol = futures[future]
             try:
-                sym, df3, df75, df15 = future.result()
+                sym, df3, df5, df75, df15 = future.result()
                 if df3 is not None:
-                    dfs[sym] = (df3, df75, df15)
+                    dfs[sym] = (df3, df5, df75, df15)
             except Exception as e:
                 print(f"Error fetching {symbol}: {e}")
                 failed_symbols.append(symbol)
@@ -1100,8 +1150,16 @@ def maybe_send_failure_summary(fo_failed, fo_total, n500_failed=None, n500_total
 # ~50 F&O stock/index/commodity scan
 # ---------------------------------------------------------------------
 
-def run_fo_scan(now_ist):
+def run_fo_scan(now_ist, index_only=False):
+    """
+    index_only=True restricts the watchlist to just the 3 index
+    instruments (NIFTY 50 / NIFTY BANK / SENSEX) — used by the
+    dedicated 5-min index-only cron trigger so it stays a cheap ~3-call
+    run, completely independent of the full F&O/commodity 75-min scan.
+    """
     watchlist = build_watchlist(now_ist)
+    if index_only:
+        watchlist = {sym: watchlist[sym] for sym in config.INDICES.keys() if sym in watchlist}
     print(f"Scanning {len(watchlist)} instruments...")
 
     pivots = build_pivot_levels(watchlist)
@@ -1154,7 +1212,7 @@ def run_fo_scan(now_ist):
             print(f"Option-chain (PCR/OI buildup) fetch failed this run (non-blocking): {e}")
             oi_data = {}
 
-    for symbol, (df3, df75, df15) in dfs.items():
+    for symbol, (df3, df5, df75, df15) in dfs.items():
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
@@ -1163,23 +1221,25 @@ def run_fo_scan(now_ist):
 
             # ALERTING SIGNAL. Indices and stocks/commodities now follow
             # completely separate rules:
-            #   - Indices (NIFTY 50, NIFTY BANK, SENSEX): a PURE 3-min
+            #   - Indices (NIFTY 50, NIFTY BANK, SENSEX): a PURE 5-min
             #     EMA9/20 crossover — no EMA50 trend requirement, no
             #     75-min gate at all. check_signals() runs directly on
-            #     df3 with require_trend_confirmation=False.
+            #     df5 with require_trend_confirmation=False. Checked by
+            #     a dedicated 5-min cron trigger (index_only=True), fully
+            #     separate from the 75-min stock/commodity runs.
             #   - Stocks/commodities: unchanged — 75-min EMA9/20 cross +
             #     mandatory EMA50 trend agreement, on df75.
             if symbol in index_symbols:
-                if df3 is None:
+                if df5 is None:
                     continue
                 signals = check_signals(
-                    df3, symbol, r3=r3, s3=s3,
-                    lookback=config.INDEX_3MIN_ALERT_LOOKBACK_CANDLES,
+                    df5, symbol, r3=r3, s3=s3,
+                    lookback=config.INDEX_ALERT_LOOKBACK_CANDLES,
                     require_trend_confirmation=False,
                     prev_close=prev_close,
                 )
                 for sig in signals:
-                    sig["timeframe"] = "3-min"
+                    sig["timeframe"] = "5-min"
             else:
                 if df75 is None:
                     continue
@@ -1290,7 +1350,7 @@ def run_fo_scan(now_ist):
     # currently closest together, even though none of them crossed this
     # run. Helps confirm the scanner is working when 0 alerts fire.
     gaps = []
-    for symbol, (df3, df75, df15) in dfs.items():
+    for symbol, (df3, df5, df75, df15) in dfs.items():
         try:
             g = debug_ema_gap(df75, symbol) if df75 is not None else None
             if g is not None:
@@ -1363,7 +1423,7 @@ def run_nifty500_scan(now_ist):
             print(f"Sector trend fetch failed this run (non-blocking): {e}")
             sector_trends = {}
 
-    for symbol, (df3, df75, df15) in dfs.items():
+    for symbol, (df3, df5, df75, df15) in dfs.items():
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
@@ -1447,6 +1507,19 @@ def run():
         f"in_commodity_session={_in_commodity_session(now_ist)}",
         flush=True,
     )
+    # SCAN_MODE=index -> dedicated lightweight run for the 5-min index
+    # (NIFTY 50/BANK/SENSEX) alert only — set by the "mode" input on the
+    # index-only cron trigger (see scan.yml). Completely independent of
+    # the full 75-min F&O/Nifty500/commodity scan below: only ~3 API
+    # calls, safe to run every 5 minutes without touching rate limits.
+    mode = os.environ.get("SCAN_MODE", "full")
+    if mode == "index":
+        if not _in_stock_session(now_ist):
+            print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — index-only scan skipping.", flush=True)
+            return
+        run_fo_scan(now_ist, index_only=True)
+        return
+
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)
         return
