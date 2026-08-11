@@ -12,12 +12,12 @@ This script scans the ~50 F&O stock/index/commodity watchlist on every
 workflow run (the workflow itself can still run as often as every few
 minutes — see "when alerts actually fire" below).
 
-75-min PRIMARY/ALERTING signal for STOCKS/COMMODITIES ONLY (FLIPPED
-from the previous 3-min-primary design): the main EMA9/EMA20 crossover
-check (strategy.check_signals — EMA9/20 cross + mandatory EMA50 trend
-agreement; volume is informational only, never gating) now runs
-on df75 — 1-min data (cached multi-day history + today's live data)
-resampled to 75-min candles. This is the timeframe that decides
+75-min PRIMARY/ALERTING signal for STOCKS/COMMODITIES/CASH (FLIPPED
+from the previous 3-min-primary design): the main EMA9/EMA50 crossover
+check (strategy.check_signals — EMA9/50 cross; volume increase over
+the previous candle is now MANDATORY, require_volume_increase=True)
+now runs on df75 — 1-min data (cached multi-day history + today's live
+data) resampled to 75-min candles. This is the timeframe that decides
 whether/when a STOCK/COMMODITY Telegram alert is sent. The old design
 made 75-min a MANDATORY gate on top of a 3-min primary cross, which
 meant an alert only fired once a 3-min cross AND a fresh 75-min cross
@@ -52,8 +52,8 @@ Purely informational — it never gates or blocks the 75-min alert. (Not
 attached for indices — see above.)
 
 COMMODITIES (GOLD/SILVER/CRUDEOIL etc.): follow the exact same rule as
-stocks — the 75-min loop is their only alert (EMA9/20 cross + mandatory
-EMA50 trend agreement; volume is informational only), with 3-min shown
+stocks — the 75-min loop is their only alert (EMA9/50 cross, mandatory
+volume increase over the previous candle), with 3-min shown
 as context on the alert. There is no separate standalone commodity-only
 alert (a 15-min standalone version used to exist here; it remains
 removed). df15 is still resampled per-instrument but is no longer read
@@ -1250,6 +1250,7 @@ def run_fo_scan(now_ist, index_only=False):
                     prev_close=prev_close,
                     ema_fast=config.EMA_FAST,
                     ema_slow=config.PRIMARY_EMA_SLOW,
+                    require_volume_increase=True,
                 )
                 for sig in signals:
                     sig["timeframe"] = "75-min"
@@ -1439,6 +1440,7 @@ def run_nifty500_scan(now_ist):
                 prev_close=prev_close,
                 ema_fast=config.NIFTY500_EMA_FAST,
                 ema_slow=config.NIFTY500_EMA_SLOW,
+                require_volume_increase=True,
             )
             for sig in signals:
                 sig["timeframe"] = "75-min"
