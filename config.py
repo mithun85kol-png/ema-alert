@@ -52,6 +52,19 @@ HIST_FETCH_MAX_PER_SECOND = 4   # hard cap on combined outbound rate to this end
 PIVOT_FETCH_WORKERS = 6
 PIVOT_FETCH_MAX_PER_SECOND = 4
 
+# Caps outbound requests to Upstox's intraday-candle endpoint (used by
+# fetch_1min_candles — the per-run hot path for every instrument in the
+# watchlist, up to ~714 combined for F&O+Nifty500). Same reasoning as
+# HIST_FETCH_MAX_PER_SECOND/PIVOT_FETCH_MAX_PER_SECOND above: 4/sec
+# sustained = 240/min, safely under Upstox's 250/min cap for this
+# endpoint. Without this, FETCH_WORKERS (30) threads firing unrated
+# would burst well past 250/min for the combined F&O+Nifty500 watchlist,
+# causing instruments to be silently skipped for the run (fixed
+# 2026-08-12 after fetch-failure warnings on ~45% of the Nifty 500
+# list). Trade-off: the full ~714-instrument fetch now takes ~3 minutes
+# instead of ~30 seconds, but nothing gets dropped.
+INTRADAY_FETCH_MAX_PER_SECOND = 4
+
 # ---------- Upstox request retry/backoff (applies to ALL Upstox calls:
 # intraday candles, daily OHLC for pivots) ----------
 # If Upstox returns 429 (rate-limited) or a transient 5xx, retry a few
@@ -121,7 +134,9 @@ INFO_3MIN_LOOKBACK_CANDLES = 5
 # many trailing CLOSED 3-min candles are re-checked on every run (catch-
 # up window, same idea as PRIMARY_LOOKBACK_CANDLES below but for the
 # index's 3-min alert specifically).
-INDEX_3MIN_ALERT_LOOKBACK_CANDLES = 5
+INDEX_ALERT_LOOKBACK_CANDLES = 8  # 8 x 5-min = 40 min lookback (safety
+# buffer for the dedicated index-only 5-min cron job — covers several
+# missed/delayed runs, not just the exact 5-min gap)
 
 # Informational trade-plan fields (computed in strategy.py, currently
 # not shown in the Telegram message — see telegram_notifier.py):
