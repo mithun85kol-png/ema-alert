@@ -52,7 +52,14 @@ jobs:
           UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SCAN_MODE: ${{ github.event.inputs.mode || 'full' }}
+          # FIX: repository_dispatch (used by cron-job.org) has no
+          # `inputs` — only `client_payload`. The old line only read
+          # `github.event.inputs.mode`, which is always empty for a
+          # repository_dispatch trigger, so SCAN_MODE silently fell
+          # back to 'full' on every cron-job.org-triggered run,
+          # regardless of which mode the cron job actually requested.
+          # Now mirrors the concurrency group's fallback chain above.
+          SCAN_MODE: ${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
         run: python main.py
 
       - name: Commit updated state files
