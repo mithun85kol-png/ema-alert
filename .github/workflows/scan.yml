@@ -15,8 +15,22 @@ on:
     types: [run-scan]
 
 concurrency:
-  group: ema-alert-scan
-  cancel-in-progress: false
+  # Separate group per mode: an "index" (5-min, ~3 API calls, fast)
+  # trigger must never queue behind or cancel a "full" (F&O+Nifty500,
+  # several minutes) run, and vice versa.
+  group: ema-alert-scan-${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
+  # cancel-in-progress TRUE (was false): a "full" run takes several
+  # minutes (rate-limited fetch across ~714 instruments), but the
+  # external cron trigger fires far more often than that. With
+  # cancel-in-progress:false, every trigger that arrived mid-run
+  # queued up instead of running immediately -- the backlog only grew
+  # through the day, which is why alerts kept arriving later and
+  # later. Cancelling the stale queued run and only ever running the
+  # latest trigger is safe here because PRIMARY_LOOKBACK_CANDLES
+  # (main.py) re-checks the last 2 closed 75-min candles anyway, so a
+  # cancelled/skipped run's candle close still gets caught on the very
+  # next run.
+  cancel-in-progress: true
 
 jobs:
   scan:
