@@ -154,11 +154,11 @@ IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 STOCK_SESSION_START = dt.time(9, 15)
 STOCK_SESSION_END = dt.time(15, 30)
 
-# Commodity (MCX) session — extended to match MCX's evening session so
-# the standalone 15-min EMA cross alert (below) keeps firing up to
-# 11 PM IST, not just the cash-market window.
+# Commodity (MCX) session — MCX's evening session actually runs until
+# 11:30 PM IST (was incorrectly set to 23:00 here, which cut off the
+# last 30 minutes of commodity scanning/alerting every day).
 COMMODITY_SESSION_START = dt.time(9, 15)
-COMMODITY_SESSION_END = dt.time(23, 0)
+COMMODITY_SESSION_END = dt.time(23, 30)
 
 
 def _now_ist():
