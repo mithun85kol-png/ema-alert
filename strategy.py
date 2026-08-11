@@ -172,7 +172,7 @@ def _compute_vwap_at(df, idx):
 
 
 def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None,
-                      ema_fast_period=None, ema_slow_period=None):
+                      ema_fast_period=None, ema_slow_period=None, require_volume_increase=False):
     ema_fast_period = ema_fast_period if ema_fast_period is not None else config.EMA_FAST
     ema_slow_period = ema_slow_period if ema_slow_period is not None else config.EMA_SLOW
 
@@ -202,15 +202,20 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
     if require_trend_confirmation and direction != stock_trend:
         return None
 
-    # Volume — INFORMATIONAL ONLY (no longer a gating condition). The
-    # crossing candle's volume vs the previous candle's is still
-    # computed and shown in the alert (vol_change_pct), but a signal no
-    # longer requires curr volume > prev volume to fire. If prev_vol is
-    # 0/unavailable, vol_change_pct is simply None — the alert still
-    # fires, just without that line's %.
+    # Volume — MANDATORY when require_volume_increase=True (currently
+    # only the 75-min stock/F&O/cash/commodity alerts — see
+    # check_signals/main.py): the crossing candle's volume must be
+    # strictly higher than the previous candle's, or the signal is
+    # rejected outright. If prev_vol is 0/unavailable, the comparison
+    # can't be made — the alert still fires rather than being blocked
+    # on missing data, same as before. When require_volume_increase is
+    # False (indices, and everywhere else by default), volume stays
+    # informational-only, exactly as before.
     curr_vol = curr["volume"]
     prev_vol = prev["volume"]
     vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1) if prev_vol else None
+    if require_volume_increase and prev_vol and curr_vol <= prev_vol:
+        return None
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
 
     cross_pattern = detect_candle_pattern(curr)
@@ -317,7 +322,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
 
 
 def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True, prev_close=None,
-                   ema_fast=None, ema_slow=None):
+                   ema_fast=None, ema_slow=None, require_volume_increase=False):
     """
     Scans the last `lookback` closed candles (default:
     config.CROSS_LOOKBACK_CANDLES) for EMA crossovers — not just the
@@ -327,13 +332,19 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     ema_fast/ema_slow: the EMA periods to use for the crossover +
     labeling (defaults to config.EMA_FAST/EMA_SLOW, i.e. 9/20 — the F&O
     scan's periods). Pass config.NIFTY500_EMA_FAST/EMA_SLOW (9/21) for
-    the Nifty 500 cash-stock scan. EMA50 trend-agreement, RSI, volume,
-    MACD etc. are unaffected — only the crossover pair itself changes.
+    the Nifty 500 cash-stock scan. EMA50 trend-agreement, RSI, MACD etc.
+    are unaffected — only the crossover pair itself changes.
 
     require_trend_confirmation=False disables condition 4 (EMA50 trend
     agreement) — used for indices, where every qualifying crossover
     should alert regardless of the broader trend. Leave True (default)
     for stocks/commodities.
+
+    require_volume_increase=True makes the crossing candle's volume >
+    previous candle's volume a MANDATORY condition (signal rejected
+    otherwise) — used for the 75-min stock/F&O/cash/commodity alerts
+    (see main.py). Leave False (default) for indices, where volume
+    stays informational-only.
 
     Returns a list of signal dicts, oldest candle first. Empty list if
     nothing qualifies. Caller is responsible for de-duping against
@@ -368,6 +379,7 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
             prev_close=prev_close,
             ema_fast_period=ema_fast,
             ema_slow_period=ema_slow,
+            require_volume_increase=require_volume_increase,
         )
         if sig is not None:
             signals.append(sig)
@@ -409,169 +421,4 @@ def debug_ema_gap(df, symbol, ema_fast=None, ema_slow=None):
     return {
         "symbol": symbol,
         "ema_fast": round(ema_fast_val, 2),
-        "ema_slow": round(ema_slow_val, 2),
-        "gap_pct": round(gap_pct, 3),
-        "leaning": f"BULLISH (EMA{ema_fast_period} above)" if ema_fast_val > ema_slow_val else f"BEARISH (EMA{ema_fast_period} below)",
-    }
-
-
-def get_3min_trend_info(df_3min, symbol, lookback_candles=None, ema_fast=None, ema_slow=None):
-    """
-    Informative-only check on 3-min candles — no filters (no strong
-    candle, no volume, no trend-agreement, no gap threshold). Reports:
-      - bias: which side EMA9 is currently on relative to EMA20
-      - candles_since_cross: how many 3-min candles ago EMA9/20 last
-        crossed, within lookback_candles (None = no cross in that
-        window — i.e. the 3-min chart has NOT crossed recently)
-      - gap_pct: how close EMA9/EMA20 currently are to crossing, as a
-        % of close price (0 = touching/about to cross; bigger = further
-        from a cross)
-    Attached as context to a 75-min alert (the PRIMARY/ALERTING
-    timeframe — see check_signals above). Never blocks or fires its own
-    alert.
-
-    Returns None if there isn't enough 3-min history yet.
-    """
-    ema_fast_period = ema_fast if ema_fast is not None else config.EMA_FAST
-    ema_slow_period = ema_slow if ema_slow is not None else config.EMA_SLOW
-
-    if len(df_3min) < ema_slow_period + 2:
-        return None
-
-    lookback_candles = lookback_candles or config.INFO_3MIN_LOOKBACK_CANDLES
-
-    df = add_emas(df_3min, ema_fast_period, ema_slow_period)
-    n = len(df)
-
-    curr = df.iloc[-1]
-    bias = "BULLISH" if curr["ema_fast"] > curr["ema_slow"] else "BEARISH"
-    close_price = float(curr["close"])
-    gap_pct = round(abs(float(curr["ema_fast"]) - float(curr["ema_slow"])) / close_price * 100, 3) if close_price else None
-
-    candles_since_cross = None
-    cross_time = None
-    start = max(1, n - lookback_candles)
-    for idx in range(n - 1, start - 1, -1):
-        prev = df.iloc[idx - 1]
-        cur = df.iloc[idx]
-        bull_cross = prev["ema_fast"] <= prev["ema_slow"] and cur["ema_fast"] > cur["ema_slow"]
-        bear_cross = prev["ema_fast"] >= prev["ema_slow"] and cur["ema_fast"] < cur["ema_slow"]
-        if bull_cross or bear_cross:
-            candles_since_cross = (n - 1) - idx
-            # Timestamp (candle open time, from df's datetime index) of the
-            # 75-min candle on which the cross actually happened — lets the
-            # Telegram message show an exact date/time instead of just
-            # "crossed N candle(s) ago".
-            cross_time = df.index[idx]
-            break
-
-    return {
-        "symbol": symbol,
-        "bias": bias,
-        "ema_fast": round(float(curr["ema_fast"]), 2),
-        "ema_slow": round(float(curr["ema_slow"]), 2),
-        "ema_fast_period": ema_fast_period,
-        "ema_slow_period": ema_slow_period,
-        "gap_pct": gap_pct,  # how close to a cross right now, on 75-min
-        "candles_since_cross": candles_since_cross,  # None = no cross in lookback window
-        "cross_time": cross_time,  # exact 75-min candle timestamp of the cross, or None
-    }
-
-
-def get_sector_trend(df):
-    """
-    Sector-index trend reading (added) — same rule the stock-level
-    trend uses (stock_trend in _evaluate_candle): close above EMA50 =
-    UPTREND, close below = DOWNTREND. No cross logic, no filters, just
-    the current trend on the sector index's own 3-min data. Meant to be
-    called on a sector index's df3 (today's 1-min resampled to 3-min,
-    same as any stock) and attached to a related stock's alert in
-    main.py via config.STOCK_SECTOR_MAP.
-
-    Returns None if there isn't enough 3-min history yet today to warm
-    up EMA50 (same ~50-candle / ~150-minute-into-session constraint the
-    main per-stock signal already has) — the caller treats None as
-    "not available yet", never an error.
-    """
-    if len(df) < 51:
-        return None
-    df = add_ema50(df)
-    curr = df.iloc[-1]
-    return "UPTREND" if curr["close"] > curr["ema_trend"] else "DOWNTREND"
-
-
-def check_signals_15min(df_15min, symbol, lookback=None):
-    """
-    STANDALONE 15-min alert — pure EMA9/EMA20 crossover on the 15-min
-    chart. Same design as the retired standalone 75-min alert used to
-    be: no strong-candle filter, no EMA50 trend-agreement requirement,
-    no min-gap filter. Intended for config.COMMODITIES only (see
-    main.py — the caller filters by symbol), so it is not restricted
-    here. Fires independently of check_signals(). Deduped separately
-    in main.py with state key namespaced "::15m".
-
-    Uses the same catch-up-window approach: scans the last `lookback`
-    closed 15-min candles (default: config.CROSS_LOOKBACK_CANDLES), not
-    just the latest one.
-
-    Returns a list of signal dicts (oldest first), each tagged
-    timeframe="15-min". Empty list if nothing qualifies or there isn't
-    enough 15-min history yet.
-    """
-    lookback = lookback or config.CROSS_LOOKBACK_CANDLES
-
-    if len(df_15min) < config.EMA_SLOW + 2:
-        return []
-
-    max_possible_lookback = len(df_15min) - (config.EMA_SLOW + 1)
-    lookback = max(1, min(lookback, max_possible_lookback))
-
-    df = add_emas(df_15min, config.EMA_FAST, config.EMA_SLOW)
-    df = add_rsi(df, config.RSI_PERIOD)
-    df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
-
-    signals = []
-    n = len(df)
-    start = max(1, n - lookback)
-    for idx in range(start, n):
-        curr = df.iloc[idx]
-        prev = df.iloc[idx - 1]
-
-        bullish_cross = prev["ema_fast"] <= prev["ema_slow"] and curr["ema_fast"] > curr["ema_slow"]
-        bearish_cross = prev["ema_fast"] >= prev["ema_slow"] and curr["ema_fast"] < curr["ema_slow"]
-
-        if not (bullish_cross or bearish_cross):
-            continue
-
-        direction = "BULLISH" if bullish_cross else "BEARISH"
-
-        curr_vol = curr["volume"]
-        prev_vol = prev["volume"]
-        vol_change_pct = round(((curr_vol - prev_vol) / prev_vol) * 100, 1) if prev_vol else None
-        rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
-
-        cross_pattern = detect_candle_pattern(curr)
-        prev_pattern = detect_candle_pattern(prev)
-
-        signals.append({
-            "symbol": symbol,
-            "timeframe": "15-min",
-            "direction": direction,
-            "close": round(float(curr["close"]), 2),
-            "rsi": round(float(rsi_val), 1) if rsi_val is not None else None,
-            "volume": int(curr["volume"]),
-            "vol_avg": round(float(curr["vol_avg"]), 0) if not pd_isna(curr["vol_avg"]) else None,
-            "vol_change_pct": vol_change_pct,
-            "ema_fast": round(float(curr["ema_fast"]), 2),
-            "ema_slow": round(float(curr["ema_slow"]), 2),
-            "candle_time": str(curr.get("timestamp", "")),
-            "cross_candle_pattern": cross_pattern,
-            "prev_candle_pattern": prev_pattern,
-        })
-
-    return signals
-
-
-def pd_isna(val):
-    import pandas as pd
-    return pd.isna(val)
+        "em
