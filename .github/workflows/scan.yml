@@ -1,7 +1,16 @@
 name: EMA Alert Scan
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Scan mode: full (F&O+cash+commodity, 75-min) or index (NIFTY50/BANK/SENSEX only, 5-min)'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - index
   repository_dispatch:
     types: [run-scan]
 
@@ -29,6 +38,7 @@ jobs:
           UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SCAN_MODE: ${{ github.event.inputs.mode || 'full' }}
         run: python main.py
 
       - name: Commit updated state files
