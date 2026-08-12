@@ -585,6 +585,168 @@ def check_signals_15min(df_15min, symbol, lookback=None):
     return signals
 
 
+def passes_confluence_filter(signal):
+    """
+    Secondary quality filter layered ONLY on top of an already-
+    qualifying 75-min EMA cross signal (stocks/commodities/Nifty 500 —
+    never applied to index or VWAP-momentum alerts, which have their
+    own separate rules). Combines fields the signal ALREADY carries
+    (entry/stop_loss/target/risk_reward from _evaluate_candle, plus
+    sector_trend/oi_buildup attached later in main.py) into a single
+    "is this a genuinely good risk:reward setup" gate — no new
+    indicator, no extra API call:
+
+      1. risk_reward (entry vs the EMA-based stop vs the trailing
+         config.TARGET_LOOKBACK_CANDLES high/low target) must be at
+         least config.CONFLUENCE_MIN_RISK_REWARD — this is what keeps
+         the stop small relative to the target.
+      2. RSI must sit in a "trending but not yet exhausted" band —
+         BULLISH: config.CONFLUENCE_RSI_BULLISH_MIN..MAX (skips a
+         cross that's already overbought and due a pullback); BEARISH:
+         config.CONFLUENCE_RSI_BEARISH_MIN..MAX (mirror — skips
+         shorting into an already-oversold bounce).
+      3. sector_trend (if the stock has a sector mapping — see
+         config.STOCK_SECTOR_MAP) must agree with the signal
+         direction. Stocks/instruments with no sector mapping, or no
+         sector reading yet, simply skip this check (neither pass nor
+         fail on it).
+      4. oi_buildup bias (F&O stocks only, fetched on-demand in
+         main.py — see get_stock_oi_buildup) must not OPPOSE the
+         direction — a BEARISH (call-writing-dominant) buildup blocks
+         a BULLISH signal and vice versa. NEUTRAL, or no buildup
+         reading yet, both pass.
+
+    Returns True/False. Only ever called on a signal that has ALREADY
+    passed check_signals()'s own mandatory conditions (cross + EMA50
+    trend agreement + volume increase) — this is an additional,
+    optional layer on top, controlled by config.CONFLUENCE_FILTER_ENABLED.
+    """
+    risk_reward = signal.get("risk_reward")
+    if config.CONFLUENCE_CHECK_RISK_REWARD:
+        if risk_reward is None or risk_reward < config.CONFLUENCE_MIN_RISK_REWARD:
+            return False
+
+    rsi_val = signal.get("rsi")
+    if config.CONFLUENCE_CHECK_RSI_BAND:
+        if rsi_val is None:
+            return False
+        if signal["direction"] == "BULLISH":
+            if not (config.CONFLUENCE_RSI_BULLISH_MIN <= rsi_val <= config.CONFLUENCE_RSI_BULLISH_MAX):
+                return False
+        else:
+            if not (config.CONFLUENCE_RSI_BEARISH_MIN <= rsi_val <= config.CONFLUENCE_RSI_BEARISH_MAX):
+                return False
+
+    sector_trend = signal.get("sector_trend")
+    if config.CONFLUENCE_CHECK_SECTOR_TREND and sector_trend is not None:
+        expected = "UPTREND" if signal["direction"] == "BULLISH" else "DOWNTREND"
+        if sector_trend != expected:
+            return False
+
+    oi_buildup = signal.get("oi_buildup")
+    if config.CONFLUENCE_CHECK_OI_BUILDUP and oi_buildup is not None:
+        bias = oi_buildup.get("bias")
+        opposing = "BEARISH" if signal["direction"] == "BULLISH" else "BULLISH"
+        if bias == opposing:
+            return False
+
+    return True
+
+
+def check_vwap_momentum(df5, symbol, lookback=None):
+    """
+    Standalone BUY-side momentum scan — replicates a Chartink "VWAP EMA
+    9,20 RSI" screener (uploaded screenshot, 2026-08-11): on the 5-min
+    chart of an F&O futures-segment stock, fires once when ALL of these
+    newly become true on a closed 5-min candle:
+      1. 5-min RSI(14) > config.VWAP_MOMENTUM_RSI_MIN
+      2. Day's Close / Day's Open > config.VWAP_MOMENTUM_DAY_CHANGE_MIN
+         (today's cumulative move up from the day's opening price)
+      3. Day's VWAP < the 5-min candle's Close (price trading above the
+         day's volume-weighted average price)
+      4. Day's cumulative Volume >= config.VWAP_MOMENTUM_MIN_VOLUME
+      5. Day's Close > config.VWAP_MOMENTUM_MIN_PRICE
+
+    "Day's Open/Close/Volume/VWAP" are all computed cumulatively from
+    df5 (Upstox intraday data = current session only, so row 0 already
+    is the session's first 5-min bar — same assumption
+    _compute_vwap_at already relies on elsewhere in this file).
+
+    Transition-only firing: a candle only qualifies if ALL conditions
+    are true on it AND at least one condition was false on the
+    immediately preceding candle (or there's no prior candle in the
+    lookback window to compare) — otherwise the scan would re-alert on
+    every single run for as long as the stock stays in the qualifying
+    zone. main.py's candle_time-keyed state dedup is a second safety
+    net on top of this.
+
+    Returns a list of signal dicts (oldest first), each tagged
+    timeframe="5-min", direction="BULLISH" (this is a buy-only screen,
+    matching the Chartink scan it replicates). Empty list if nothing
+    qualifies or there isn't enough 5-min history yet today.
+    """
+    if df5 is None or len(df5) < config.VWAP_MOMENTUM_RSI_PERIOD + 2:
+        return []
+
+    lookback = lookback or config.INDEX_ALERT_LOOKBACK_CANDLES
+    df = df5.copy()
+    df = add_rsi(df, config.VWAP_MOMENTUM_RSI_PERIOD)
+
+    day_open = float(df.iloc[0]["open"])
+    if day_open <= 0:
+        return []
+
+    n = len(df)
+    start = max(1, n - lookback)
+
+    def _qualifies(idx):
+        row = df.iloc[idx]
+        rsi_val = row["rsi"]
+        if pd_isna(rsi_val):
+            return False
+        day_close = float(row["close"])
+        day_volume = float(df.iloc[: idx + 1]["volume"].sum())
+        day_vwap = _compute_vwap_at(df, idx)
+        if day_vwap is None:
+            return False
+        return (
+            float(rsi_val) > config.VWAP_MOMENTUM_RSI_MIN
+            and (day_close / day_open) > config.VWAP_MOMENTUM_DAY_CHANGE_MIN
+            and day_vwap < day_close
+            and day_volume >= config.VWAP_MOMENTUM_MIN_VOLUME
+            and day_close > config.VWAP_MOMENTUM_MIN_PRICE
+        )
+
+    signals = []
+    for idx in range(start, n):
+        if not _qualifies(idx):
+            continue
+        if idx > 0 and _qualifies(idx - 1):
+            continue  # already qualifying last candle too — not a fresh trigger
+
+        curr = df.iloc[idx]
+        rsi_val = float(curr["rsi"])
+        day_close = float(curr["close"])
+        day_volume = float(df.iloc[: idx + 1]["volume"].sum())
+        day_vwap = _compute_vwap_at(df, idx)
+
+        signals.append({
+            "symbol": symbol,
+            "timeframe": "5-min",
+            "direction": "BULLISH",
+            "scan_type": "vwap_momentum",
+            "close": round(day_close, 2),
+            "day_open": round(day_open, 2),
+            "day_change_pct": round((day_close / day_open - 1) * 100, 2),
+            "vwap": round(day_vwap, 2),
+            "rsi": round(rsi_val, 1),
+            "volume": int(day_volume),
+            "candle_time": str(curr.get("timestamp", "")),
+        })
+
+    return signals
+
+
 def pd_isna(val):
     import pandas as pd
     return pd.isna(val)
