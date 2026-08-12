@@ -302,6 +302,51 @@ STOCK_SECTOR_MAP = {
 HISTORICAL_1MIN_LOOKBACK_DAYS = 28
 HIST_1MIN_CACHE_FILE = "historical_1min_cache.json"
 
+# ---------- VWAP Momentum scan (replica of the Chartink "BUY VWAP EMA
+# 9,20 RSI" screener) — a separate, standalone BUY-only alert. Runs on
+# df5 (5-min candles, already fetched for the index alert — no extra
+# API cost) for F&O futures-segment stocks only. Fires once when ALL
+# of the below newly become true on a closed 5-min candle:
+#   1. 5-min RSI(14) > VWAP_MOMENTUM_RSI_MIN
+#   2. Day's Close / Day's Open > VWAP_MOMENTUM_DAY_CHANGE_MIN
+#   3. Day's VWAP < the 5-min candle's Close
+#   4. Day's cumulative Volume >= VWAP_MOMENTUM_MIN_VOLUME
+#   5. Day's Close > VWAP_MOMENTUM_MIN_PRICE
+# See strategy.check_vwap_momentum() for the transition-only firing
+# logic (doesn't re-alert every run while conditions stay true).
+VWAP_MOMENTUM_ENABLED = True
+VWAP_MOMENTUM_RSI_PERIOD = 14
+VWAP_MOMENTUM_RSI_MIN = 60
+VWAP_MOMENTUM_DAY_CHANGE_MIN = 1.002
+VWAP_MOMENTUM_MIN_VOLUME = 2_000_000
+VWAP_MOMENTUM_MIN_PRICE = 350
+
+# ---------- Confluence "High R:R" filter (added) ----------
+# A secondary filter layered ONLY on top of already-qualifying 75-min
+# EMA9/50 signals (stocks/commodities/Nifty 500) — never applied to
+# index or VWAP-momentum alerts, which have their own separate rules.
+# Combines fields the signal ALREADY carries (no new indicator or
+# extra API call) into a single "is this a genuinely good risk:reward
+# setup" gate, meant to cut the daily count down to only a handful
+# (roughly 5/day) of higher-quality setups with a comparatively small
+# stop and a bigger target. See strategy.passes_confluence_filter().
+CONFLUENCE_FILTER_ENABLED = True
+
+# Each check below can be toggled independently without touching
+# strategy.py — set back to True later to re-enable a specific check.
+# Per Mithun's instruction (2026-08-12): only the OI buildup check is
+# active for now; risk:reward / RSI band / sector trend are paused.
+CONFLUENCE_CHECK_RISK_REWARD = False
+CONFLUENCE_CHECK_RSI_BAND = False
+CONFLUENCE_CHECK_SECTOR_TREND = False
+CONFLUENCE_CHECK_OI_BUILDUP = True
+
+CONFLUENCE_MIN_RISK_REWARD = 3.0
+CONFLUENCE_RSI_BULLISH_MIN = 50
+CONFLUENCE_RSI_BULLISH_MAX = 70
+CONFLUENCE_RSI_BEARISH_MIN = 30
+CONFLUENCE_RSI_BEARISH_MAX = 50
+
 # ---------- State / alert de-dup ----------
 STATE_FILE = "alert_state.json"
 DEDUPE_MINUTES = 30
