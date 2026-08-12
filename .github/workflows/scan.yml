@@ -52,13 +52,13 @@ jobs:
           UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # FIX: repository_dispatch (used by cron-job.org) has no
-          # `inputs` — only `client_payload`. The old line only read
-          # `github.event.inputs.mode`, which is always empty for a
-          # repository_dispatch trigger, so SCAN_MODE silently fell
-          # back to 'full' on every cron-job.org-triggered run,
-          # regardless of which mode the cron job actually requested.
-          # Now mirrors the concurrency group's fallback chain above.
+          # BUG FIX (2026-08-13): this previously only read
+          # github.event.inputs.mode (manual workflow_dispatch runs),
+          # so every cron-job.org trigger (repository_dispatch, mode
+          # in client_payload) fell through to the 'full' default
+          # regardless of what cron-job.org actually sent -- meaning
+          # the "index" cron was silently running a full scan too,
+          # doubling up on full scans and causing duplicate alerts.
           SCAN_MODE: ${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
         run: python main.py
 
@@ -68,5 +68,25 @@ jobs:
           git config user.email "actions@github.com"
           git add alert_state.json
           if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
-          git diff --cached --quiet || git commit -m "update alert state [skip ci]"
-          git push
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "update alert state [skip ci]"
+          # RACE-SAFETY FIX (2026-08-13): "full" and "index" runs use
+          # separate concurrency groups (see above) so they can run at
+          # the same time, and both write to this same file. A plain
+          # `git push` here would fail (non-fast-forward) if the other
+          # mode's run pushed first in between, SILENTLY LOSING this
+          # run's state update -- which is exactly what caused the
+          # same alert to be re-sent on the next run. Retry a few
+          # times with a rebase-pull in between so the losing push
+          # always catches up and lands instead of just failing.
+          for i in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $i) -- pulling latest and retrying..."
+            git pull --rebase --strategy-option=ours origin "$(git rev-parse --abbrev-ref HEAD)"
+            sleep $((RANDOM % 5 + 1))
+          done
+          echo "::warning::Failed to push updated state file after 5 attempts -- next run may re-send an already-fired alert."
