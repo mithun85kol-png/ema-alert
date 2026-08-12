@@ -1259,13 +1259,15 @@ def run_fo_scan(now_ist, index_only=False):
             if not signals:
                 continue
 
-            # 3-min context (get_3min_trend_info) is only meaningful as
-            # supporting context UNDERNEATH a 75-min alert — for indices
-            # the alert itself now IS the 3-min signal, so there's
-            # nothing extra to attach there.
+            # 15-min context (get_3min_trend_info, now run on df15 —
+            # per request, 2026-08-12, changed from the 3-min chart to
+            # the 15-min chart) is only meaningful as supporting context
+            # UNDERNEATH a 75-min alert — for indices the alert itself
+            # now IS the 3-min signal, so there's nothing extra to
+            # attach there.
             info3 = None
-            if symbol not in index_symbols and df3 is not None:
-                info3 = get_3min_trend_info(df3, symbol)
+            if symbol not in index_symbols and df15 is not None:
+                info3 = get_3min_trend_info(df15, symbol)
 
             for signal in signals:
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
@@ -1475,10 +1477,12 @@ def run_nifty500_scan(now_ist):
             if not signals:
                 continue
 
+            # info3 now runs on df15 (15-min candles) instead of df3 —
+            # per request, 2026-08-12.
             info3 = None
-            if df3 is not None:
+            if df15 is not None:
                 info3 = get_3min_trend_info(
-                    df3, symbol,
+                    df15, symbol,
                     ema_fast=config.NIFTY500_EMA_FAST,
                     ema_slow=config.NIFTY500_EMA_SLOW,
                 )
