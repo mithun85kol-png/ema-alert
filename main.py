@@ -119,7 +119,7 @@ import config
 import instruments
 import state
 import delivery_data
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
@@ -1319,6 +1319,21 @@ def run_fo_scan(now_ist, index_only=False):
                         signal["pcr"] = oi["pcr"]
                         if oi["buildup"]:
                             signal["oi_buildup"] = oi["buildup"]
+                else:
+                    # Confluence "High R:R" filter (added) — never
+                    # applied to indices (see above). Combines fields
+                    # the signal already carries (risk_reward, RSI,
+                    # sector_trend, oi_buildup — all set above) into a
+                    # single quality gate; see
+                    # strategy.passes_confluence_filter for the exact
+                    # rules. A signal that fails this is simply not
+                    # sent (and not marked alerted, so it's re-checked
+                    # — and can still pass later once RSI/sector/OI
+                    # shift — on the next run within the lookback
+                    # window).
+                    if config.CONFLUENCE_FILTER_ENABLED and not passes_confluence_filter(signal):
+                        continue
+                    signal["confluence_passed"] = True
 
                 send_alert(signal)
                 state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
@@ -1475,6 +1490,10 @@ def run_nifty500_scan(now_ist):
                 if sector_name:
                     signal["sector_index"] = sector_name
                     signal["sector_trend"] = sector_trends.get(sector_name)
+
+                if config.CONFLUENCE_FILTER_ENABLED and not passes_confluence_filter(signal):
+                    continue
+                signal["confluence_passed"] = True
 
                 send_alert(signal)
                 state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
