@@ -27,12 +27,11 @@ def send_alert(signal):
     # candle_time expected like "2026-07-29 12:15:00+05:30" -> split date/time
     date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
 
+    # stock_trend (EMA50 trend direction) is still computed/kept on the
+    # signal for other logic (e.g. the sector-agreement note below), but
+    # per request (2026-08-12) the "Trend: UPTREND/DOWNTREND" line itself
+    # is no longer shown in the Telegram message.
     stock_trend = signal.get("stock_trend", "UNKNOWN")
-    trend_icon = "📈" if stock_trend == "BULLISH" else "📉"
-    trend_label = "UPTREND" if stock_trend == "BULLISH" else "DOWNTREND"
-    # Bolded (HTML parse_mode) so the EMA50 trend direction stands out
-    # instead of blending into the rest of the message.
-    trend_label_bold = f"<b>{trend_label} {trend_icon}</b>"
 
     volume = signal["volume"]
     volume_str = f"{volume:,}"
@@ -47,29 +46,15 @@ def send_alert(signal):
     else:
         vol_note = " (Same as previous)"
 
-    # Trade-plan fields (entry/stop-loss/target/risk-reward) are
-    # computed in strategy.py for every signal and now shown on every
-    # alert as INFORMATIONAL context (per request, 2026-08-12) — this
-    # is no longer gated on the confluence filter. The "🎯 High R:R"
-    # header tag, however, is still only added when the signal actually
-    # passed strategy.passes_confluence_filter (see main.py — set as
-    # signal["confluence_passed"]), since that still reflects whichever
-    # confluence checks are currently switched on in config.py.
+    # Trade-plan fields (entry/stop-loss/target/risk-reward) are still
+    # computed in strategy.py for every signal, but per request
+    # (2026-08-12) are no longer shown in the Telegram message. The
+    # "🎯 High R:R" header tag is kept — it still reflects whether the
+    # signal passed strategy.passes_confluence_filter (see main.py —
+    # set as signal["confluence_passed"]) even though the underlying
+    # numbers are no longer printed.
     header_tag = " 🎯 High R:R" if signal.get("confluence_passed") else ""
-    entry = signal.get("entry")
-    stop_loss = signal.get("stop_loss")
-    target = signal.get("target")
-    risk_reward = signal.get("risk_reward")
-    if entry is not None and stop_loss is not None and target is not None:
-        rr_str = risk_reward if risk_reward is not None else "N/A"
-        trade_plan_block = (
-            f"Entry: {entry}\n"
-            f"Stop Loss: {stop_loss}\n"
-            f"Target: {target}\n"
-            f"Risk:Reward — 1 : {rr_str}\n"
-        )
-    else:
-        trade_plan_block = ""
+    trade_plan_block = ""
 
     # PCR (Put-Call Ratio) — informational only, present on index
     # signals (every run) and F&O stock signals (on-demand, see
@@ -150,11 +135,13 @@ def send_alert(signal):
         if macd_divergence:
             macd_block += f"MACD {macd_divergence}\n"
 
-    # 3-min context — informational only (see strategy.get_3min_trend_info,
-    # attached in main.py as signal["trend_3min"]). Shows the shorter-
+    # 15-min context — informational only (see strategy.get_3min_trend_info,
+    # now called on 15-min candles (df15) and attached in main.py as
+    # signal["trend_3min"] — per request, 2026-08-12, this was changed
+    # from the 3-min chart to the 15-min chart). Shows the shorter-
     # timeframe EMA9/20 bias, whether/when it last crossed, and how
     # close it currently is to crossing. Omitted entirely if there
-    # wasn't enough 3-min history warmed up yet for this symbol.
+    # wasn't enough 15-min history warmed up yet for this symbol.
     trend3 = signal.get("trend_3min")
     trend3_block = ""
     if trend3:
@@ -175,7 +162,7 @@ def send_alert(signal):
         if since is None:
             cross_note = f"no cross in last {config.INFO_3MIN_LOOKBACK_CANDLES} candles"
         elif since == 0:
-            cross_note = f"crossed on the latest 3-min candle{cross_time_note}"
+            cross_note = f"crossed on the latest 15-min candle{cross_time_note}"
         else:
             cross_note = f"crossed {since} candle(s) ago{cross_time_note}"
         gap = trend3.get("gap_pct")
@@ -183,7 +170,7 @@ def send_alert(signal):
         trend3_fast_p = trend3.get("ema_fast_period", 9)
         trend3_slow_p = trend3.get("ema_slow_period", 20)
         trend3_block = (
-            f"3-min: {trend3['bias']} {bias_icon} "
+            f"15-min: {trend3['bias']} {bias_icon} "
             f"(EMA{trend3_fast_p} {trend3['ema_fast']} / EMA{trend3_slow_p} {trend3['ema_slow']}) — "
             f"{cross_note}{gap_note}\n"
         )
@@ -249,7 +236,6 @@ def send_alert(signal):
         f"Close: {signal['close']}\n"
         f"{day_change_line}"
         f"EMA{ema_fast_p}: {signal['ema_fast']}  EMA{ema_slow_p}: {signal['ema_slow']}\n"
-        f"Trend: {trend_label_bold}\n"
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{delivery_line}"
