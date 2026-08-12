@@ -72,21 +72,30 @@ jobs:
             exit 0
           fi
           git commit -m "update alert state [skip ci]"
-          # RACE-SAFETY FIX (2026-08-13): "full" and "index" runs use
-          # separate concurrency groups (see above) so they can run at
-          # the same time, and both write to this same file. A plain
-          # `git push` here would fail (non-fast-forward) if the other
-          # mode's run pushed first in between, SILENTLY LOSING this
-          # run's state update -- which is exactly what caused the
-          # same alert to be re-sent on the next run. Retry a few
-          # times with a rebase-pull in between so the losing push
-          # always catches up and lands instead of just failing.
+          # RACE-SAFETY FIX: "full" and "index" runs use separate
+          # concurrency groups (see above) so they can run at the same
+          # time, and both write to this same file. A plain `git push`
+          # here would fail (non-fast-forward) if the other mode's run
+          # pushed first in between. Retry with a rebase-pull in
+          # between so the losing push catches up and lands instead of
+          # failing.
+          #
+          # IMPORTANT: during `git rebase`, -X ours/theirs are FLIPPED
+          # from their `git merge` meaning -- "ours" is the code
+          # already on the remote (upstream), "theirs" is the commit
+          # being replayed (this run's own alert_state.json update).
+          # `--strategy-option=ours` was therefore discarding THIS
+          # run's newly-marked alerts on every conflict and keeping
+          # the older remote state instead -- so the next run wouldn't
+          # see the candle as already-alerted and would re-send it.
+          # `theirs` keeps this run's own state update, which is what
+          # we actually want here.
           for i in 1 2 3 4 5; do
             if git push; then
               exit 0
             fi
             echo "Push rejected (attempt $i) -- pulling latest and retrying..."
-            git pull --rebase --strategy-option=ours origin "$(git rev-parse --abbrev-ref HEAD)"
+            git pull --rebase --strategy-option=theirs origin "$(git rev-parse --abbrev-ref HEAD)"
             sleep $((RANDOM % 5 + 1))
           done
           echo "::warning::Failed to push updated state file after 5 attempts -- next run may re-send an already-fired alert."
