@@ -214,6 +214,28 @@ def send_alert(signal):
     delivery_pct = signal.get("delivery_pct")
     delivery_line = f"Delivery % (prev day): {delivery_pct}%\n" if delivery_pct is not None else ""
 
+    # Bulk/Block deals (added) — informational only, stocks only (see
+    # main.py / bulk_block_data.py). Shows each large-trade entry NSE
+    # published for this symbol on the most recent trading day, if
+    # any — client name, Buy/Sell, quantity, price, and whether it was
+    # a Bulk or Block deal. Omitted entirely if none were found (most
+    # symbols, most days) or the fetch failed.
+    # Last Bulk/Block deal (added) — informational only, stocks only
+    # (see main.py / bulk_block_data.py). The single most recent
+    # Bulk/Block deal NSE has published for this symbol, whenever it
+    # was (searched over bulk_block_data.LOOKBACK_DAYS) — not
+    # restricted to today. Omitted entirely if none was found in that
+    # window, or the fetch failed/got blocked.
+    last_deal = signal.get("last_bulk_block_deal")
+    bulk_block_block = ""
+    if last_deal:
+        side_icon = "🟢" if last_deal["buy_sell"] == "BUY" else ("🔴" if last_deal["buy_sell"] == "SELL" else "➖")
+        bulk_block_block = (
+            f"Last Bulk/Block Deal: {last_deal['date']} [{last_deal['type']}]\n"
+            f"  {last_deal['client']} {last_deal['buy_sell']} {side_icon} "
+            f"{last_deal['quantity']} @ {last_deal['price']}\n"
+        )
+
     # EMA period labels — default to 9/20 (F&O scan) for backward
     # compatibility if an older caller didn't set these; the Nifty 500
     # cash scan sets them to 9/21 (see strategy.py / main.py).
@@ -231,6 +253,7 @@ def send_alert(signal):
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{delivery_line}"
+        f"{bulk_block_block}"
         f"{sector_line}"
         f"{trade_plan_block}"
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
