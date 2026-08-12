@@ -47,11 +47,29 @@ def send_alert(signal):
     else:
         vol_note = " (Same as previous)"
 
-    # Trade-plan fields (entry/stop-loss/target/risk-reward) are still
-    # computed in strategy.py, just no longer displayed here — kept out
-    # per request. Set trade_plan_block back to a non-empty string if
-    # you want it shown again.
-    trade_plan_block = ""
+    # Trade-plan fields (entry/stop-loss/target/risk-reward) are
+    # computed in strategy.py for every signal and now shown on every
+    # alert as INFORMATIONAL context (per request, 2026-08-12) — this
+    # is no longer gated on the confluence filter. The "🎯 High R:R"
+    # header tag, however, is still only added when the signal actually
+    # passed strategy.passes_confluence_filter (see main.py — set as
+    # signal["confluence_passed"]), since that still reflects whichever
+    # confluence checks are currently switched on in config.py.
+    header_tag = " 🎯 High R:R" if signal.get("confluence_passed") else ""
+    entry = signal.get("entry")
+    stop_loss = signal.get("stop_loss")
+    target = signal.get("target")
+    risk_reward = signal.get("risk_reward")
+    if entry is not None and stop_loss is not None and target is not None:
+        rr_str = risk_reward if risk_reward is not None else "N/A"
+        trade_plan_block = (
+            f"Entry: {entry}\n"
+            f"Stop Loss: {stop_loss}\n"
+            f"Target: {target}\n"
+            f"Risk:Reward — 1 : {rr_str}\n"
+        )
+    else:
+        trade_plan_block = ""
 
     # PCR (Put-Call Ratio) — informational only, present on index
     # signals (every run) and F&O stock signals (on-demand, see
@@ -203,7 +221,7 @@ def send_alert(signal):
     ema_slow_p = signal.get("ema_slow_period", 20)
 
     text = (
-        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label})\n"
+        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{fno_line}"
         f"Timeframe: {timeframe_label} | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
