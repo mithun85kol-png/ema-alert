@@ -119,6 +119,7 @@ import config
 import instruments
 import state
 import delivery_data
+import bulk_block_data
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
@@ -1292,6 +1293,17 @@ def run_fo_scan(now_ist, index_only=False):
                         signal["sector_index"] = sector_name
                         signal["sector_trend"] = sector_trends.get(sector_name)
 
+                    # Bulk/Block deal (added) — stocks only, the SINGLE
+                    # most recent Bulk/Block deal for this symbol
+                    # within the trailing lookback window, if any (see
+                    # bulk_block_data.py). Informational only, fetched
+                    # on-demand right here since this alert is about to
+                    # fire anyway — a failed/empty fetch never blocks
+                    # the alert, just means no Bulk/Block line on it.
+                    last_deal = bulk_block_data.get_last_deal_for_symbol(symbol)
+                    if last_deal:
+                        signal["last_bulk_block_deal"] = last_deal
+
                     # PCR + Call/Put writing buildup — F&O stocks only
                     # (cash-only stocks have no option chain), fetched
                     # ON-DEMAND right here rather than every run (see
@@ -1485,6 +1497,10 @@ def run_nifty500_scan(now_ist):
                 deliv = delivery_map.get(symbol.upper())
                 if deliv is not None:
                     signal["delivery_pct"] = deliv
+
+                last_deal = bulk_block_data.get_last_deal_for_symbol(symbol)
+                if last_deal:
+                    signal["last_bulk_block_deal"] = last_deal
 
                 sector_name = config.STOCK_SECTOR_MAP.get(symbol.upper())
                 if sector_name:
