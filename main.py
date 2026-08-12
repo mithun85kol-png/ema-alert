@@ -1251,7 +1251,7 @@ def run_fo_scan(now_ist, index_only=False):
                     prev_close=prev_close,
                     ema_fast=config.EMA_FAST,
                     ema_slow=config.PRIMARY_EMA_SLOW,
-                    require_volume_increase=True,
+                    require_volume_increase=False,
                 )
                 for sig in signals:
                     sig["timeframe"] = "75-min"
@@ -1469,7 +1469,7 @@ def run_nifty500_scan(now_ist):
                 prev_close=prev_close,
                 ema_fast=config.NIFTY500_EMA_FAST,
                 ema_slow=config.NIFTY500_EMA_SLOW,
-                require_volume_increase=True,
+                require_volume_increase=False,
             )
             for sig in signals:
                 sig["timeframe"] = "75-min"
