@@ -119,11 +119,13 @@ CROSS_LOOKBACK_CANDLES = 5
 # almost immediately on the next run anyway.
 PRIMARY_LOOKBACK_CANDLES = 2
 
-# How many trailing 3-min candles the informational 3-min context block
-# (strategy.get_3min_trend_info) scans to report "a cross happened N
-# candles ago" and how close EMA9/20 currently are to crossing on the
-# 3-min chart. 5 candles x 3-min = 15 minutes. Purely informational —
-# attached to every 75-min alert but never blocks it.
+# How many trailing 15-min candles the informational context block
+# (strategy.get_3min_trend_info, called on df15 — per request,
+# 2026-08-12, changed from the 3-min chart to the 15-min chart) scans
+# to report "a cross happened N candles ago" and how close EMA9/20
+# currently are to crossing on the 15-min chart. 5 candles x 15-min =
+# 75 minutes. Purely informational — attached to every 75-min alert but
+# never blocks it.
 INFO_3MIN_LOOKBACK_CANDLES = 5
 
 # ---------- Index-only pure 3-min EMA cross alert ----------
