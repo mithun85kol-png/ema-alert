@@ -15,21 +15,7 @@ on:
     types: [run-scan]
 
 concurrency:
-  # Separate group per mode: an "index" (5-min, ~3 API calls, fast)
-  # trigger must never queue behind or cancel a "full" (F&O+Nifty500,
-  # several minutes) run, and vice versa.
   group: ema-alert-scan-${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
-  # cancel-in-progress TRUE (was false): a "full" run takes several
-  # minutes (rate-limited fetch across ~714 instruments), but the
-  # external cron trigger fires far more often than that. With
-  # cancel-in-progress:false, every trigger that arrived mid-run
-  # queued up instead of running immediately -- the backlog only grew
-  # through the day, which is why alerts kept arriving later and
-  # later. Cancelling the stale queued run and only ever running the
-  # latest trigger is safe here because PRIMARY_LOOKBACK_CANDLES
-  # (main.py) re-checks the last 2 closed 75-min candles anyway, so a
-  # cancelled/skipped run's candle close still gets caught on the very
-  # next run.
   cancel-in-progress: true
 
 jobs:
@@ -52,13 +38,6 @@ jobs:
           UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # BUG FIX (2026-08-13): this previously only read
-          # github.event.inputs.mode (manual workflow_dispatch runs),
-          # so every cron-job.org trigger (repository_dispatch, mode
-          # in client_payload) fell through to the 'full' default
-          # regardless of what cron-job.org actually sent -- meaning
-          # the "index" cron was silently running a full scan too,
-          # doubling up on full scans and causing duplicate alerts.
           SCAN_MODE: ${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
         run: python main.py
 
@@ -68,28 +47,11 @@ jobs:
           git config user.email "actions@github.com"
           git add alert_state.json
           if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
+          if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
           if git diff --cached --quiet; then
             exit 0
           fi
           git commit -m "update alert state [skip ci]"
-          # RACE-SAFETY FIX: "full" and "index" runs use separate
-          # concurrency groups (see above) so they can run at the same
-          # time, and both write to this same file. A plain `git push`
-          # here would fail (non-fast-forward) if the other mode's run
-          # pushed first in between. Retry with a rebase-pull in
-          # between so the losing push catches up and lands instead of
-          # failing.
-          #
-          # IMPORTANT: during `git rebase`, -X ours/theirs are FLIPPED
-          # from their `git merge` meaning -- "ours" is the code
-          # already on the remote (upstream), "theirs" is the commit
-          # being replayed (this run's own alert_state.json update).
-          # `--strategy-option=ours` was therefore discarding THIS
-          # run's newly-marked alerts on every conflict and keeping
-          # the older remote state instead -- so the next run wouldn't
-          # see the candle as already-alerted and would re-send it.
-          # `theirs` keeps this run's own state update, which is what
-          # we actually want here.
           for i in 1 2 3 4 5; do
             if git push; then
               exit 0
