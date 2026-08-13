@@ -16,7 +16,7 @@ on:
 
 concurrency:
   group: ema-alert-scan-${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   scan:
