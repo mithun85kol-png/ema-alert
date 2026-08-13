@@ -1376,9 +1376,22 @@ def run_fo_scan(now_ist, index_only=False):
                         continue
                     signal["confluence_passed"] = True
 
-                send_alert(signal)
+                # Mark BEFORE sending: if send_alert() raises after the
+                # Telegram API call already succeeded (e.g. a parsing
+                # or logging error on our side, post-send), the alert
+                # still went out, so we must not leave this candle
+                # unmarked -- an unmarked candle gets re-alerted every
+                # future run until fixed. Marking first means a
+                # send failure costs at most one missed alert, never
+                # an infinite duplicate loop.
                 state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
-                alerts_sent += 1
+                try:
+                    send_alert(signal)
+                    alerts_sent += 1
+                except Exception as e:
+                    import traceback
+                    print(f"send_alert failed for {symbol} (state already marked, won't re-send): {e}")
+                    traceback.print_exc()
 
         except Exception as e:
             print(f"Error on {symbol}: {e}")
@@ -1544,9 +1557,16 @@ def run_nifty500_scan(now_ist):
                     continue
                 signal["confluence_passed"] = True
 
-                send_alert(signal)
+                # Mark BEFORE sending -- see the matching comment in
+                # run_fo_scan() above for why.
                 state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
-                alerts_sent += 1
+                try:
+                    send_alert(signal)
+                    alerts_sent += 1
+                except Exception as e:
+                    import traceback
+                    print(f"send_alert failed for {symbol} (state already marked, won't re-send): {e}")
+                    traceback.print_exc()
 
         except Exception as e:
             print(f"Error on {symbol} (Nifty 500 scan): {e}")
