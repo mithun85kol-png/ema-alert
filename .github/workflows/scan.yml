@@ -45,6 +45,15 @@ jobs:
         run: |
           git config user.name "ema-alert-bot"
           git config user.email "actions@github.com"
+
+          # Save this run's freshly-computed alert_state.json aside
+          # BEFORE any git operations touch the working tree, so it
+          # survives the merge loop below no matter what git does to
+          # the checked-out file.
+          cp alert_state.json /tmp/local_alert_state.json
+
+          BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
           git add alert_state.json
           if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
           if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
@@ -52,12 +61,43 @@ jobs:
             exit 0
           fi
           git commit -m "update alert state [skip ci]"
+
           for i in 1 2 3 4 5; do
             if git push; then
               exit 0
             fi
-            echo "Push rejected (attempt $i) -- pulling latest and retrying..."
-            git pull --rebase --strategy-option=theirs origin "$(git rev-parse --abbrev-ref HEAD)"
+            echo "Push rejected (attempt $i) -- merging with the latest remote alert_state.json and retrying..."
+
+            # The "index" (5-min) and "full" (75-min) scans are
+            # separate workflow runs that can genuinely overlap, and
+            # both write alert_state.json. A blind
+            # "git pull --rebase -X theirs" here used to silently
+            # discard whichever side lost the rebase -- forgetting
+            # that side's newly-marked alerts, so the SAME alert would
+            # get re-sent on a later run. Instead: fetch the latest
+            # remote copy and UNION-merge it with our own
+            # just-computed state (see merge_state.py) -- safe because
+            # every value in this file only ever grows (a list of
+            # candle_times already alerted), so a union can never lose
+            # a fact or fabricate a missed alert.
+            git fetch origin "$BRANCH"
+            git show "origin/$BRANCH:alert_state.json" > /tmp/remote_alert_state.json 2>/dev/null || echo '{}' > /tmp/remote_alert_state.json
+            python merge_state.py /tmp/local_alert_state.json /tmp/remote_alert_state.json alert_state.json
+
+            # Move our branch pointer up to the remote tip WITHOUT
+            # touching the working tree (soft reset), so the merged
+            # alert_state.json we just wrote is preserved, then
+            # re-commit just that file on top of the new tip. Other
+            # cache files (pivot/corporate-actions) simply keep this
+            # run's version if there's a conflict -- low-stakes,
+            # unlike alert_state.json.
+            git reset --soft "origin/$BRANCH"
+            git add alert_state.json
+            if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
+            if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
+            if ! git diff --cached --quiet; then
+              git commit -m "update alert state [skip ci]"
+            fi
             sleep $((RANDOM % 5 + 1))
           done
           echo "::warning::Failed to push updated state file after 5 attempts -- next run may re-send an already-fired alert."
