@@ -40,24 +40,27 @@ this to label the message correctly) and does NOT get a trend_3min
 context block, since the alert itself already is the short-timeframe
 signal.
 
-df3 (3-min) is still built for every instrument. For STOCKS/COMMODITIES,
-strategy.get_3min_trend_info(df3, symbol) is computed for every
+3-min (df3) processing has been removed entirely (2026-08-13) — it was
+being resampled/fetched for every instrument on every run but nothing
+actually read it any more (the informational context below had already
+moved to df15). This was pure wasted work on every run. df15 (15-min)
+is what's built for every instrument now. For STOCKS/COMMODITIES,
+strategy.get_3min_trend_info(df15, symbol) is computed for every
 qualifying 75-min signal and attached as signal["trend_3min"], showing:
-  - whether EMA9/20 has crossed on the 3-min chart recently (and how
-    many 3-min candles ago), or hasn't crossed within the lookback
+  - whether EMA9/20 has crossed on the 15-min chart recently (and how
+    many 15-min candles ago), or hasn't crossed within the lookback
     window at all
-  - how close EMA9/20 currently are to crossing on the 3-min chart
+  - how close EMA9/20 currently are to crossing on the 15-min chart
     (gap_pct — smaller = closer to a cross)
 Purely informational — it never gates or blocks the 75-min alert. (Not
 attached for indices — see above.)
 
 COMMODITIES (GOLD/SILVER/CRUDEOIL etc.): follow the exact same rule as
 stocks — the 75-min loop is their only alert (EMA9/50 cross, mandatory
-volume increase over the previous candle), with 3-min shown
+volume increase over the previous candle), with 15-min shown
 as context on the alert. There is no separate standalone commodity-only
 alert (a 15-min standalone version used to exist here; it remains
-removed). df15 is still resampled per-instrument but is no longer read
-anywhere.
+removed).
 
 WHEN ALERTS ACTUALLY FIRE:
 - STOCKS/COMMODITIES (75-min): a 75-min candle closes 5 times a day
@@ -963,12 +966,13 @@ def build_watchlist(now_ist=None):
 
 def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     """
-    Returns (symbol, df3, df5, df75, df15) — df3 is kept purely as
-    informational 3-min context attached to 75-min stock/commodity
-    alerts (get_3min_trend_info); df5 drives the standalone index
+    Returns (symbol, df5, df75, df15) — df5 drives the standalone index
     (NIFTY 50/BANK/SENSEX) EMA9/EMA20 cross alert; df75 is the primary
-    75-min signal timeframe for stocks/commodities/cash; df15 is
-    resampled but currently unused (kept for reference).
+    75-min signal timeframe for stocks/commodities/cash; df15 is the
+    informational trend context attached to 75-min alerts
+    (get_3min_trend_info). (3-min/df3 was removed 2026-08-13 — it had
+    become dead weight, resampled every run for every instrument but no
+    longer read anywhere.)
 
     df75 combines cached PRE-TODAY 1-min history (hist_candles, from
     build_hist1min_cache — enough days to warm up EMA9/EMA20) with
@@ -984,10 +988,13 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     """
     raw = fetch_1min_candles(instrument_key)
     if raw is None or len(raw) < 30:
+        # NOTE: previously returned a 4-tuple here while the function's
+        # normal return is 5 values, so this path (harmless — "not
+        # enough data yet") was silently raising a ValueError on
+        # unpack in fetch_all() below and getting miscounted as a
+        # genuine fetch failure. Fixed 2026-08-13 to match the actual
+        # (now 4-value) return shape below.
         return symbol, None, None, None
-    df3 = resample_3min(raw)
-    df3 = drop_unclosed_candle(df3, now_ist, candle_minutes=3)
-
     df5 = resample_5min(raw)
     df5 = drop_unclosed_candle(df5, now_ist, candle_minutes=5)
 
@@ -1007,12 +1014,12 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
 
     df75 = resample_75min(combined_75)
     df75 = drop_unclosed_candle(df75, now_ist, candle_minutes=75)
-    return symbol, df3, df5, df75, df15
+    return symbol, df5, df75, df15
 
 
 def fetch_all(watchlist, now_ist, workers, hist_cache=None):
     """
-    Fetches + resamples 1-min candles -> 3-min (and 75-min) for every
+    Fetches + resamples 1-min candles -> 5-min/15-min/75-min for every
     instrument in watchlist, concurrently (up to `workers` threads).
 
     hist_cache: {symbol: [candle, ...]} of cached pre-today 1-min
@@ -1021,7 +1028,7 @@ def fetch_all(watchlist, now_ist, workers, hist_cache=None):
     up. Optional — omitting it just means 75-min features stay dormant.
 
     Returns (dfs, failed_symbols):
-      dfs            -- {symbol: (df3, df5, df75, df15)} for every instrument
+      dfs            -- {symbol: (df5, df75, df15)} for every instrument
                          that fetched successfully (with enough history).
       failed_symbols -- list of symbols whose fetch raised an exception
                          even after the retry/backoff in
@@ -1043,9 +1050,9 @@ def fetch_all(watchlist, now_ist, workers, hist_cache=None):
         for future in as_completed(futures):
             symbol = futures[future]
             try:
-                sym, df3, df5, df75, df15 = future.result()
-                if df3 is not None:
-                    dfs[sym] = (df3, df5, df75, df15)
+                sym, df5, df75, df15 = future.result()
+                if df5 is not None:
+                    dfs[sym] = (df5, df75, df15)
             except Exception as e:
                 print(f"Error fetching {symbol}: {e}")
                 failed_symbols.append(symbol)
@@ -1214,7 +1221,7 @@ def run_fo_scan(now_ist, index_only=False):
             print(f"Option-chain (PCR/OI buildup) fetch failed this run (non-blocking): {e}")
             oi_data = {}
 
-    for symbol, (df3, df5, df75, df15) in dfs.items():
+    for symbol, (df5, df75, df15) in dfs.items():
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
@@ -1357,13 +1364,15 @@ def run_fo_scan(now_ist, index_only=False):
         except Exception as e:
             print(f"Error on {symbol}: {e}")
 
-    # ---- 3-min: informational-only (no separate alert) ----
-    # There is no standalone 3-min alert anymore. 3-min context
-    # (EMA9/20 bias, candles since last 3-min cross, and how close to a
-    # cross right now) is attached to every 75-min alert above via
-    # signal["trend_3min"] (set from get_3min_trend_info(df3, ...)), so
-    # you can see the shorter-term picture without a second, separate
-    # ping.
+    # ---- 15-min: informational-only (no separate alert) ----
+    # There is no standalone 15-min alert. 15-min context (EMA9/20
+    # bias, candles since last 15-min cross, and how close to a cross
+    # right now) is attached to every 75-min alert above via
+    # signal["trend_3min"] (set from get_3min_trend_info(df15, ...) —
+    # the key name "trend_3min" is legacy and kept as-is so
+    # telegram_notifier.py doesn't need touching), so you can see the
+    # shorter-term picture without a second, separate ping. (3-min/df3
+    # itself was removed 2026-08-13 — see _fetch_and_resample_one.)
 
     # ---- 15-min standalone commodity alert: REMOVED ----
     # Commodities (GOLD/SILVER/CRUDEOIL etc.) no longer get a separate
@@ -1381,7 +1390,7 @@ def run_fo_scan(now_ist, index_only=False):
     # currently closest together, even though none of them crossed this
     # run. Helps confirm the scanner is working when 0 alerts fire.
     gaps = []
-    for symbol, (df3, df5, df75, df15) in dfs.items():
+    for symbol, (df5, df75, df15) in dfs.items():
         try:
             g = debug_ema_gap(df75, symbol) if df75 is not None else None
             if g is not None:
@@ -1409,8 +1418,8 @@ def run_fo_scan(now_ist, index_only=False):
 # Nifty 500 cash-stock scan (added)
 # ---------------------------------------------------------------------
 # Same signal logic/conditions as the F&O 75-min flow above — EMA cross
-# + mandatory EMA50 trend agreement on df75, with df3 shown as
-# informational 3-min context — just on the full Nifty 500 constituent
+# + mandatory EMA50 trend agreement on df75, with df15 shown as
+# informational 15-min context — just on the full Nifty 500 constituent
 # list (cash/EQ, fetched live from NSE — see
 # instruments.resolve_nifty500_stocks) and EMA9/21
 # (config.NIFTY500_EMA_FAST/EMA_SLOW) instead of EMA9/20. No PCR/OI
@@ -1454,7 +1463,7 @@ def run_nifty500_scan(now_ist):
             print(f"Sector trend fetch failed this run (non-blocking): {e}")
             sector_trends = {}
 
-    for symbol, (df3, df5, df75, df15) in dfs.items():
+    for symbol, (df5, df75, df15) in dfs.items():
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
