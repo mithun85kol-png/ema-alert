@@ -3,109 +3,131 @@ Fetches the SINGLE MOST RECENT Bulk or Block deal for a symbol —
 NSE's disclosure of a single-client, single-stock, single-day trade
 big enough to cross NSE's threshold (bulk: >=0.5% of the company's
 total listed shares in a day; block: a separate large-trade window,
-minimum 5,00,000 shares or Rs 5 crore) — searched over a trailing
-lookback window (config below), not just the current/most recent
-trading day.
+minimum 5,00,000 shares or Rs 5 crore).
 
-NOTE / RELIABILITY WARNING: unlike delivery_data.py's bhavcopy (a
-static file on archives.nseindia.com, which has been reliable from
-GitHub Actions), this uses NSE's MAIN SITE historical API
+REWRITTEN 2026-08-13: the previous version called NSE's MAIN SITE API
 (www.nseindia.com/api/historical/...), which sits behind NSE's
-bot-protection and is known to block requests from cloud/datacenter
-IP ranges — including GitHub Actions runners — even with a
-browser-like User-Agent and a same-site cookie warm-up (see
-_get_session below). Verify the exact endpoint path/params against
-NSE's current site if this stops returning data; this module is
-written to fail silently (returns None) rather than ever raise, so a
-broken/blocked fetch here never blocks the alert itself — it just
-means no "Last Bulk/Block Deal" line on that alert.
+bot-protection and reliably gets blocked from GitHub Actions runners
+(cloud/datacenter IPs) even with a browser-like User-Agent and a
+same-site cookie warm-up — so this feature never actually produced a
+"Last Bulk/Block Deal" line on any alert.
+
+This version instead uses the same static-file archive host
+(archives.nseindia.com) that delivery_data.py already uses
+successfully from GitHub Actions for the bhavcopy — no bot-protection,
+no session/cookie warm-up needed:
+  https://archives.nseindia.com/content/equities/bulk.csv
+  https://archives.nseindia.com/content/equities/block.csv
+These two CSVs each hold a short trailing window of recent bulk/block
+deals (not a full historical range you can query by date — NSE
+refreshes them in place), which is exactly what "most recent deal for
+this symbol" needs.
+
+Fails silently (returns None) rather than ever raising, so a
+broken/empty fetch here never blocks the alert itself — it just means
+no "Last Bulk/Block Deal" line on that alert.
 """
+import csv
+import io
 import datetime as dt
 
 import requests
 
-LOOKBACK_DAYS = 180  # how far back to search for the most recent deal
+BULK_URL = "https://archives.nseindia.com/content/equities/bulk.csv"
+BLOCK_URL = "https://archives.nseindia.com/content/equities/block.csv"
 
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
+    "Accept": "text/csv,*/*",
     "Referer": "https://www.nseindia.com/",
 }
 
-# {symbol: (date_fetched, result_or_None)} — re-used for the rest of
-# this process run once a symbol has been looked up, so a symbol that
-# alerts more than once in one run doesn't re-hit NSE.
+# {symbol: deal_or_None} -- reused for the rest of this process run so
+# repeat lookups (or multiple alerts in one run) don't re-download.
 _cache = {}
 
-
-def _get_session():
-    """
-    NSE's main site rejects a bare API call without first visiting a
-    normal page to pick up session cookies (same reason every
-    unofficial NSE-scraping library does this two-step warm-up).
-    """
-    s = requests.Session()
-    s.headers.update(_HEADERS)
-    try:
-        s.get("https://www.nseindia.com/", timeout=10)
-    except Exception:
-        pass
-    return s
-
-
-def _fetch_historical(session, mode, from_str, to_str):
-    """mode: "bulk-deals" or "block-deals"."""
-    url = f"https://www.nseindia.com/api/historical/{mode}"
-    try:
-        resp = session.get(url, params={"from": from_str, "to": to_str}, timeout=15)
-        if resp.status_code != 200:
-            return []
-        return resp.json().get("data", [])
-    except Exception as e:
-        print(f"NSE historical {mode} fetch failed: {e}")
-        return []
+# The two CSVs themselves, downloaded at most once per process run
+# (both scans in main.py run in the same process, so this is at most
+# one download of each file per GitHub Actions run, not one per
+# alerting symbol).
+_bulk_rows = None
+_block_rows = None
 
 
 def _parse_bd_date(date_str):
+    for fmt in ("%d-%b-%Y", "%d-%B-%Y"):
+        try:
+            return dt.datetime.strptime(date_str.strip(), fmt)
+        except Exception:
+            continue
+    return dt.datetime.min
+
+
+def _fetch_csv(url):
     try:
-        return dt.datetime.strptime(date_str, "%d-%b-%Y")
-    except Exception:
-        return dt.datetime.min
+        resp = requests.get(url, headers=_HEADERS, timeout=15)
+        if resp.status_code != 200 or not resp.text.strip():
+            return []
+        return list(csv.DictReader(io.StringIO(resp.text)))
+    except Exception as e:
+        print(f"Bulk/Block deal CSV fetch failed ({url}): {e}")
+        return []
+
+
+def _get_rows(mode):
+    """mode: 'bulk' or 'block'. Downloads once per process run, cached
+    in the module-level _bulk_rows/_block_rows globals after that."""
+    global _bulk_rows, _block_rows
+    if mode == "bulk":
+        if _bulk_rows is None:
+            _bulk_rows = _fetch_csv(BULK_URL)
+        return _bulk_rows
+    else:
+        if _block_rows is None:
+            _block_rows = _fetch_csv(BLOCK_URL)
+        return _block_rows
+
+
+def _row_get(row, key):
+    """NSE's CSV header spelling/spacing has shifted before (leading
+    spaces, case) -- match loosely rather than assuming one exact
+    key."""
+    for actual_key in row.keys():
+        if actual_key.strip().lower() == key.lower():
+            v = row[actual_key]
+            return v.strip() if v else v
+    return None
 
 
 def get_last_deal_for_symbol(symbol):
     """
-    Returns the single most recent Bulk/Block deal for `symbol` within
-    the trailing LOOKBACK_DAYS, as
+    Returns the single most recent Bulk/Block deal for `symbol` found
+    in NSE's current bulk.csv/block.csv archive snapshot, as
     {type, date, client, buy_sell, quantity, price}, or None if
-    nothing found in that window / the fetch failed or got blocked.
+    nothing found for that symbol / the fetch failed or came back
+    empty.
     """
     symbol = symbol.upper()
-    today = dt.date.today()
 
-    cached = _cache.get(symbol)
-    if cached is not None and cached[0] == today:
-        return cached[1]
+    if symbol in _cache:
+        return _cache[symbol]
 
-    to_str = today.strftime("%d-%m-%Y")
-    from_str = (today - dt.timedelta(days=LOOKBACK_DAYS)).strftime("%d-%m-%Y")
-
-    session = _get_session()
     matches = []
-    for mode, label in (("bulk-deals", "Bulk"), ("block-deals", "Block")):
-        for r in _fetch_historical(session, mode, from_str, to_str):
-            if (r.get("BD_SYMBOL") or "").strip().upper() == symbol:
-                matches.append({
-                    "type": label,
-                    "date": r.get("BD_DT_DATE"),
-                    "client": r.get("BD_CLIENT_NAME"),
-                    "buy_sell": (r.get("BD_BUY_SELL") or "").strip().upper(),
-                    "quantity": r.get("BD_QTY_TRD"),
-                    "price": r.get("BD_TP_WATP"),
-                })
+    for mode, label in (("bulk", "Bulk"), ("block", "Block")):
+        for row in _get_rows(mode):
+            sym = (_row_get(row, "Symbol") or "").upper()
+            if sym != symbol:
+                continue
+            matches.append({
+                "type": label,
+                "date": _row_get(row, "Date"),
+                "client": _row_get(row, "Client Name"),
+                "buy_sell": (_row_get(row, "Buy/Sell") or "").upper(),
+                "quantity": _row_get(row, "Quantity Traded"),
+                "price": _row_get(row, "Trade Price / Wght. Avg. Price"),
+            })
 
-    result = max(matches, key=lambda m: _parse_bd_date(m["date"])) if matches else None
-    _cache[symbol] = (today, result)
+    result = max(matches, key=lambda m: _parse_bd_date(m["date"] or "")) if matches else None
+    _cache[symbol] = result
     return result
