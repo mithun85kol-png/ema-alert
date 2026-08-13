@@ -985,11 +985,12 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
 
     df75 combines cached PRE-TODAY 1-min history (hist_candles, from
     build_hist1min_cache — enough days to warm up EMA9/EMA20) with
-    today's fresh 1-min data, deduped and resampled together. Without
-    hist_candles, df75 falls back to today-only data (same as before) —
+    today's fresh 1-min data, deduped and resampled together. df15 is
+    now built from that same combined data (fixed 2026-08-13 — see
+    below). Without hist_candles, both fall back to today-only data —
     which will almost never have enough bars to warm up EMA9/EMA20, so
-    the 75-min features simply stay dormant for that symbol until
-    history is available, never a crash.
+    the 75-min/15-min features simply stay dormant for that symbol
+    until history is available, never a crash.
 
     Raises on a genuine fetch failure (after retries are exhausted in
     fetch_1min_candles) so the caller (fetch_all) can distinguish
@@ -1007,9 +1008,6 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     df5 = resample_5min(raw)
     df5 = drop_unclosed_candle(df5, now_ist, candle_minutes=5)
 
-    df15 = resample_15min(raw)
-    df15 = drop_unclosed_candle(df15, now_ist, candle_minutes=15)
-
     if hist_candles:
         hist_df = pd.DataFrame(
             hist_candles,
@@ -1020,6 +1018,18 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
         combined_75 = combined_75.drop_duplicates(subset="timestamp").sort_values("timestamp").reset_index(drop=True)
     else:
         combined_75 = raw
+
+    # df15 (15-min informational trend context, get_3min_trend_info)
+    # is built from the SAME combined multi-day history as df75, not
+    # just today's candles. Fixed 2026-08-13: EMA20 warmup needs 22
+    # bars -- on today-only data that's 22 x 15min = 330 minutes,
+    # i.e. almost the entire trading session, so the "15-min:" line
+    # on an alert was silently missing for most of the day (only
+    # appearing near the close) until it had enough history. Using
+    # combined_75 here gives it the same multi-day warmup df75 already
+    # gets, so it's available from the first alert of the day.
+    df15 = resample_15min(combined_75)
+    df15 = drop_unclosed_candle(df15, now_ist, candle_minutes=15)
 
     df75 = resample_75min(combined_75)
     df75 = drop_unclosed_candle(df75, now_ist, candle_minutes=75)
