@@ -123,7 +123,16 @@ import instruments
 import state
 import delivery_data
 import bulk_block_data
-import corporate_actions
+try:
+    import corporate_actions
+except ImportError:
+    # corporate_actions.py (Dividend/Bonus/Buyback/Order Win alerts)
+    # isn't present in this checkout. Never let a missing/optional
+    # module take down the whole scan -- same "fail silently, never
+    # block the main alert path" pattern as bulk_block_data.py /
+    # delivery_data.py. If you have this file, just add it back to
+    # the repo root and this feature resumes automatically.
+    corporate_actions = None
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
@@ -1582,10 +1591,11 @@ def run():
     # call every run -- corporate_actions.check_and_alert() only does
     # real work (NSE fetch) once per calendar day; every other call
     # this same day is a no-op (see its own cache check).
-    try:
-        corporate_actions.check_and_alert(now_ist)
-    except Exception as e:
-        print(f"Corporate-action check failed this run (non-blocking): {e}", flush=True)
+    if corporate_actions is not None:
+        try:
+            corporate_actions.check_and_alert(now_ist)
+        except Exception as e:
+            print(f"Corporate-action check failed this run (non-blocking): {e}", flush=True)
 
     # ---- Nifty 500 cash-stock scan (same conditions, EMA9/21) ----
     n500_failed, n500_total = [], 0
