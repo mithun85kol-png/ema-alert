@@ -69,7 +69,7 @@ WHEN ALERTS ACTUALLY FIRE:
   candle_minutes=75) makes sure a still-forming 75-min bar is never
   evaluated, so a signal can only appear right after a 75-min candle
   closes. check_signals() re-checks the last
-  config.PRIMARY_LOOKBACK_CANDLES (6) closed 75-min candles (not just
+  config.PRIMARY_LOOKBACK_CANDLES (2) closed 75-min candles (not just
   the newest), so a delayed/skipped run still catches a cross that
   closed while nothing was running.
 - INDICES (5-min): a 5-min candle closes every 5 minutes during the
@@ -958,136 +958,7 @@ def build_pivot_levels(watchlist):
     return cache["pivots"]
 
 
-def fetch_daily_history(instrument_key, days_back=40):
-    """
-    Fetches up to `days_back` calendar days of completed daily candles
-    (strictly before today) for one instrument, via the same
-    Upstox daily-candle endpoint used by fetch_prev_day_ohlc — reuses
-    the same rate limiter (_pivot_fetch_limiter) since it's the same
-    Upstox endpoint/budget. Returns a list of {"date", "close",
-    "volume"} sorted oldest -> newest, or [] on failure/no data.
-    """
-    headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
-    today = _now_ist().date()
-    from_date = today - dt.timedelta(days=days_back)
-    to_date = today - dt.timedelta(days=1)
-
-    url = UPSTOX_DAILY_URL.format(
-        instrument_key=instrument_key,
-        to_date=to_date.isoformat(),
-        from_date=from_date.isoformat(),
-    )
-    _pivot_fetch_limiter.wait()
-    resp = _get_with_retry(url, headers=headers, timeout=20)
-    resp.raise_for_status()
-    payload = resp.json()
-    candles = payload.get("data", {}).get("candles", [])
-    if not candles:
-        return []
-
-    candles_sorted = sorted(candles, key=lambda c: c[0])
-    return [{"date": c[0], "close": c[4], "volume": c[5]} for c in candles_sorted]
-
-
-MOMENTUM_VOLUME_CACHE_FILE = "momentum_volume_cache.json"
-
-# How many trailing COMPLETED trading days count as "last four weeks"
-# for the Momentum check (5 trading days/week x 4 weeks). Today's own
-# (still-forming) day is never included.
-MOMENTUM_LOOKBACK_TRADING_DAYS = 20
-
-# How many trading days back (from the most recent completed day) to
-# compare against for the Volume Spike check.
-VOLUME_SPIKE_LOOKBACK_TRADING_DAYS = 5
-
-
-def load_momentum_volume_cache():
-    try:
-        with open(MOMENTUM_VOLUME_CACHE_FILE, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {"date": None, "data": {}}
-
-
-def save_momentum_volume_cache(cache):
-    with open(MOMENTUM_VOLUME_CACHE_FILE, "w") as f:
-        json.dump(cache, f, indent=2)
-
-
-def build_momentum_volume_data(watchlist):
-    """
-    Returns {symbol: {"four_week_high_close": ..., "prev_day_volume":
-    ..., "volume_5day_ago": ...}} for every symbol in the watchlist —
-    the raw numbers behind the two informational tags on the alert:
-
-      - Momentum: today's alert close > four_week_high_close (the
-        highest DAILY CLOSE over the last MOMENTUM_LOOKBACK_TRADING_DAYS
-        completed trading days, i.e. the last ~4 weeks — today's own
-        candle is never included).
-      - Volume Spike: prev_day_volume (the most recent COMPLETED
-        trading day's total volume) > volume_5day_ago (total volume
-        VOLUME_SPIKE_LOOKBACK_TRADING_DAYS completed trading days
-        before that).
-
-    Daily OHLC/volume is only fetched once per calendar day per symbol
-    — results are cached in momentum_volume_cache.json, same pattern
-    as build_pivot_levels/pivot_cache.json.
-    """
-    cache = load_momentum_volume_cache()
-    today_str = _now_ist().date().isoformat()
-
-    if cache.get("date") != today_str:
-        cache = {"date": today_str, "data": {}}
-
-    missing = {sym: key for sym, key in watchlist.items() if sym not in cache["data"]}
-
-    if missing:
-        print(f"Fetching daily history for {len(missing)} instrument(s) for Momentum/Volume Spike checks...")
-
-        def _fetch_one(symbol, instrument_key):
-            history = fetch_daily_history(instrument_key)
-            if len(history) < MOMENTUM_LOOKBACK_TRADING_DAYS + 1:
-                # Not enough daily history yet (new listing, fetch
-                # partially failed, etc.) — both checks simply stay
-                # unavailable for this symbol today, same graceful
-                # degradation as pivots/delivery%/sector when data is
-                # missing.
-                return symbol, None
-
-            lookback_window = history[-MOMENTUM_LOOKBACK_TRADING_DAYS:]
-            four_week_high_close = max(day["close"] for day in lookback_window)
-
-            prev_day_volume = history[-1]["volume"]
-            volume_5day_ago = None
-            if len(history) >= VOLUME_SPIKE_LOOKBACK_TRADING_DAYS + 1:
-                volume_5day_ago = history[-(VOLUME_SPIKE_LOOKBACK_TRADING_DAYS + 1)]["volume"]
-
-            return symbol, {
-                "four_week_high_close": four_week_high_close,
-                "prev_day_volume": prev_day_volume,
-                "volume_5day_ago": volume_5day_ago,
-            }
-
-        with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
-            futures = {
-                pool.submit(_fetch_one, symbol, instrument_key): symbol
-                for symbol, instrument_key in missing.items()
-            }
-            for future in as_completed(futures):
-                symbol = futures[future]
-                try:
-                    sym, data = future.result()
-                    if data is not None:
-                        cache["data"][sym] = data
-                except Exception as e:
-                    print(f"Error fetching Momentum/Volume Spike data for {symbol}: {e}")
-
-        save_momentum_volume_cache(cache)
-
-    return cache["data"]
-
-
-
+def build_watchlist(now_ist=None):
     now_ist = now_ist or _now_ist()
     watchlist = {}
 
@@ -1321,11 +1192,6 @@ def run_fo_scan(now_ist, index_only=False):
 
     pivots = build_pivot_levels(watchlist)
 
-    # Momentum (price vs last 4 weeks' high) / Volume Spike (daily
-    # volume vs 5 trading days ago) — see build_momentum_volume_data.
-    # Cached on disk, same once-per-day pattern as pivots above.
-    momentum_volume = build_momentum_volume_data(watchlist)
-
     # Previous trading day's NSE delivery % per stock (see
     # delivery_data.py). Cached on disk, so this only actually
     # downloads the NSE bhavcopy once per calendar day, not once per
@@ -1403,16 +1269,16 @@ def run_fo_scan(now_ist, index_only=False):
                 for sig in signals:
                     sig["timeframe"] = "5-min"
             else:
-                # REVERTED (per request, 2026-08-14): 75-min is back to
-                # being the PRIMARY/ALERTING timeframe for stocks/
-                # commodities/cash — an alert fires as soon as a 75-min
-                # candle closes with a qualifying EMA9/50 cross. 15-min
-                # moved back to informational-only context (see info3
-                # below).
-                if df75 is None:
+                # FLIPPED (per request, 2026-08-13): 15-min is now the
+                # PRIMARY/ALERTING timeframe for stocks/commodities/cash
+                # — an alert fires as soon as a 15-min candle closes
+                # with a qualifying EMA9/20 cross. 75-min moved to
+                # informational-only context (see info75 below, shown
+                # with its own candle timestamp on the alert).
+                if df15 is None:
                     continue
                 signals = check_signals(
-                    df75, symbol, r3=r3, s3=s3,
+                    df15, symbol, r3=r3, s3=s3,
                     lookback=config.PRIMARY_LOOKBACK_CANDLES,
                     require_trend_confirmation=False,
                     prev_close=prev_close,
@@ -1421,22 +1287,22 @@ def run_fo_scan(now_ist, index_only=False):
                     require_volume_increase=False,
                 )
                 for sig in signals:
-                    sig["timeframe"] = "75-min"
+                    sig["timeframe"] = "15-min"
 
             if not signals:
                 continue
 
-            # 15-min context (REVERTED, 2026-08-14 — back to 15-min
-            # context under a 75-min alert). get_3min_trend_info()
-            # already returns cross_time (the exact 15-min candle
-            # timestamp of the last cross, if any within the lookback
-            # window) — telegram_notifier shows this so the 15-min line
-            # carries a real timestamp, not just "N candles ago". Only
-            # meaningful under a stock/commodity alert — indices have
-            # nothing extra to attach.
+            # 75-min context (FLIPPED, 2026-08-13 — was 15-min context
+            # under a 75-min alert; now 75-min context under a 15-min
+            # alert). get_3min_trend_info() already returns cross_time
+            # (the exact 75-min candle timestamp of the last cross, if
+            # any within the lookback window) — telegram_notifier shows
+            # this so the 75-min line carries a real timestamp, not
+            # just "N candles ago". Only meaningful under a stock/
+            # commodity alert — indices have nothing extra to attach.
             info3 = None
-            if symbol not in index_symbols and df15 is not None:
-                info3 = get_3min_trend_info(df15, symbol)
+            if symbol not in index_symbols and df75 is not None:
+                info3 = get_3min_trend_info(df75, symbol)
 
             for signal in signals:
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
@@ -1444,16 +1310,6 @@ def run_fo_scan(now_ist, index_only=False):
 
                 if info3 is not None:
                     signal["trend_3min"] = info3
-
-                # Momentum / Volume Spike — applies to every instrument
-                # (stocks, indices, commodities), not stock-only like
-                # delivery%/bulk-deals/sector below.
-                mv = momentum_volume.get(symbol)
-                if mv is not None:
-                    signal["momentum"] = signal["close"] > mv["four_week_high_close"]
-                    signal["four_week_high_close"] = mv["four_week_high_close"]
-                    if mv["volume_5day_ago"] is not None:
-                        signal["volume_spike"] = mv["prev_day_volume"] > mv["volume_5day_ago"]
 
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
@@ -1630,11 +1486,6 @@ def run_nifty500_scan(now_ist):
     print(f"Scanning {len(watchlist)} Nifty 500 cash stocks (EMA{config.NIFTY500_EMA_FAST}/{config.NIFTY500_EMA_SLOW})...")
 
     pivots = build_pivot_levels(watchlist)
-
-    # Momentum (price vs last 4 weeks' high) / Volume Spike (daily
-    # volume vs 5 trading days ago) — see build_momentum_volume_data.
-    momentum_volume = build_momentum_volume_data(watchlist)
-
     delivery_map = delivery_data.get_delivery_data(now_ist.date())
     saved_state = state.load_state()
     alerts_sent = 0
@@ -1659,13 +1510,13 @@ def run_nifty500_scan(now_ist):
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
 
-            # REVERTED (per request, 2026-08-14): 75-min is back to
-            # being the PRIMARY/ALERTING timeframe here too — same
-            # reasoning as run_fo_scan above.
-            if df75 is None:
+            # FLIPPED (per request, 2026-08-13): 15-min is now the
+            # PRIMARY/ALERTING timeframe here too — same reasoning as
+            # run_fo_scan above.
+            if df15 is None:
                 continue
             signals = check_signals(
-                df75, symbol, r3=r3, s3=s3,
+                df15, symbol, r3=r3, s3=s3,
                 lookback=config.PRIMARY_LOOKBACK_CANDLES,
                 require_trend_confirmation=False,
                 prev_close=prev_close,
@@ -1674,7 +1525,7 @@ def run_nifty500_scan(now_ist):
                 require_volume_increase=False,
             )
             for sig in signals:
-                sig["timeframe"] = "75-min"
+                sig["timeframe"] = "15-min"
 
             # Nifty 500 cash-stock scan: BEARISH alerts are not wanted
             # here (cash-only stocks, no shorting use case for most
@@ -1686,13 +1537,13 @@ def run_nifty500_scan(now_ist):
             if not signals:
                 continue
 
-            # 15-min context (REVERTED, 2026-08-14 — back to 15-min
-            # context under a 75-min alert, with a real cross timestamp
-            # via cross_time).
+            # 75-min context (FLIPPED, 2026-08-13 — was 15-min context
+            # under a 75-min alert; now 75-min context under a 15-min
+            # alert, with a real cross timestamp via cross_time).
             info3 = None
-            if df15 is not None:
+            if df75 is not None:
                 info3 = get_3min_trend_info(
-                    df15, symbol,
+                    df75, symbol,
                     ema_fast=config.NIFTY500_EMA_FAST,
                     ema_slow=config.NIFTY500_EMA_SLOW,
                 )
@@ -1705,14 +1556,6 @@ def run_nifty500_scan(now_ist):
 
                 if info3 is not None:
                     signal["trend_3min"] = info3
-
-                # Momentum / Volume Spike — see build_momentum_volume_data.
-                mv = momentum_volume.get(symbol)
-                if mv is not None:
-                    signal["momentum"] = signal["close"] > mv["four_week_high_close"]
-                    signal["four_week_high_close"] = mv["four_week_high_close"]
-                    if mv["volume_5day_ago"] is not None:
-                        signal["volume_spike"] = mv["prev_day_volume"] > mv["volume_5day_ago"]
 
                 signal["is_fno"] = symbol.upper() in fno_underlyings
 
