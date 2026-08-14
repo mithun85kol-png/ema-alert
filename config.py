@@ -109,15 +109,19 @@ MIN_EMA_CROSS_GAP_PCT = 0.05
 # check_signals_15min() — kept for reference.
 CROSS_LOOKBACK_CANDLES = 5
 
-# ---------- 75-min = PRIMARY/ALERTING timeframe (flipped) ----------
-# 75-min is now what actually decides whether/when an alert fires; the
-# EMA9/20 cross + EMA50 trend-agreement conditions in strategy.py run
-# on 75-min candles. Catch-up window: how many of the most recent
-# CLOSED 75-min candles to re-check on every run, in case a run was
-# skipped/delayed. Kept small (2 candles = 150 min) since the workflow
-# runs every 1-3 minutes, so a missed 75-min candle close is caught
-# almost immediately on the next run anyway.
-PRIMARY_LOOKBACK_CANDLES = 2
+# ---------- 75-min = PRIMARY/ALERTING timeframe ----------
+# 75-min is what decides whether/when an alert fires; the EMA9/50
+# cross + trend-agreement conditions in strategy.py run on 75-min
+# candles. Catch-up window: how many of the most recent CLOSED 75-min
+# candles to re-check on every run, in case a run was skipped/delayed.
+# Widened 2 -> 6 (per Mithun's instruction, 2026-08-14) so a full
+# trading session's worth of 75-min closes (~5-6 closes between 09:15
+# and 15:30) is always covered even after a longer gap in runs — no
+# close is ever silently missed. This only widens the RE-CHECK window;
+# it can never cause a duplicate alert, since state.already_alerted
+# dedupes strictly on (symbol, direction, exact candle_time) regardless
+# of how many past candles get re-scanned.
+PRIMARY_LOOKBACK_CANDLES = 6
 
 # How many trailing 15-min candles the informational context block
 # (strategy.get_3min_trend_info, called on df15 — per request,
