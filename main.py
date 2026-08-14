@@ -1269,15 +1269,16 @@ def run_fo_scan(now_ist, index_only=False):
                 for sig in signals:
                     sig["timeframe"] = "5-min"
             else:
-                # REVERTED (per request, 2026-08-14) back to 75-min as
-                # the PRIMARY/ALERTING timeframe for stocks/
-                # commodities/cash — an alert fires only when a 75-min
-                # candle closes with a qualifying EMA9/20 cross. 15-min
-                # is informational-only context again (see info3 below).
-                if df75 is None:
+                # FLIPPED (per request, 2026-08-13): 15-min is now the
+                # PRIMARY/ALERTING timeframe for stocks/commodities/cash
+                # — an alert fires as soon as a 15-min candle closes
+                # with a qualifying EMA9/20 cross. 75-min moved to
+                # informational-only context (see info75 below, shown
+                # with its own candle timestamp on the alert).
+                if df15 is None:
                     continue
                 signals = check_signals(
-                    df75, symbol, r3=r3, s3=s3,
+                    df15, symbol, r3=r3, s3=s3,
                     lookback=config.PRIMARY_LOOKBACK_CANDLES,
                     require_trend_confirmation=False,
                     prev_close=prev_close,
@@ -1286,21 +1287,22 @@ def run_fo_scan(now_ist, index_only=False):
                     require_volume_increase=False,
                 )
                 for sig in signals:
-                    sig["timeframe"] = "75-min"
+                    sig["timeframe"] = "15-min"
 
             if not signals:
                 continue
 
-            # 15-min context (REVERTED, 2026-08-14 — back to 15-min
-            # context under a 75-min alert). get_3min_trend_info()
-            # returns cross_time (the exact 15-min candle timestamp of
-            # the last cross, if any within the lookback window) —
-            # telegram_notifier shows this as a real timestamp, not
+            # 75-min context (FLIPPED, 2026-08-13 — was 15-min context
+            # under a 75-min alert; now 75-min context under a 15-min
+            # alert). get_3min_trend_info() already returns cross_time
+            # (the exact 75-min candle timestamp of the last cross, if
+            # any within the lookback window) — telegram_notifier shows
+            # this so the 75-min line carries a real timestamp, not
             # just "N candles ago". Only meaningful under a stock/
             # commodity alert — indices have nothing extra to attach.
             info3 = None
-            if symbol not in index_symbols and df15 is not None:
-                info3 = get_3min_trend_info(df15, symbol)
+            if symbol not in index_symbols and df75 is not None:
+                info3 = get_3min_trend_info(df75, symbol)
 
             for signal in signals:
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
@@ -1508,13 +1510,13 @@ def run_nifty500_scan(now_ist):
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
 
-            # REVERTED (per request, 2026-08-14): back to 75-min as the
+            # FLIPPED (per request, 2026-08-13): 15-min is now the
             # PRIMARY/ALERTING timeframe here too — same reasoning as
             # run_fo_scan above.
-            if df75 is None:
+            if df15 is None:
                 continue
             signals = check_signals(
-                df75, symbol, r3=r3, s3=s3,
+                df15, symbol, r3=r3, s3=s3,
                 lookback=config.PRIMARY_LOOKBACK_CANDLES,
                 require_trend_confirmation=False,
                 prev_close=prev_close,
@@ -1523,7 +1525,7 @@ def run_nifty500_scan(now_ist):
                 require_volume_increase=False,
             )
             for sig in signals:
-                sig["timeframe"] = "75-min"
+                sig["timeframe"] = "15-min"
 
             # Nifty 500 cash-stock scan: BEARISH alerts are not wanted
             # here (cash-only stocks, no shorting use case for most
@@ -1535,13 +1537,13 @@ def run_nifty500_scan(now_ist):
             if not signals:
                 continue
 
-            # 15-min context (REVERTED, 2026-08-14 — back to 15-min
-            # context under a 75-min alert, with a real cross timestamp
-            # via cross_time).
+            # 75-min context (FLIPPED, 2026-08-13 — was 15-min context
+            # under a 75-min alert; now 75-min context under a 15-min
+            # alert, with a real cross timestamp via cross_time).
             info3 = None
-            if df15 is not None:
+            if df75 is not None:
                 info3 = get_3min_trend_info(
-                    df15, symbol,
+                    df75, symbol,
                     ema_fast=config.NIFTY500_EMA_FAST,
                     ema_slow=config.NIFTY500_EMA_SLOW,
                 )
@@ -1617,37 +1619,14 @@ def run():
     # SCAN_MODE=index -> dedicated lightweight run for the 5-min index
     # (NIFTY 50/BANK/SENSEX) alert only — set by the "mode" input on the
     # index-only cron trigger (see scan.yml). Completely independent of
-    # the full 15-min F&O/commodity scan below: only ~3 API calls, safe
-    # to run every 5 minutes without touching rate limits.
+    # the full 75-min F&O/Nifty500/commodity scan below: only ~3 API
+    # calls, safe to run every 5 minutes without touching rate limits.
     mode = os.environ.get("SCAN_MODE", "full")
     if mode == "index":
         if not _in_stock_session(now_ist):
             print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — index-only scan skipping.", flush=True)
             return
         run_fo_scan(now_ist, index_only=True)
-        return
-
-    # SCAN_MODE=n500 -> SPLIT OUT (2026-08-13) into its own dedicated
-    # trigger/run, separate from "full". The Nifty 500 scan (500+293
-    # instruments including pivot/history warmup) is by far the
-    # heaviest part of a combined run and was pushing total run time
-    # close to/over the job timeout once the F&O scan moved to a
-    # 15-min primary cadence (candles now close 5x more often, so the
-    # F&O scan needs to finish quickly and reliably every 15 minutes).
-    # Splitting it out means: (a) the "full" F&O/commodity/index scan
-    # below stays fast and isn't held up by the Nifty 500 fetch, and
-    # (b) Nifty 500 can run on its own, less frequent schedule (e.g.
-    # every 30 min) via a separate cron-job.org trigger passing
-    # mode=n500, without needing code changes here to adjust cadence.
-    if mode == "n500":
-        if not _in_stock_session(now_ist):
-            print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — Nifty 500 scan skipping.", flush=True)
-            return
-        try:
-            _, n500_failed, n500_total = run_nifty500_scan(now_ist)
-            maybe_send_failure_summary([], 0, n500_failed, n500_total)
-        except Exception as e:
-            print(f"Nifty 500 scan failed this run: {e}", flush=True)
         return
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
@@ -1667,12 +1646,17 @@ def run():
         except Exception as e:
             print(f"Corporate-action check failed this run (non-blocking): {e}", flush=True)
 
+    # ---- Nifty 500 cash-stock scan (same conditions, EMA9/21) ----
+    n500_failed, n500_total = [], 0
+    if _in_stock_session(now_ist):
+        try:
+            _, n500_failed, n500_total = run_nifty500_scan(now_ist)
+        except Exception as e:
+            print(f"Nifty 500 scan failed this run (non-blocking): {e}", flush=True)
+
     # ---- Fetch-failure visibility: one summary alert if enough
     # instruments failed to fetch this run ----
-    # (Nifty 500 scan is no longer run here — see SCAN_MODE=n500 above
-    # — so this summary now only ever covers the F&O/index/commodity
-    # scan; the n500 branch above sends its own separate summary.)
-    maybe_send_failure_summary(fo_failed, fo_total)
+    maybe_send_failure_summary(fo_failed, fo_total, n500_failed, n500_total)
 
 
 if __name__ == "__main__":
