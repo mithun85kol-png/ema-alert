@@ -23,11 +23,11 @@ def send_alert(signal):
     direction = signal["direction"]  # "BULLISH" or "BEARISH"
     arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
 
-    # Timeframe label — "15-min" for stocks/commodities/cash (the
-    # PRIMARY/ALERTING timeframe, flipped 2026-08-13), "5-min" for
-    # indices. Defaults to "15-min" for backward compatibility if an
+    # Timeframe label — "75-min" for stocks/commodities/cash (the
+    # PRIMARY/ALERTING timeframe, reverted 2026-08-14), "5-min" for
+    # indices. Defaults to "75-min" for backward compatibility if an
     # older caller didn't set this.
-    timeframe_label = signal.get("timeframe", "15-min")
+    timeframe_label = signal.get("timeframe", "75-min")
 
     candle_time = signal["candle_time"]
     # candle_time expected like "2026-07-29 12:15:00+05:30" -> split date/time
@@ -141,15 +141,13 @@ def send_alert(signal):
         if macd_divergence:
             macd_block += f"MACD {macd_divergence}\n"
 
-    # 75-min context (RELABELED 2026-08-14 — was "15-min:", showing
-    # 15-min data under a 75-min alert; now the timeframes flipped, so
-    # this block shows 75-min data under a 15-min alert instead — see
-    # strategy.get_3min_trend_info, called on df75 in main.py as of
-    # 2026-08-13, attached as signal["trend_3min"]). Shows the longer-
-    # timeframe EMA9/20 bias, whether/when it last crossed (with an
-    # exact timestamp), and how close it currently is to crossing.
-    # Omitted entirely if there wasn't enough 75-min history warmed up
-    # yet for this symbol.
+    # 15-min context (RELABELED back 2026-08-14 — reverted to "15-min:",
+    # showing 15-min data under a 75-min alert, via
+    # strategy.get_3min_trend_info, called on df15 in main.py, attached
+    # as signal["trend_3min"]). Shows the 15-min EMA9/20 bias,
+    # whether/when it last crossed (with an exact timestamp), and how
+    # close it currently is to crossing. Omitted entirely if there
+    # wasn't enough 15-min history warmed up yet for this symbol.
     trend3 = signal.get("trend_3min")
     trend3_block = ""
     if trend3:
@@ -170,7 +168,7 @@ def send_alert(signal):
         if since is None:
             cross_note = f"no cross in last {config.INFO_3MIN_LOOKBACK_CANDLES} candles"
         elif since == 0:
-            cross_note = f"crossed on the latest 75-min candle{cross_time_note}"
+            cross_note = f"crossed on the latest 15-min candle{cross_time_note}"
         else:
             cross_note = f"crossed {since} candle(s) ago{cross_time_note}"
         gap = trend3.get("gap_pct")
@@ -178,7 +176,7 @@ def send_alert(signal):
         trend3_fast_p = trend3.get("ema_fast_period", 9)
         trend3_slow_p = trend3.get("ema_slow_period", 20)
         trend3_block = (
-            f"75-min: {trend3['bias']} {bias_icon} "
+            f"15-min: {trend3['bias']} {bias_icon} "
             f"(EMA{trend3_fast_p} {trend3['ema_fast']} / EMA{trend3_slow_p} {trend3['ema_slow']}) — "
             f"{cross_note}{gap_note}\n"
         )
@@ -208,6 +206,32 @@ def send_alert(signal):
     # omitted for them. None if the bhavcopy fetch failed/skipped.
     delivery_pct = signal.get("delivery_pct")
     delivery_line = f"Delivery % (prev day): {delivery_pct}%\n" if delivery_pct is not None else ""
+
+    # Momentum (added) — informational only. True when the alert's
+    # close price is above the highest DAILY CLOSE over the last
+    # ~4 weeks (20 completed trading days) — see
+    # main.py's build_momentum_volume_data. Omitted entirely if there
+    # wasn't enough daily history to compute it for this symbol today.
+    momentum = signal.get("momentum")
+    four_week_high = signal.get("four_week_high_close")
+    if momentum is not None:
+        momentum_icon = "🚀" if momentum else "➖"
+        momentum_note = f"Above last 4-week high ({four_week_high})" if momentum else f"Below last 4-week high ({four_week_high})"
+        momentum_line = f"Momentum: {'Yes' if momentum else 'No'} {momentum_icon} ({momentum_note})\n"
+    else:
+        momentum_line = ""
+
+    # Volume Spike (added) — informational only. True when the most
+    # recent COMPLETED trading day's total volume is higher than the
+    # volume from 5 trading days before that — see main.py's
+    # build_momentum_volume_data. Omitted entirely if there wasn't
+    # enough daily history to compute it for this symbol today.
+    volume_spike = signal.get("volume_spike")
+    if volume_spike is not None:
+        vs_icon = "📊" if volume_spike else "➖"
+        volume_spike_line = f"Volume Spike: {'Yes' if volume_spike else 'No'} {vs_icon} (prev day vol vs 5-day-ago vol)\n"
+    else:
+        volume_spike_line = ""
 
     # Bulk/Block deals (added) — informational only, stocks only (see
     # main.py / bulk_block_data.py). Shows each large-trade entry NSE
@@ -247,6 +271,8 @@ def send_alert(signal):
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{delivery_line}"
+        f"{momentum_line}"
+        f"{volume_spike_line}"
         f"{bulk_block_block}"
         f"{sector_line}"
         f"{trade_plan_block}"
