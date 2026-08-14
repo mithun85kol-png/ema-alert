@@ -27,7 +27,7 @@ def send_alert(signal):
     # PRIMARY/ALERTING timeframe, flipped 2026-08-13), "5-min" for
     # indices. Defaults to "15-min" for backward compatibility if an
     # older caller didn't set this.
-    timeframe_label = signal.get("timeframe", "15-min")
+    timeframe_label = signal.get("timeframe", "75-min")
 
     candle_time = signal["candle_time"]
     # candle_time expected like "2026-07-29 12:15:00+05:30" -> split date/time
@@ -170,7 +170,7 @@ def send_alert(signal):
         if since is None:
             cross_note = f"no cross in last {config.INFO_3MIN_LOOKBACK_CANDLES} candles"
         elif since == 0:
-            cross_note = f"crossed on the latest 75-min candle{cross_time_note}"
+            cross_note = f"crossed on the latest 15-min candle{cross_time_note}"
         else:
             cross_note = f"crossed {since} candle(s) ago{cross_time_note}"
         gap = trend3.get("gap_pct")
@@ -178,7 +178,7 @@ def send_alert(signal):
         trend3_fast_p = trend3.get("ema_fast_period", 9)
         trend3_slow_p = trend3.get("ema_slow_period", 20)
         trend3_block = (
-            f"75-min: {trend3['bias']} {bias_icon} "
+            f"15-min: {trend3['bias']} {bias_icon} "
             f"(EMA{trend3_fast_p} {trend3['ema_fast']} / EMA{trend3_slow_p} {trend3['ema_slow']}) — "
             f"{cross_note}{gap_note}\n"
         )
