@@ -1269,10 +1269,16 @@ def run_fo_scan(now_ist, index_only=False):
                 for sig in signals:
                     sig["timeframe"] = "5-min"
             else:
-                if df75 is None:
+                # FLIPPED (per request, 2026-08-13): 15-min is now the
+                # PRIMARY/ALERTING timeframe for stocks/commodities/cash
+                # — an alert fires as soon as a 15-min candle closes
+                # with a qualifying EMA9/20 cross. 75-min moved to
+                # informational-only context (see info75 below, shown
+                # with its own candle timestamp on the alert).
+                if df15 is None:
                     continue
                 signals = check_signals(
-                    df75, symbol, r3=r3, s3=s3,
+                    df15, symbol, r3=r3, s3=s3,
                     lookback=config.PRIMARY_LOOKBACK_CANDLES,
                     require_trend_confirmation=False,
                     prev_close=prev_close,
@@ -1281,20 +1287,22 @@ def run_fo_scan(now_ist, index_only=False):
                     require_volume_increase=False,
                 )
                 for sig in signals:
-                    sig["timeframe"] = "75-min"
+                    sig["timeframe"] = "15-min"
 
             if not signals:
                 continue
 
-            # 15-min context (get_3min_trend_info, now run on df15 —
-            # per request, 2026-08-12, changed from the 3-min chart to
-            # the 15-min chart) is only meaningful as supporting context
-            # UNDERNEATH a 75-min alert — for indices the alert itself
-            # now IS the 3-min signal, so there's nothing extra to
-            # attach there.
+            # 75-min context (FLIPPED, 2026-08-13 — was 15-min context
+            # under a 75-min alert; now 75-min context under a 15-min
+            # alert). get_3min_trend_info() already returns cross_time
+            # (the exact 75-min candle timestamp of the last cross, if
+            # any within the lookback window) — telegram_notifier shows
+            # this so the 75-min line carries a real timestamp, not
+            # just "N candles ago". Only meaningful under a stock/
+            # commodity alert — indices have nothing extra to attach.
             info3 = None
-            if symbol not in index_symbols and df15 is not None:
-                info3 = get_3min_trend_info(df15, symbol)
+            if symbol not in index_symbols and df75 is not None:
+                info3 = get_3min_trend_info(df75, symbol)
 
             for signal in signals:
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
@@ -1502,10 +1510,13 @@ def run_nifty500_scan(now_ist):
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
 
-            if df75 is None:
+            # FLIPPED (per request, 2026-08-13): 15-min is now the
+            # PRIMARY/ALERTING timeframe here too — same reasoning as
+            # run_fo_scan above.
+            if df15 is None:
                 continue
             signals = check_signals(
-                df75, symbol, r3=r3, s3=s3,
+                df15, symbol, r3=r3, s3=s3,
                 lookback=config.PRIMARY_LOOKBACK_CANDLES,
                 require_trend_confirmation=False,
                 prev_close=prev_close,
@@ -1514,17 +1525,25 @@ def run_nifty500_scan(now_ist):
                 require_volume_increase=False,
             )
             for sig in signals:
-                sig["timeframe"] = "75-min"
+                sig["timeframe"] = "15-min"
+
+            # Nifty 500 cash-stock scan: BEARISH alerts are not wanted
+            # here (cash-only stocks, no shorting use case for most
+            # subscribers) — only BULLISH crossovers are sent. This
+            # does NOT affect the F&O scan above (run_fo_scan), which
+            # still sends both directions.
+            signals = [sig for sig in signals if sig["direction"] == "BULLISH"]
 
             if not signals:
                 continue
 
-            # info3 now runs on df15 (15-min candles) instead of df3 —
-            # per request, 2026-08-12.
+            # 75-min context (FLIPPED, 2026-08-13 — was 15-min context
+            # under a 75-min alert; now 75-min context under a 15-min
+            # alert, with a real cross timestamp via cross_time).
             info3 = None
-            if df15 is not None:
+            if df75 is not None:
                 info3 = get_3min_trend_info(
-                    df15, symbol,
+                    df75, symbol,
                     ema_fast=config.NIFTY500_EMA_FAST,
                     ema_slow=config.NIFTY500_EMA_SLOW,
                 )
