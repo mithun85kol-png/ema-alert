@@ -7,20 +7,26 @@ def send_alert(signal):
         print("Telegram not configured, skipping send:", signal)
         return
 
-    # 15-min standalone commodity alerts (strategy.check_signals_15min)
-    # use a minimal message style — pure EMA9/EMA20 cross, no
-    # trend/trade-plan/PCR/pivot/VWAP blocks.
-    if signal.get("timeframe") == "15-min":
-        _send_15min_alert(signal)
-        return
+    # NOTE (fixed 2026-08-14): there used to be a special case here that
+    # routed any signal with timeframe == "15-min" into a minimal,
+    # stripped-down message (_send_15min_alert below) — that was built
+    # for the OLD standalone commodity 15-min alert
+    # (strategy.check_signals_15min), which main.py no longer calls at
+    # all. Once 15-min became the PRIMARY/ALERTING timeframe for
+    # stocks/commodities/cash (2026-08-13), every real alert started
+    # carrying timeframe="15-min" too, so it was silently being
+    # downgraded to the minimal message instead of the full one below.
+    # Removed — every signal now always gets the full message
+    # regardless of its timeframe label. _send_15min_alert is kept
+    # (unused) only in case check_signals_15min is ever reintroduced.
 
     direction = signal["direction"]  # "BULLISH" or "BEARISH"
     arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
 
-    # Timeframe label — "75-min" for stocks/commodities, "3-min" for
-    # indices (see strategy.py / main.py: indices run check_signals()
-    # directly on 3-min data). Defaults to "75-min" for backward
-    # compatibility if an older caller didn't set this.
+    # Timeframe label — "15-min" for stocks/commodities/cash (the
+    # PRIMARY/ALERTING timeframe, flipped 2026-08-13), "5-min" for
+    # indices. Defaults to "15-min" for backward compatibility if an
+    # older caller didn't set this.
     timeframe_label = signal.get("timeframe", "75-min")
 
     candle_time = signal["candle_time"]
@@ -135,13 +141,15 @@ def send_alert(signal):
         if macd_divergence:
             macd_block += f"MACD {macd_divergence}\n"
 
-    # 15-min context — informational only (see strategy.get_3min_trend_info,
-    # now called on 15-min candles (df15) and attached in main.py as
-    # signal["trend_3min"] — per request, 2026-08-12, this was changed
-    # from the 3-min chart to the 15-min chart). Shows the shorter-
-    # timeframe EMA9/20 bias, whether/when it last crossed, and how
-    # close it currently is to crossing. Omitted entirely if there
-    # wasn't enough 15-min history warmed up yet for this symbol.
+    # 75-min context (RELABELED 2026-08-14 — was "15-min:", showing
+    # 15-min data under a 75-min alert; now the timeframes flipped, so
+    # this block shows 75-min data under a 15-min alert instead — see
+    # strategy.get_3min_trend_info, called on df75 in main.py as of
+    # 2026-08-13, attached as signal["trend_3min"]). Shows the longer-
+    # timeframe EMA9/20 bias, whether/when it last crossed (with an
+    # exact timestamp), and how close it currently is to crossing.
+    # Omitted entirely if there wasn't enough 75-min history warmed up
+    # yet for this symbol.
     trend3 = signal.get("trend_3min")
     trend3_block = ""
     if trend3:
@@ -264,10 +272,12 @@ def send_alert(signal):
 
 def _send_15min_alert(signal):
     """
-    Standalone 15-min COMMODITY crossover alert (GOLD/SILVER/CRUDEOIL
-    etc. — see main.py, which only calls check_signals_15min for
-    config.COMMODITIES symbols). Same minimal style as the 75-min alert
-    — pure EMA9/EMA20 cross, no trend/trade-plan/PCR/pivot/VWAP blocks.
+    UNUSED as of 2026-08-14 (no longer called by send_alert — see the
+    NOTE at the top of send_alert). Kept only in case
+    strategy.check_signals_15min is ever reintroduced for a genuine
+    standalone-minimal alert. Was the standalone 15-min COMMODITY
+    crossover alert style (GOLD/SILVER/CRUDEOIL etc.) — pure EMA9/EMA20
+    cross, no trend/trade-plan/PCR/pivot/VWAP blocks.
     """
     direction = signal["direction"]
     arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
