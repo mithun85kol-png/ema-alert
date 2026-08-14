@@ -10,7 +10,9 @@ Runs **two independent scans** every run (see `main.py`):
    underlyings + indices (NIFTY 50, NIFTY BANK, SENSEX) + MCX commodities
    (GOLD, SILVER, CRUDEOIL). Stocks/commodities alert on a **75-min
    EMA9/EMA20 cross + mandatory EMA50 trend agreement**; indices alert on a
-   pure **3-min EMA9/EMA20 cross** (no trend gate).
+   pure **5-min EMA9/EMA20 cross** (no trend gate), via their own dedicated
+   5-min cron trigger (`SCAN_MODE=index`), fully independent of the 75-min
+   scan.
 2. **Nifty 500 cash-stock scan** (`run_nifty500_scan`) — the full Nifty 500
    constituent list (cash/EQ segment), fetched live from NSE's archives so
    it stays correct across NSE's periodic index rebalances (see
