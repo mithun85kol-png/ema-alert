@@ -133,7 +133,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal
 from telegram_notifier import send_alert
 from indicators import calculate_r3_s3
 
@@ -1000,6 +1000,65 @@ MOMENTUM_LOOKBACK_TRADING_DAYS = 20
 # compare against for the Volume Spike check.
 VOLUME_SPIKE_LOOKBACK_TRADING_DAYS = 5
 
+# EMA50 x EMA200 cross on DAILY candles — informational only, added
+# per request. The classic "Golden Cross" (EMA50 crosses above EMA200
+# = long-term bullish) / "Death Cross" (crosses below = long-term
+# bearish). Computed on daily closes (not intraday), since that's what
+# these periods conventionally mean. This needs much deeper daily
+# history than the Momentum/Volume Spike checks above (EMA200 wants
+# 200+ daily closes to warm up), so fetch_daily_history below is now
+# called with DAILY_HISTORY_LOOKBACK_DAYS instead of its old default of
+# 40 -- ONE fetch per symbol still covers Momentum/Volume Spike AND
+# this, no extra API calls added.
+EMA50_PERIOD = 50
+EMA200_PERIOD = 200
+# 320 calendar days -> roughly 210-220 trading days after weekends/
+# holidays, comfortably covering EMA200's 200-candle warmup plus a
+# buffer for cross-detection to look back into. NOTE: an EMA seeded
+# from a fixed starting point only fully converges to the "true"
+# infinite-history EMA after several multiples of its own period,
+# so with ~220 candles feeding a 200-period EMA this is a solid
+# approximation for an informational tag, not laboratory-precise --
+# bump this constant higher (and, if needed, Upstox's date range) for
+# tighter precision.
+DAILY_HISTORY_LOOKBACK_DAYS = 320
+
+
+def _compute_ema50_200_cross(history):
+    """
+    history: the same oldest->newest list of {"date","close","volume"}
+    fetch_daily_history returns. Returns None if there isn't enough of
+    it yet to warm up EMA200 (len < EMA200_PERIOD + 5); otherwise
+    {"bias", "ema50", "ema200", "cross_date"} — cross_date is the date
+    (string, "YYYY-MM-DD") of the most recent EMA50/200 cross found
+    anywhere in the supplied history, or None if the whole window was
+    one-sided (no cross happened within the available history).
+    """
+    if len(history) < EMA200_PERIOD + 5:
+        return None
+
+    closes = [day["close"] for day in history]
+    dates = [day["date"] for day in history]
+    ema50 = pd.Series(closes).ewm(span=EMA50_PERIOD, adjust=False).mean()
+    ema200 = pd.Series(closes).ewm(span=EMA200_PERIOD, adjust=False).mean()
+
+    bias = "BULLISH" if ema50.iloc[-1] > ema200.iloc[-1] else "BEARISH"
+
+    cross_date = None
+    for i in range(len(closes) - 1, 0, -1):
+        prev_diff = ema50.iloc[i - 1] - ema200.iloc[i - 1]
+        curr_diff = ema50.iloc[i] - ema200.iloc[i]
+        if (prev_diff <= 0 < curr_diff) or (prev_diff >= 0 > curr_diff):
+            cross_date = str(dates[i])[:10]
+            break
+
+    return {
+        "bias": bias,
+        "ema50": round(float(ema50.iloc[-1]), 2),
+        "ema200": round(float(ema200.iloc[-1]), 2),
+        "cross_date": cross_date,
+    }
+
 
 def load_momentum_volume_cache():
     try:
@@ -1017,8 +1076,9 @@ def save_momentum_volume_cache(cache):
 def build_momentum_volume_data(watchlist):
     """
     Returns {symbol: {"four_week_high_close": ..., "prev_day_volume":
-    ..., "volume_5day_ago": ...}} for every symbol in the watchlist —
-    the raw numbers behind the two informational tags on the alert:
+    ..., "volume_5day_ago": ..., "ema_cross": ...}} for every symbol in
+    the watchlist — the raw numbers behind the three informational tags
+    on the alert:
 
       - Momentum: today's alert close > four_week_high_close (the
         highest DAILY CLOSE over the last MOMENTUM_LOOKBACK_TRADING_DAYS
@@ -1028,10 +1088,18 @@ def build_momentum_volume_data(watchlist):
         trading day's total volume) > volume_5day_ago (total volume
         VOLUME_SPIKE_LOOKBACK_TRADING_DAYS completed trading days
         before that).
+      - EMA50/200 cross (added): "ema_cross" is None or
+        {"bias","ema50","ema200","cross_date"} from
+        _compute_ema50_200_cross — the daily-timeframe Golden/Death
+        Cross, purely informational, same as the two above.
 
     Daily OHLC/volume is only fetched once per calendar day per symbol
     — results are cached in momentum_volume_cache.json, same pattern
-    as build_pivot_levels/pivot_cache.json.
+    as build_pivot_levels/pivot_cache.json. Now fetches
+    DAILY_HISTORY_LOOKBACK_DAYS (320) calendar days per symbol instead
+    of the old 40, since EMA50/200 needs much deeper history than
+    Momentum/Volume Spike alone did — still just one fetch per symbol
+    per day, serving all three tags.
     """
     cache = load_momentum_volume_cache()
     today_str = _now_ist().date().isoformat()
@@ -1045,7 +1113,7 @@ def build_momentum_volume_data(watchlist):
         print(f"Fetching daily history for {len(missing)} instrument(s) for Momentum/Volume Spike checks...")
 
         def _fetch_one(symbol, instrument_key):
-            history = fetch_daily_history(instrument_key)
+            history = fetch_daily_history(instrument_key, days_back=DAILY_HISTORY_LOOKBACK_DAYS)
             if len(history) < MOMENTUM_LOOKBACK_TRADING_DAYS + 1:
                 # Not enough daily history yet (new listing, fetch
                 # partially failed, etc.) — both checks simply stay
@@ -1062,10 +1130,17 @@ def build_momentum_volume_data(watchlist):
             if len(history) >= VOLUME_SPIKE_LOOKBACK_TRADING_DAYS + 1:
                 volume_5day_ago = history[-(VOLUME_SPIKE_LOOKBACK_TRADING_DAYS + 1)]["volume"]
 
+            # EMA50/200 (added, see _compute_ema50_200_cross above) —
+            # None if this symbol's history is shorter than EMA200
+            # needs; doesn't affect Momentum/Volume Spike above, which
+            # have their own, much shallower requirement.
+            ema_cross = _compute_ema50_200_cross(history)
+
             return symbol, {
                 "four_week_high_close": four_week_high_close,
                 "prev_day_volume": prev_day_volume,
                 "volume_5day_ago": volume_5day_ago,
+                "ema_cross": ema_cross,
             }
 
         with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
@@ -1454,6 +1529,8 @@ def run_fo_scan(now_ist, index_only=False):
                     signal["four_week_high_close"] = mv["four_week_high_close"]
                     if mv["volume_5day_ago"] is not None:
                         signal["volume_spike"] = mv["prev_day_volume"] > mv["volume_5day_ago"]
+                    if mv.get("ema_cross") is not None:
+                        signal["ema_cross"] = mv["ema_cross"]
 
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
@@ -1513,6 +1590,18 @@ def run_fo_scan(now_ist, index_only=False):
                         if oi["buildup"]:
                             signal["oi_buildup"] = oi["buildup"]
                 else:
+                    # "Smart Money Entry" 🐋 (added) — purely
+                    # informational, like everything else on this
+                    # alert now (OI buildup included, per request) —
+                    # never blocks or filters anything. Just a
+                    # 0-7 score + a plain-language reasons line, built
+                    # entirely from fields already attached to this
+                    # signal above — no extra fetch, no extra API call.
+                    # See strategy.compute_smart_money_signal.
+                    smart_money = compute_smart_money_signal(signal)
+                    if smart_money:
+                        signal["smart_money"] = smart_money
+
                     # Confluence "High R:R" filter (added) — never
                     # applied to indices (see above). Combines fields
                     # the signal already carries (risk_reward, RSI,
@@ -1713,6 +1802,8 @@ def run_nifty500_scan(now_ist):
                     signal["four_week_high_close"] = mv["four_week_high_close"]
                     if mv["volume_5day_ago"] is not None:
                         signal["volume_spike"] = mv["prev_day_volume"] > mv["volume_5day_ago"]
+                    if mv.get("ema_cross") is not None:
+                        signal["ema_cross"] = mv["ema_cross"]
 
                 signal["is_fno"] = symbol.upper() in fno_underlyings
 
@@ -1728,6 +1819,15 @@ def run_nifty500_scan(now_ist):
                 if sector_name:
                     signal["sector_index"] = sector_name
                     signal["sector_trend"] = sector_trends.get(sector_name)
+
+                # "Smart Money Entry" 🐋 (added) — informational only,
+                # see the matching comment in run_fo_scan above. Note:
+                # this scan never fetches OI buildup (cash-only Nifty
+                # 500 stocks), so that one dimension just won't
+                # contribute a point here — everything else still can.
+                smart_money = compute_smart_money_signal(signal)
+                if smart_money:
+                    signal["smart_money"] = smart_money
 
                 if config.CONFLUENCE_FILTER_ENABLED and not passes_confluence_filter(signal):
                     continue
