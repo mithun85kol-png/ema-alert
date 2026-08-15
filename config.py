@@ -345,13 +345,38 @@ CONFLUENCE_FILTER_ENABLED = True
 CONFLUENCE_CHECK_RISK_REWARD = False
 CONFLUENCE_CHECK_RSI_BAND = False
 CONFLUENCE_CHECK_SECTOR_TREND = False
-CONFLUENCE_CHECK_OI_BUILDUP = True
+# CHANGED (per request): OI buildup is informational only now, same as
+# Momentum/Volume Spike/Delivery%/Sector/Bulk-Deal — it still shows on
+# every alert ("OI Buildup: ..." line, unaffected by this) but no
+# longer BLOCKS a signal from being sent. With all four confluence
+# checks now False, passes_confluence_filter() always returns True —
+# the "🎯 High R:R" tag on every alert is effectively vestigial at this
+# point (kept as-is; say the word if you'd rather it just stop showing
+# rather than showing on every alert).
+CONFLUENCE_CHECK_OI_BUILDUP = False
 
 CONFLUENCE_MIN_RISK_REWARD = 3.0
 CONFLUENCE_RSI_BULLISH_MIN = 50
 CONFLUENCE_RSI_BULLISH_MAX = 70
 CONFLUENCE_RSI_BEARISH_MIN = 30
 CONFLUENCE_RSI_BEARISH_MAX = 50
+
+# ---------- "Smart Money Entry" 🐋 tag (added) ----------
+# PURELY INFORMATIONAL — like every other tag on the alert now
+# (Momentum, Volume Spike, EMA50/200, OI Buildup) this never blocks or
+# skips a signal. Scores up to 9 independent, already-computed
+# dimensions (OI buildup, volume vs previous candle, delivery %, VWAP
+# cushion, a same-direction Bulk/Block deal, a matching Marubozu,
+# Momentum, Volume Spike, EMA50/200 bias) — see
+# strategy.compute_smart_money_signal for the exact rules. The tag
+# only shows once at least this many points are scored (out of
+# whichever of the 9 dimensions had data available that run — a
+# missing field, e.g. no OI data on the Nifty 500 cash scan, is
+# skipped rather than counted against it).
+SMART_MONEY_MIN_SCORE = 5
+SMART_MONEY_DELIVERY_THRESHOLD = 50.0
+SMART_MONEY_VWAP_MIN_PCT = 0.3
+SMART_MONEY_DEAL_LOOKBACK_DAYS = 3
 
 # ---------- State / alert de-dup ----------
 STATE_FILE = "alert_state.json"
