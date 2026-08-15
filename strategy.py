@@ -97,6 +97,8 @@ informational — raw MACD values and any divergence note are attached
 to the signal but never block it from firing.
 """
 
+import datetime as _dt
+
 import config
 from indicators import (
     add_emas, add_rsi, add_volume_avg, add_ema50, add_macd,
@@ -651,6 +653,162 @@ def passes_confluence_filter(signal):
             return False
 
     return True
+
+
+def compute_smart_money_signal(signal):
+    """
+    "Smart Money Entry" 🐋 — PURELY INFORMATIONAL, added per request
+    (and made non-blocking from the start, matching the rest of the
+    codebase's now-informational-everywhere style — OI buildup itself
+    was also switched from blocking to informational, see
+    CONFLUENCE_CHECK_OI_BUILDUP). Never stops an alert from being
+    sent; only adds a tag + reasons line when several independent
+    signs line up. Built entirely from fields the signal ALREADY
+    carries by the time this is called (see main.py — delivery%,
+    Bulk/Block deal, sector/OI, Momentum, Volume Spike, and EMA50/200
+    are all attached before this runs) — no new fetch, no extra API
+    call.
+
+    Up to 9 points, 1 each:
+      1. OI buildup bias agrees with the signal direction (F&O stocks
+         only — cash-only Nifty 500 scan never sets this, so it's
+         simply skipped there, same as every other missing field below)
+      2. Crossing candle's volume beat the previous candle's
+         (vol_change_pct > 0)
+      3. delivery_pct >= config.SMART_MONEY_DELIVERY_THRESHOLD (prev
+         trading day's NSE delivery %, not a per-stock trailing
+         average)
+      4. VWAP cushion: BULLISH needs Close >= VWAP by at least
+         config.SMART_MONEY_VWAP_MIN_PCT; BEARISH the mirror
+      5. A same-direction Bulk/Block deal (BUY for BULLISH, SELL for
+         BEARISH) dated within config.SMART_MONEY_DEAL_LOOKBACK_DAYS
+         calendar days of the signal's candle_time
+      6. cross_candle_pattern is a Marubozu matching the direction
+      7. Momentum: signal["momentum"] is True (today's close above the
+         trailing 4-week high — see main.py's build_momentum_volume_data)
+      8. Volume Spike: signal["volume_spike"] is True (yesterday's
+         volume beat the volume from 5 trading days before that)
+      9. EMA50/200 (daily) bias agrees with the signal direction —
+         signal["ema_cross"]["bias"]
+
+    Returns None if fewer than config.SMART_MONEY_MIN_SCORE points are
+    scored (out of however many of the 9 dimensions actually had data
+    available this run — missing fields are skipped, not counted
+    against it); otherwise {"score": int, "possible": int,
+    "reasons": [str, ...]}.
+    """
+    direction = signal["direction"]
+    score = 0
+    possible = 0
+    reasons = []
+
+    # ---- 1. OI buildup direction ----
+    oi_buildup = signal.get("oi_buildup")
+    if oi_buildup:
+        possible += 1
+        if oi_buildup.get("bias") == direction:
+            score += 1
+            reasons.append(f"OI buildup: {direction.title()}")
+
+    # ---- 2. volume beat previous candle ----
+    vol_change_pct = signal.get("vol_change_pct")
+    if vol_change_pct is not None:
+        possible += 1
+        if vol_change_pct > 0:
+            score += 1
+            reasons.append(f"Volume up {vol_change_pct:+.1f}% vs previous candle")
+
+    # ---- 3. delivery % ----
+    deliv = signal.get("delivery_pct")
+    if deliv is not None:
+        possible += 1
+        if deliv >= config.SMART_MONEY_DELIVERY_THRESHOLD:
+            score += 1
+            reasons.append(f"Delivery {deliv:.1f}% (>={config.SMART_MONEY_DELIVERY_THRESHOLD:.0f}%)")
+
+    # ---- 4. VWAP cushion ----
+    vwap = signal.get("vwap")
+    close = signal.get("close")
+    if vwap and close:
+        possible += 1
+        gap_pct = (close - vwap) / vwap * 100
+        if direction == "BULLISH" and gap_pct >= config.SMART_MONEY_VWAP_MIN_PCT:
+            score += 1
+            reasons.append(f"Above VWAP by {gap_pct:+.2f}%")
+        elif direction == "BEARISH" and gap_pct <= -config.SMART_MONEY_VWAP_MIN_PCT:
+            score += 1
+            reasons.append(f"Below VWAP by {gap_pct:+.2f}%")
+
+    # ---- 5. same-direction Bulk/Block deal, recent ----
+    deal = signal.get("last_bulk_block_deal")
+    if deal and deal.get("date") and signal.get("candle_time"):
+        possible += 1
+        expected_side = "BUY" if direction == "BULLISH" else "SELL"
+        if (deal.get("buy_sell") or "").upper() == expected_side:
+            deal_dt = _parse_deal_date(deal["date"])
+            candle_dt = _parse_candle_time(signal["candle_time"])
+            if deal_dt is not None and candle_dt is not None:
+                if 0 <= (candle_dt.date() - deal_dt.date()).days <= config.SMART_MONEY_DEAL_LOOKBACK_DAYS:
+                    score += 1
+                    reasons.append(f"{deal['type']} deal ({expected_side}) on {deal['date']}")
+
+    # ---- 6. strong matching Marubozu ----
+    pattern = signal.get("cross_candle_pattern")
+    if pattern:
+        possible += 1
+        expected_pattern = "Bullish Marubozu" if direction == "BULLISH" else "Bearish Marubozu"
+        if pattern == expected_pattern:
+            score += 1
+            reasons.append(f"Crossing candle: {pattern}")
+
+    # ---- 7. Momentum (4-week high) ----
+    momentum = signal.get("momentum")
+    if momentum is not None:
+        possible += 1
+        if momentum:
+            score += 1
+            reasons.append(f"Momentum: above 4-week high ({signal.get('four_week_high_close')})")
+
+    # ---- 8. Volume Spike (vs 5 trading days ago) ----
+    volume_spike = signal.get("volume_spike")
+    if volume_spike is not None:
+        possible += 1
+        if volume_spike:
+            score += 1
+            reasons.append("Volume spike: prev day vol > 5-day-ago vol")
+
+    # ---- 9. EMA50/200 (daily) bias ----
+    ema_cross = signal.get("ema_cross")
+    if ema_cross:
+        possible += 1
+        if ema_cross.get("bias") == direction:
+            score += 1
+            reasons.append(f"EMA50/200 (daily): {ema_cross['bias'].title()}")
+
+    if score < config.SMART_MONEY_MIN_SCORE:
+        return None
+
+    return {"score": score, "possible": possible, "reasons": reasons}
+
+
+def _parse_deal_date(date_str):
+    for fmt in ("%d-%b-%Y", "%d-%B-%Y"):
+        try:
+            return _dt.datetime.strptime(date_str.strip(), fmt)
+        except Exception:
+            continue
+    return None
+
+
+def _parse_candle_time(candle_time_str):
+    # candle_time is str(pandas_timestamp), e.g. "2026-08-15 13:00:00"
+    # or "2026-08-15 13:00:00+05:30" -- take just the date portion,
+    # first 10 chars, which is always "YYYY-MM-DD" regardless of
+    # whatever comes after.
+    try:
+        return _dt.datetime.strptime(candle_time_str[:10], "%Y-%m-%d")
+    except Exception:
+        return None
 
 
 def check_vwap_momentum(df5, symbol, lookback=None):
