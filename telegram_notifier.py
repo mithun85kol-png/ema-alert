@@ -60,6 +60,9 @@ def send_alert(signal):
     # set as signal["confluence_passed"]) even though the underlying
     # numbers are no longer printed.
     header_tag = " 🎯 High R:R" if signal.get("confluence_passed") else ""
+    smart_money = signal.get("smart_money")
+    if smart_money:
+        header_tag += " 🐋 Smart Money"
     trade_plan_block = ""
 
     # PCR (Put-Call Ratio) — informational only, present on index
@@ -233,6 +236,35 @@ def send_alert(signal):
     else:
         volume_spike_line = ""
 
+    # EMA50/200 daily cross (added) — informational only, the classic
+    # Golden Cross (EMA50 above EMA200 = long-term bullish) / Death
+    # Cross (below = long-term bearish), on DAILY closes — see main.py's
+    # build_momentum_volume_data / _compute_ema50_200_cross. Omitted
+    # entirely if there wasn't enough daily history (200+ days) yet for
+    # this symbol.
+    ema_cross = signal.get("ema_cross")
+    if ema_cross:
+        ema_cross_icon = "📈" if ema_cross["bias"] == "BULLISH" else "📉"
+        if ema_cross.get("cross_date"):
+            ema_cross_note = f"last crossed {ema_cross['cross_date']}"
+        else:
+            ema_cross_note = "no cross in available history"
+        ema_cross_line = (
+            f"EMA50/200 (daily): {ema_cross['bias']} {ema_cross_icon} "
+            f"(EMA50 {ema_cross['ema50']} / EMA200 {ema_cross['ema200']}) — {ema_cross_note}\n"
+        )
+    else:
+        ema_cross_line = ""
+
+    # "Smart Money Entry" 🐋 (added) — informational only, see
+    # strategy.compute_smart_money_signal / config.SMART_MONEY_*.
+    # Lists exactly which of the (up to 9) dimensions matched, so it's
+    # clear why the tag showed up rather than just that it did.
+    smart_money_block = ""
+    if smart_money:
+        reasons_str = "; ".join(smart_money["reasons"])
+        smart_money_block = f"🐋 Smart Money ({smart_money['score']}/{smart_money['possible']}): {reasons_str}\n"
+
     # Bulk/Block deals (added) — informational only, stocks only (see
     # main.py / bulk_block_data.py). Shows each large-trade entry NSE
     # published for this symbol on the most recent trading day, if
@@ -273,6 +305,8 @@ def send_alert(signal):
         f"{delivery_line}"
         f"{momentum_line}"
         f"{volume_spike_line}"
+        f"{ema_cross_line}"
+        f"{smart_money_block}"
         f"{bulk_block_block}"
         f"{sector_line}"
         f"{trade_plan_block}"
