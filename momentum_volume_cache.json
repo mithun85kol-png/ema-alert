@@ -1,0 +1,23 @@
+{
+  "date": "2026-08-16",
+  "data": {
+    "GOLD": {
+      "four_week_high_close": 15445.0,
+      "prev_day_volume": 197984,
+      "volume_5day_ago": 267226,
+      "ema_cross": null
+    },
+    "SILVER": {
+      "four_week_high_close": 238691.0,
+      "prev_day_volume": 105416,
+      "volume_5day_ago": 178074,
+      "ema_cross": null
+    },
+    "CRUDEOIL": {
+      "four_week_high_close": 9024.0,
+      "prev_day_volume": 37610,
+      "volume_5day_ago": 63707,
+      "ema_cross": null
+    }
+  }
+}
