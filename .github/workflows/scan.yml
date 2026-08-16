@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Scan mode: full (F&O+cash+commodity, 75-min) or index (NIFTY50/BANK/SENSEX only, 5-min)'
+        description: 'Scan mode: full (F&O+cash+commodity, 75-min), index (NIFTY50/BANK/SENSEX only, 5-min), or ema_cross_report (EMA50/200 + Delivery% report, run at market open/close)'
         required: false
         default: 'full'
         type: choice
         options:
           - full
           - index
+          - ema_cross_report
   repository_dispatch:
     types: [run-scan]
 
@@ -57,6 +58,7 @@ jobs:
           git add alert_state.json
           if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
           if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
+          if [ -f momentum_volume_cache.json ]; then git add momentum_volume_cache.json; fi
           if git diff --cached --quiet; then
             exit 0
           fi
@@ -95,6 +97,7 @@ jobs:
             git add alert_state.json
             if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
             if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
+            if [ -f momentum_volume_cache.json ]; then git add momentum_volume_cache.json; fi
             if ! git diff --cached --quiet; then
               git commit -m "update alert state [skip ci]"
             fi
