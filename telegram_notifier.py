@@ -330,6 +330,67 @@ def send_alert(signal):
         print("Telegram send failed:", e)
 
 
+def send_ema_cross_report(crosses, now_ist):
+    """
+    RE-ADDED (was missing from this checkout — see chat) — the
+    standalone "EMA50/200 (Golden/Death Cross) + Delivery%" report
+    (SCAN_MODE=ema_cross_report, run twice a day per your cron setup —
+    market open and market close). ONE message covering every symbol
+    with a fresh cross (see main.py's build_todays_ema_cross_list for
+    exactly what "fresh" means here). Always sends something, even when
+    the list is empty, so a scheduled run never looks like it might
+    have silently failed.
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", crosses)
+        return
+
+    date_str = now_ist.strftime("%Y-%m-%d")
+    time_str = now_ist.strftime("%H:%M")
+
+    if not crosses:
+        text = (
+            f"📊 <b>EMA50/200 Cross Report</b> — {date_str} {time_str}\n"
+            f"No fresh Golden/Death Cross today."
+        )
+    else:
+        lines = [f"📊 <b>EMA50/200 Cross Report</b> — {date_str} {time_str}\n"]
+        golden = [c for c in crosses if c["bias"] == "BULLISH"]
+        death = [c for c in crosses if c["bias"] == "BEARISH"]
+
+        if golden:
+            lines.append("🟢 <b>Golden Cross</b> (EMA50 crossed above EMA200):")
+            for c in golden:
+                deliv = f"{c['delivery_pct']:.1f}%" if c["delivery_pct"] is not None else "N/A"
+                lines.append(
+                    f"  • <b>{c['symbol']}</b> — EMA50 {c['ema50']} / EMA200 {c['ema200']} "
+                    f"| Delivery: {deliv} | {c['cross_date']}"
+                )
+            lines.append("")
+
+        if death:
+            lines.append("🔴 <b>Death Cross</b> (EMA50 crossed below EMA200):")
+            for c in death:
+                deliv = f"{c['delivery_pct']:.1f}%" if c["delivery_pct"] is not None else "N/A"
+                lines.append(
+                    f"  • <b>{c['symbol']}</b> — EMA50 {c['ema50']} / EMA200 {c['ema200']} "
+                    f"| Delivery: {deliv} | {c['cross_date']}"
+                )
+
+        text = "\n".join(lines).rstrip()
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (ema_cross_report):", e)
+
+
 def _send_15min_alert(signal):
     """
     UNUSED as of 2026-08-14 (no longer called by send_alert — see the
