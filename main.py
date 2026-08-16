@@ -134,7 +134,7 @@ except ImportError:
     # the repo root and this feature resumes automatically.
     corporate_actions = None
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal
-from telegram_notifier import send_alert
+from telegram_notifier import send_alert, send_ema_cross_report
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -1162,6 +1162,67 @@ def build_momentum_volume_data(watchlist):
     return cache["data"]
 
 
+def build_todays_ema_cross_list(watchlist, now_ist):
+    """
+    RE-ADDED (was missing from this checkout — see chat) — the
+    standalone "EMA50/200 (Golden/Death Cross) + Delivery%" report
+    (SCAN_MODE=ema_cross_report), separate from the regular alert scan.
+    Returns a list of {symbol, bias, ema50, ema200, cross_date,
+    delivery_pct}, sorted by symbol, for every watchlist symbol whose
+    EMA50/200 cross happened on the LATEST trading day actually present
+    in its own fetched daily history (cross_date == latest_date — see
+    _compute_ema50_200_cross) — i.e. a FRESH cross, not one from
+    weeks/months ago that just happens to still be the most recent one
+    on record.
+
+    IMPORTANT CAVEAT (read before relying on the open vs close run
+    showing different things): fetch_daily_history always stops at
+    YESTERDAY — today's own daily candle only exists once today's
+    session has closed AND Upstox has finalized it (usually
+    evening/next morning), never mid-day. So a run of this report at
+    MARKET OPEN and one at MARKET CLOSE on the same calendar day will
+    almost always show the exact same list — both are really reporting
+    "as of yesterday's close", since today's close isn't known yet even
+    at 15:30. This isn't a bug; it's just what "daily EMA cross" data
+    can ever mean before today's candle exists.
+    """
+    momentum_volume = build_momentum_volume_data(watchlist)
+    delivery_map = delivery_data.get_delivery_data(now_ist.date()) or {}
+
+    crosses = []
+    for symbol, mv in momentum_volume.items():
+        ema_cross = mv.get("ema_cross") if mv else None
+        if not ema_cross or not ema_cross.get("cross_date"):
+            continue
+        if ema_cross["cross_date"] != ema_cross["latest_date"]:
+            continue
+        crosses.append({
+            "symbol": symbol,
+            "bias": ema_cross["bias"],
+            "ema50": ema_cross["ema50"],
+            "ema200": ema_cross["ema200"],
+            "cross_date": ema_cross["cross_date"],
+            "delivery_pct": delivery_map.get(symbol),
+        })
+
+    return sorted(crosses, key=lambda c: c["symbol"])
+
+
+def run_ema_cross_report(now_ist):
+    """
+    RE-ADDED (was missing — see chat) — SCAN_MODE=ema_cross_report
+    entry point (see run()). Builds the full stock/commodity/Nifty500
+    watchlist, finds fresh EMA50/200 crosses (see
+    build_todays_ema_cross_list above), and sends ONE consolidated
+    Telegram message via telegram_notifier.send_ema_cross_report —
+    always sends something (even "no crosses today"), so a scheduled
+    run being silent never looks like it might have just failed.
+    """
+    watchlist = build_watchlist(now_ist)
+    crosses = build_todays_ema_cross_list(watchlist, now_ist)
+    send_ema_cross_report(crosses, now_ist)
+
+
 def build_watchlist(now_ist=None):
     now_ist = now_ist or _now_ist()
     watchlist = {}
@@ -1884,6 +1945,20 @@ def run():
             print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — index-only scan skipping.", flush=True)
             return
         run_fo_scan(now_ist, index_only=True)
+        return
+
+    # SCAN_MODE=ema_cross_report -> the standalone "EMA50/200
+    # (Golden/Death Cross) + Delivery%" report (RE-ADDED, was missing —
+    # see chat), fully separate from the alert scan — no session gate,
+    # since it can usefully run right at/just before market open too.
+    # See run_ema_cross_report / build_todays_ema_cross_list above for
+    # what "today" actually means here. IMPORTANT: without this check,
+    # SCAN_MODE=ema_cross_report was silently falling through to the
+    # normal full-scan path below (since it isn't "index" either) --
+    # meaning the two new cron-job.org triggers were firing a full
+    # 75-min alert scan instead of the intended lightweight report.
+    if mode == "ema_cross_report":
+        run_ema_cross_report(now_ist)
         return
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
