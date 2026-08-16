@@ -473,11 +473,20 @@ def get_3min_trend_info(df_3min, symbol, lookback_candles=None, ema_fast=None, e
         bear_cross = prev["ema_fast"] >= prev["ema_slow"] and cur["ema_fast"] < cur["ema_slow"]
         if bull_cross or bear_cross:
             candles_since_cross = (n - 1) - idx
-            # Timestamp (candle open time, from df's datetime index) of the
-            # 75-min candle on which the cross actually happened — lets the
-            # Telegram message show an exact date/time instead of just
-            # "crossed N candle(s) ago".
-            cross_time = df.index[idx]
+            # FIXED: this used to read df.index[idx], but after
+            # resample_*min() the dataframe index is just a plain
+            # 0..n row counter (reset_index()) -- the real timestamp
+            # lives in the "timestamp" COLUMN. df.index[idx] was
+            # silently returning an integer row number instead of a
+            # real date/time, which then crashed inside
+            # telegram_notifier.py's date-formatting (str(3).split(" ")
+            # has no [1] element -> IndexError) -- silently swallowed
+            # by the try/except around send_alert in main.py, so the
+            # WHOLE alert would just quietly fail to send whenever this
+            # 15-min context block had a recent cross. Reading
+            # df.iloc[idx]["timestamp"] instead fixes both the display
+            # and this silent-drop bug.
+            cross_time = cur["timestamp"]
             break
 
     return {
