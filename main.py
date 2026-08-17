@@ -1029,10 +1029,15 @@ def _compute_ema50_200_cross(history):
     history: the same oldest->newest list of {"date","close","volume"}
     fetch_daily_history returns. Returns None if there isn't enough of
     it yet to warm up EMA200 (len < EMA200_PERIOD + 5); otherwise
-    {"bias", "ema50", "ema200", "cross_date"} — cross_date is the date
-    (string, "YYYY-MM-DD") of the most recent EMA50/200 cross found
-    anywhere in the supplied history, or None if the whole window was
-    one-sided (no cross happened within the available history).
+    {"bias", "ema50", "ema200", "cross_date", "latest_date"} —
+    cross_date is the date (string, "YYYY-MM-DD") of the most recent
+    EMA50/200 cross found anywhere in the supplied history, or None if
+    the whole window was one-sided (no cross happened within the
+    available history). latest_date is the date of the most recent
+    candle in the supplied history — callers compare cross_date ==
+    latest_date to know whether a cross is "fresh" (happened on the
+    latest trading day on record) vs. an old one still showing up as
+    the most recent cross found.
     """
     if len(history) < EMA200_PERIOD + 5:
         return None
@@ -1057,6 +1062,7 @@ def _compute_ema50_200_cross(history):
         "ema50": round(float(ema50.iloc[-1]), 2),
         "ema200": round(float(ema200.iloc[-1]), 2),
         "cross_date": cross_date,
+        "latest_date": str(dates[-1])[:10],
     }
 
 
