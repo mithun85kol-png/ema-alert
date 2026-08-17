@@ -43,6 +43,13 @@ jobs:
         run: python main.py
 
       - name: Commit updated state files
+        # if: always() — even if "Run scan" above crashed/failed
+        # partway through, whatever main.py managed to save to disk
+        # before that (state.save_state() is called at the end of
+        # run_fo_scan(), which completes before the riskier downstream
+        # steps like corporate actions / Nifty 500 / EMA report) should
+        # still get committed, instead of being silently thrown away.
+        if: always()
         run: |
           git config user.name "ema-alert-bot"
           git config user.email "actions@github.com"
@@ -104,3 +111,4 @@ jobs:
             sleep $((RANDOM % 5 + 1))
           done
           echo "::warning::Failed to push updated state file after 5 attempts -- next run may re-send an already-fired alert."
+          exit 1
