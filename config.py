@@ -83,16 +83,38 @@ EMA_SLOW = 20
 # EMA9/EMA50 cross on 75-min candles — the 75-min F&O stock/commodity
 # alert's crossover pair (replaces the old 9/20 pair). EMA_FAST (9)
 # above is reused as the fast leg; this is only the new slow leg.
-# require_trend_confirmation is turned OFF for this pair in main.py's
-# 75-min call, since an EMA9 x EMA50 cross already IS the trend signal
-# — a separate EMA50 trend-agreement check would be near-redundant.
-PRIMARY_EMA_SLOW = 50
+# Used whenever config.PRIMARY_TIMEFRAME == "75min" (see main.py).
+# Trend/volume/strong-candle gating on this pair is controlled by
+# REQUIRE_TREND_CONFIRMATION / REQUIRE_VOLUME_CONFIRMATION /
+# REQUIRE_STRONG_CANDLE below, same as the 15-min primary pair.
+PRIMARY_EMA_SLOW_75MIN = 50
 RSI_PERIOD = 14
 RSI_BULLISH_MIN = 55          # unused by current strategy.py (informational-only design); kept for reference
 RSI_BEARISH_MAX = 45          # unused by current strategy.py (informational-only design); kept for reference
 VOLUME_AVG_PERIOD = 20
 VOLUME_MULTIPLIER = 1.3       # unused by current strategy.py (informational-only design); kept for reference
 STRONG_CANDLE_BODY_RATIO = 0.30  # unused by current strategy.py (strong-candle filter removed — plain cross + mandatory volume now); kept for reference
+
+# ---------- Primary/alerting timeframe toggle (stocks/commodities) ----------
+# Set to "15min" or "75min" — see main.py's module docstring for the
+# full explanation. "75min" is the current/previous default behavior
+# (EMA9 x EMA50 on 75-min candles); "15min" switches to EMA9 x EMA20
+# on 15-min candles instead, with 75-min shown as informational
+# context under the alert. Flip this ONE setting to switch; nothing
+# else needs to change.
+PRIMARY_TIMEFRAME = "75min"
+
+# Three independently toggleable gating conditions on the primary-
+# timeframe crossing candle (see strategy.check_signals /
+# strategy._evaluate_candle). All three True/mandatory matches the
+# strategy.py docstring's current design: a plain EMA cross that
+# agrees with the EMA50 trend AND has rising volume on the crossing
+# candle. REQUIRE_STRONG_CANDLE is False because that filter was
+# removed from strategy.py (kept here only so main.py's call doesn't
+# need an unconditional True/False literal baked in).
+REQUIRE_TREND_CONFIRMATION = True
+REQUIRE_VOLUME_CONFIRMATION = True
+REQUIRE_STRONG_CANDLE = False
 
 # Minimum distance between EMA9 and EMA20 at the moment of crossover,
 # as a % of close price. unused by current strategy.py (gap filter
@@ -177,6 +199,23 @@ COMMODITIES = {
     "SILVER": "SILVER",
     "CRUDEOIL": "CRUDEOIL",
 }
+
+# ---------- TradingView chart-link symbol overrides ----------
+# build_chart_link() in main.py defaults to "NSE:{symbol}" for plain
+# stocks, which is correct for the F&O watchlist + Nifty 500. Indices
+# and MCX commodity futures don't chart correctly under that default,
+# so they're overridden here to the TradingView symbol that actually
+# renders their chart. Add an entry here for any future index/
+# commodity that also charts wrong under "NSE:{symbol}".
+TRADINGVIEW_SYMBOL_OVERRIDES = {
+    "NIFTY 50": "NSE:NIFTY",
+    "NIFTY BANK": "NSE:BANKNIFTY",
+    "SENSEX": "BSE:SENSEX",
+    "GOLD": "MCX:GOLD1!",
+    "SILVER": "MCX:SILVER1!",
+    "CRUDEOIL": "MCX:CRUDEOIL1!",
+}
+
 
 # ---------- F&O stocks ----------
 USE_FULL_FO_LIST = True
