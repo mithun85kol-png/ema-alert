@@ -102,7 +102,7 @@ STRONG_CANDLE_BODY_RATIO = 0.30  # unused by current strategy.py (strong-candle 
 # on 15-min candles instead, with 75-min shown as informational
 # context under the alert. Flip this ONE setting to switch; nothing
 # else needs to change.
-PRIMARY_TIMEFRAME = "15min"
+PRIMARY_TIMEFRAME = "75min"
 
 # Three independently toggleable gating conditions on the primary-
 # timeframe crossing candle (see strategy.check_signals /
