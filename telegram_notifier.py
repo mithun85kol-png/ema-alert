@@ -7,24 +7,17 @@ def send_alert(signal):
         print("Telegram not configured, skipping send:", signal)
         return
 
-    # NOTE (fixed 2026-08-14): there used to be a special case here that
-    # routed any signal with timeframe == "15-min" into a minimal,
-    # stripped-down message (_send_15min_alert below) — that was built
-    # for the OLD standalone commodity 15-min alert
-    # (strategy.check_signals_15min), which main.py no longer calls at
-    # all. Once 15-min became the PRIMARY/ALERTING timeframe for
-    # stocks/commodities/cash (2026-08-13), every real alert started
-    # carrying timeframe="15-min" too, so it was silently being
-    # downgraded to the minimal message instead of the full one below.
-    # Removed — every signal now always gets the full message
-    # regardless of its timeframe label. _send_15min_alert is kept
-    # (unused) only in case check_signals_15min is ever reintroduced.
+    # NOTE: every signal always gets this full message regardless of
+    # its timeframe label — there is no separate stripped-down message
+    # path anymore. _send_15min_alert below is kept unused, only in
+    # case a standalone minimal alert is ever wanted again.
 
     direction = signal["direction"]  # "BULLISH" or "BEARISH"
     arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
 
-    # Timeframe label — "75-min" for stocks/commodities/cash (the
-    # PRIMARY/ALERTING timeframe, reverted 2026-08-14), "5-min" for
+    # Timeframe label — set by main.py per signal: "15-min" or
+    # "75-min" for stocks/commodities/cash (whichever
+    # config.PRIMARY_TIMEFRAME currently selects), "5-min" for
     # indices. Defaults to "75-min" for backward compatibility if an
     # older caller didn't set this.
     timeframe_label = signal.get("timeframe", "75-min")
@@ -168,18 +161,24 @@ def send_alert(signal):
         else:
             cross_time_note = ""
 
+        info_label = signal.get("info_timeframe_label", "15-min")
         if since is None:
             cross_note = f"no cross in last {config.INFO_3MIN_LOOKBACK_CANDLES} candles"
         elif since == 0:
-            cross_note = f"crossed on the latest 15-min candle{cross_time_note}"
+            cross_note = f"crossed on the latest {info_label} candle{cross_time_note}"
         else:
             cross_note = f"crossed {since} candle(s) ago{cross_time_note}"
         gap = trend3.get("gap_pct")
         gap_note = f", currently {gap}% apart" if gap is not None else ""
         trend3_fast_p = trend3.get("ema_fast_period", 9)
         trend3_slow_p = trend3.get("ema_slow_period", 20)
+        # info_timeframe_label reflects whichever timeframe is CURRENTLY
+        # informational (the opposite of config.PRIMARY_TIMEFRAME) —
+        # set by main.py. Falls back to "15-min" for backward
+        # compatibility if an older caller didn't set it (already
+        # resolved above, next to cross_note).
         trend3_block = (
-            f"15-min: {trend3['bias']} {bias_icon} "
+            f"{info_label}: {trend3['bias']} {bias_icon} "
             f"(EMA{trend3_fast_p} {trend3['ema_fast']} / EMA{trend3_slow_p} {trend3['ema_slow']}) — "
             f"{cross_note}{gap_note}\n"
         )
@@ -293,9 +292,23 @@ def send_alert(signal):
     ema_fast_p = signal.get("ema_fast_period", 9)
     ema_slow_p = signal.get("ema_slow_period", 20)
 
+    # Chart link (added) — TradingView deep link, set by main.py's
+    # build_chart_link() for every signal (indices, stocks,
+    # commodities alike). Omitted if an older caller didn't set it.
+    chart_link = signal.get("chart_link")
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+
+    # Angel One (added) — no official symbol-specific deep link exists
+    # (their app embeds TradingView internally but publishes no public
+    # URL scheme for it), so this just links to the Angel One web
+    # platform homepage — opens the platform, not the specific symbol.
+    angelone_line = "🅰️ <a href=\"https://web.angelone.in\">Open Angel One</a>\n"
+
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{fno_line}"
+        f"{chart_line}"
+        f"{angelone_line}"
         f"Timeframe: {timeframe_label} | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"{day_change_line}"
