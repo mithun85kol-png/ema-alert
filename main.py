@@ -191,26 +191,18 @@ def build_chart_link(symbol, timeframe_label=None):
     """
     TradingView deep link for `symbol` — tapping it in the Telegram
     alert opens that symbol's live chart directly (TradingView app if
-    installed, else browser; no login/API key needed), already set to
-    the SAME candle timeframe the alert fired on (via the `interval`
-    URL param), so the chart doesn't just open on whatever timeframe
-    was last used in the TradingView app.
+    installed, else browser; no login/API key needed). Per request
+    (2026-08-18), the chart ALWAYS opens on the 15-min interval,
+    regardless of which timeframe the alert itself fired on — so
+    timeframe_label is accepted for backward compatibility but no
+    longer affects the link.
     Checks config.TRADINGVIEW_SYMBOL_OVERRIDES first (indices/MCX
     commodity futures, which don't chart correctly as plain
     "NSE:{symbol}"), otherwise defaults to "NSE:{symbol}" — correct
     for the vast majority of stocks (F&O watchlist + Nifty 500).
-    timeframe_label is the signal's own "timeframe" field (e.g.
-    "15-min", "75-min", "5-min") — mapped to TradingView's plain
-    number-of-minutes interval value. Falls back to no interval param
-    (TradingView just opens on whatever timeframe was last used) if
-    timeframe_label is missing or unrecognized.
     """
     tv_symbol = config.TRADINGVIEW_SYMBOL_OVERRIDES.get(symbol, f"NSE:{symbol}")
-    interval_map = {"5-min": "5", "15-min": "15", "75-min": "75"}
-    interval = interval_map.get(timeframe_label)
-    url = f"https://www.tradingview.com/chart/?symbol={tv_symbol}"
-    if interval:
-        url += f"&interval={interval}"
+    url = f"https://www.tradingview.com/chart/?symbol={tv_symbol}&interval=15"
     return url
 
 
@@ -1844,6 +1836,15 @@ def run_nifty500_scan(now_ist):
             sector_trends = {}
 
     for symbol, (df5, df75, df15) in dfs.items():
+        # Skip F&O-underlying symbols entirely here -- they're already
+        # scanned (both directions) by run_fo_scan() above, under a
+        # separate dedup key ("SYMBOL" vs this scan's "SYMBOL::N500").
+        # Without this, any stock that's in BOTH the F&O watchlist AND
+        # the Nifty 500 universe (most large-caps) would fire the SAME
+        # crossover twice -- once from each scan -- since neither scan's
+        # dedup state knows about the other's. (2026-08-18 fix)
+        if symbol.upper() in fno_underlyings:
+            continue
         try:
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
