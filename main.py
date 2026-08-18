@@ -12,19 +12,19 @@ This script scans the ~50 F&O stock/index/commodity watchlist on every
 workflow run (the workflow itself can still run as often as every few
 minutes — see "when alerts actually fire" below).
 
-75-min PRIMARY/ALERTING signal for STOCKS/COMMODITIES/CASH (FLIPPED
-from the previous 3-min-primary design): the main EMA9/EMA50 crossover
-check (strategy.check_signals — EMA9/50 cross; volume increase over
-the previous candle is now MANDATORY, require_volume_increase=True)
-now runs on df75 — 1-min data (cached multi-day history + today's live
-data) resampled to 75-min candles. This is the timeframe that decides
-whether/when a STOCK/COMMODITY Telegram alert is sent. The old design
-made 75-min a MANDATORY gate on top of a 3-min primary cross, which
-meant an alert only fired once a 3-min cross AND a fresh 75-min cross
-both lined up — causing alerts to arrive well after the 75-min cross
-had actually happened. That gate is gone: a 75-min cross (+ trend
-agreement) now fires the alert directly, as soon as that 75-min candle
-closes.
+PRIMARY/ALERTING timeframe for STOCKS/COMMODITIES/CASH is controlled
+by ONE setting: config.PRIMARY_TIMEFRAME ("15min" or "75min"). Flip
+that value alone to switch which timeframe fires alerts — nothing
+else in this file needs to change. The main EMA crossover check
+(strategy.check_signals) runs on whichever df main.py picks based on
+that setting: df15 (EMA9/20) when "15min", df75 (EMA9/50) when
+"75min". The OTHER timeframe is shown as informational-only context
+under every alert (signal["trend_3min"] / signal["info_timeframe_label"]).
+Three gating conditions on the primary-timeframe crossing candle are
+each independently toggleable in config.py: REQUIRE_TREND_CONFIRMATION
+(EMA50 trend agreement), REQUIRE_STRONG_CANDLE (candle body strength),
+and REQUIRE_VOLUME_CONFIRMATION (volume > previous candle). All three
+are mandatory (True) by default.
 
 INDICES (NIFTY 50, NIFTY BANK, SENSEX): completely separate rule, not
 tied to df75 at all, and checked by its OWN dedicated 5-min cron
@@ -185,6 +185,33 @@ def _in_stock_session(now_ist):
 
 def _in_commodity_session(now_ist):
     return COMMODITY_SESSION_START <= now_ist.time() <= COMMODITY_SESSION_END
+
+
+def build_chart_link(symbol, timeframe_label=None):
+    """
+    TradingView deep link for `symbol` — tapping it in the Telegram
+    alert opens that symbol's live chart directly (TradingView app if
+    installed, else browser; no login/API key needed), already set to
+    the SAME candle timeframe the alert fired on (via the `interval`
+    URL param), so the chart doesn't just open on whatever timeframe
+    was last used in the TradingView app.
+    Checks config.TRADINGVIEW_SYMBOL_OVERRIDES first (indices/MCX
+    commodity futures, which don't chart correctly as plain
+    "NSE:{symbol}"), otherwise defaults to "NSE:{symbol}" — correct
+    for the vast majority of stocks (F&O watchlist + Nifty 500).
+    timeframe_label is the signal's own "timeframe" field (e.g.
+    "15-min", "75-min", "5-min") — mapped to TradingView's plain
+    number-of-minutes interval value. Falls back to no interval param
+    (TradingView just opens on whatever timeframe was last used) if
+    timeframe_label is missing or unrecognized.
+    """
+    tv_symbol = config.TRADINGVIEW_SYMBOL_OVERRIDES.get(symbol, f"NSE:{symbol}")
+    interval_map = {"5-min": "5", "15-min": "15", "75-min": "75"}
+    interval = interval_map.get(timeframe_label)
+    url = f"https://www.tradingview.com/chart/?symbol={tv_symbol}"
+    if interval:
+        url += f"&interval={interval}"
+    return url
 
 
 # ---------------------------------------------------------------------
@@ -1029,15 +1056,10 @@ def _compute_ema50_200_cross(history):
     history: the same oldest->newest list of {"date","close","volume"}
     fetch_daily_history returns. Returns None if there isn't enough of
     it yet to warm up EMA200 (len < EMA200_PERIOD + 5); otherwise
-    {"bias", "ema50", "ema200", "cross_date", "latest_date"} —
-    cross_date is the date (string, "YYYY-MM-DD") of the most recent
-    EMA50/200 cross found anywhere in the supplied history, or None if
-    the whole window was one-sided (no cross happened within the
-    available history). latest_date is the date of the most recent
-    candle in the supplied history — callers compare cross_date ==
-    latest_date to know whether a cross is "fresh" (happened on the
-    latest trading day on record) vs. an old one still showing up as
-    the most recent cross found.
+    {"bias", "ema50", "ema200", "cross_date"} — cross_date is the date
+    (string, "YYYY-MM-DD") of the most recent EMA50/200 cross found
+    anywhere in the supplied history, or None if the whole window was
+    one-sided (no cross happened within the available history).
     """
     if len(history) < EMA200_PERIOD + 5:
         return None
@@ -1062,7 +1084,6 @@ def _compute_ema50_200_cross(history):
         "ema50": round(float(ema50.iloc[-1]), 2),
         "ema200": round(float(ema200.iloc[-1]), 2),
         "cross_date": cross_date,
-        "latest_date": str(dates[-1])[:10],
     }
 
 
@@ -1531,8 +1552,14 @@ def run_fo_scan(now_ist, index_only=False):
             #     df5 with require_trend_confirmation=False. Checked by
             #     a dedicated 5-min cron trigger (index_only=True), fully
             #     separate from the 75-min stock/commodity runs.
-            #   - Stocks/commodities: unchanged — 75-min EMA9/20 cross +
-            #     mandatory EMA50 trend agreement, on df75.
+            #   - Stocks/commodities: PRIMARY/ALERTING timeframe is
+            #     whichever config.PRIMARY_TIMEFRAME currently selects
+            #     ("15min" or "75min") — flip that ONE setting to
+            #     switch which timeframe fires alerts; nothing else in
+            #     this file needs to change. Trend/strong-candle/volume
+            #     gating on the primary signal is likewise controlled
+            #     by config.REQUIRE_TREND_CONFIRMATION /
+            #     REQUIRE_STRONG_CANDLE / REQUIRE_VOLUME_CONFIRMATION.
             if symbol in index_symbols:
                 if df5 is None:
                     continue
@@ -1544,41 +1571,46 @@ def run_fo_scan(now_ist, index_only=False):
                 )
                 for sig in signals:
                     sig["timeframe"] = "5-min"
+                info_df, info_label = None, None
             else:
-                # REVERTED (per request, 2026-08-14): 75-min is back to
-                # being the PRIMARY/ALERTING timeframe for stocks/
-                # commodities/cash — an alert fires as soon as a 75-min
-                # candle closes with a qualifying EMA9/50 cross. 15-min
-                # moved back to informational-only context (see info3
-                # below).
-                if df75 is None:
+                if config.PRIMARY_TIMEFRAME == "15min":
+                    primary_df, primary_label = df15, "15-min"
+                    primary_ema_fast, primary_ema_slow = config.EMA_FAST, config.EMA_SLOW
+                    info_df, info_label = df75, "75-min"
+                else:
+                    primary_df, primary_label = df75, "75-min"
+                    primary_ema_fast, primary_ema_slow = config.EMA_FAST, config.PRIMARY_EMA_SLOW_75MIN
+                    info_df, info_label = df15, "15-min"
+
+                if primary_df is None:
                     continue
                 signals = check_signals(
-                    df75, symbol, r3=r3, s3=s3,
+                    primary_df, symbol, r3=r3, s3=s3,
                     lookback=config.PRIMARY_LOOKBACK_CANDLES,
-                    require_trend_confirmation=False,
+                    require_trend_confirmation=config.REQUIRE_TREND_CONFIRMATION,
                     prev_close=prev_close,
-                    ema_fast=config.EMA_FAST,
-                    ema_slow=config.PRIMARY_EMA_SLOW,
-                    require_volume_increase=False,
+                    ema_fast=primary_ema_fast,
+                    ema_slow=primary_ema_slow,
+                    require_volume_increase=config.REQUIRE_VOLUME_CONFIRMATION,
+                    require_strong_candle=config.REQUIRE_STRONG_CANDLE,
                 )
                 for sig in signals:
-                    sig["timeframe"] = "75-min"
+                    sig["timeframe"] = primary_label
 
             if not signals:
                 continue
 
-            # 15-min context (REVERTED, 2026-08-14 — back to 15-min
-            # context under a 75-min alert). get_3min_trend_info()
-            # already returns cross_time (the exact 15-min candle
-            # timestamp of the last cross, if any within the lookback
-            # window) — telegram_notifier shows this so the 15-min line
-            # carries a real timestamp, not just "N candles ago". Only
-            # meaningful under a stock/commodity alert — indices have
-            # nothing extra to attach.
+            # Informational context block, on whichever timeframe is
+            # NOT primary right now (see info_df/info_label above).
+            # get_3min_trend_info() returns cross_time (the exact
+            # candle timestamp of the last cross, if any within the
+            # lookback window) — telegram_notifier shows this so the
+            # line carries a real timestamp, not just "N candles ago".
+            # Only meaningful under a stock/commodity alert — indices
+            # have nothing extra to attach.
             info3 = None
-            if symbol not in index_symbols and df15 is not None:
-                info3 = get_3min_trend_info(df15, symbol)
+            if symbol not in index_symbols and info_df is not None:
+                info3 = get_3min_trend_info(info_df, symbol)
 
             for signal in signals:
                 if state.already_alerted(saved_state, symbol, signal["direction"], signal["candle_time"]):
@@ -1586,6 +1618,9 @@ def run_fo_scan(now_ist, index_only=False):
 
                 if info3 is not None:
                     signal["trend_3min"] = info3
+                    signal["info_timeframe_label"] = info_label
+
+                signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
 
                 # Momentum / Volume Spike — applies to every instrument
                 # (stocks, indices, commodities), not stock-only like
@@ -1815,22 +1850,35 @@ def run_nifty500_scan(now_ist):
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
 
-            # REVERTED (per request, 2026-08-14): 75-min is back to
-            # being the PRIMARY/ALERTING timeframe here too — same
-            # reasoning as run_fo_scan above.
-            if df75 is None:
+            # PRIMARY/ALERTING timeframe here follows config.PRIMARY_TIMEFRAME
+            # too, same as run_fo_scan above — only the EMA pair differs
+            # (9/21 for Nifty 500 cash, vs 9/20 for F&O). Note: on
+            # "15min", the primary EMA pair is still NIFTY500_EMA_FAST/
+            # SLOW (9/21) — only the 75-min branch has a fixed EMA9/50
+            # pairing (PRIMARY_EMA_SLOW_75MIN), same as run_fo_scan.
+            if config.PRIMARY_TIMEFRAME == "15min":
+                primary_df, primary_label = df15, "15-min"
+                primary_ema_fast, primary_ema_slow = config.NIFTY500_EMA_FAST, config.NIFTY500_EMA_SLOW
+                info_df, info_label = df75, "75-min"
+            else:
+                primary_df, primary_label = df75, "75-min"
+                primary_ema_fast, primary_ema_slow = config.NIFTY500_EMA_FAST, config.PRIMARY_EMA_SLOW_75MIN
+                info_df, info_label = df15, "15-min"
+
+            if primary_df is None:
                 continue
             signals = check_signals(
-                df75, symbol, r3=r3, s3=s3,
+                primary_df, symbol, r3=r3, s3=s3,
                 lookback=config.PRIMARY_LOOKBACK_CANDLES,
-                require_trend_confirmation=False,
+                require_trend_confirmation=config.REQUIRE_TREND_CONFIRMATION,
                 prev_close=prev_close,
-                ema_fast=config.NIFTY500_EMA_FAST,
-                ema_slow=config.NIFTY500_EMA_SLOW,
-                require_volume_increase=False,
+                ema_fast=primary_ema_fast,
+                ema_slow=primary_ema_slow,
+                require_volume_increase=config.REQUIRE_VOLUME_CONFIRMATION,
+                require_strong_candle=config.REQUIRE_STRONG_CANDLE,
             )
             for sig in signals:
-                sig["timeframe"] = "75-min"
+                sig["timeframe"] = primary_label
 
             # Nifty 500 cash-stock scan: BEARISH alerts are not wanted
             # here (cash-only stocks, no shorting use case for most
@@ -1842,13 +1890,13 @@ def run_nifty500_scan(now_ist):
             if not signals:
                 continue
 
-            # 15-min context (REVERTED, 2026-08-14 — back to 15-min
-            # context under a 75-min alert, with a real cross timestamp
-            # via cross_time).
+            # Informational context block, on whichever timeframe is
+            # NOT primary right now — real cross timestamp via
+            # cross_time, same as run_fo_scan above.
             info3 = None
-            if df15 is not None:
+            if info_df is not None:
                 info3 = get_3min_trend_info(
-                    df15, symbol,
+                    info_df, symbol,
                     ema_fast=config.NIFTY500_EMA_FAST,
                     ema_slow=config.NIFTY500_EMA_SLOW,
                 )
@@ -1861,6 +1909,9 @@ def run_nifty500_scan(now_ist):
 
                 if info3 is not None:
                     signal["trend_3min"] = info3
+                    signal["info_timeframe_label"] = info_label
+
+                signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
 
                 # Momentum / Volume Spike — see build_momentum_volume_data.
                 mv = momentum_volume.get(symbol)
