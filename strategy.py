@@ -325,7 +325,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
 
 
 def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True, prev_close=None,
-                   ema_fast=None, ema_slow=None, require_volume_increase=False):
+                   ema_fast=None, ema_slow=None, require_volume_increase=False, require_strong_candle=False):
     """
     Scans the last `lookback` closed candles (default:
     config.CROSS_LOOKBACK_CANDLES) for EMA crossovers — not just the
@@ -348,6 +348,14 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     otherwise) — used for the 75-min stock/F&O/cash/commodity alerts
     (see main.py). Leave False (default) for indices, where volume
     stays informational-only.
+
+    require_strong_candle: accepted for call-site compatibility with
+    main.py (config.REQUIRE_STRONG_CANDLE), but currently a no-op —
+    the strong-candle-body filter was removed from _evaluate_candle
+    (see this module's docstring: "There is no longer a strong-candle
+    filter"). Kept as a parameter rather than removed so main.py can
+    keep passing it without a signature error; has no effect either
+    way right now.
 
     Returns a list of signal dicts, oldest candle first. Empty list if
     nothing qualifies. Caller is responsible for de-duping against
