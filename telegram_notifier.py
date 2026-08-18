@@ -39,9 +39,9 @@ def send_alert(signal):
     if vol_change is None:
         vol_note = ""
     elif vol_change > 0:
-        vol_note = " (Higher than previous ⬆️)"
+        vol_note = f" (+{vol_change}% vs previous ⬆️)"
     elif vol_change < 0:
-        vol_note = " (Lower than previous ⬇️)"
+        vol_note = f" ({vol_change}% vs previous ⬇️)"
     else:
         vol_note = " (Same as previous)"
 
@@ -249,8 +249,7 @@ def send_alert(signal):
         else:
             ema_cross_note = "no cross in available history"
         ema_cross_line = (
-            f"EMA50/200 (daily): {ema_cross['bias']} {ema_cross_icon} "
-            f"(EMA50 {ema_cross['ema50']} / EMA200 {ema_cross['ema200']}) — {ema_cross_note}\n"
+            f"EMA50/200 (daily): {ema_cross['bias']} {ema_cross_icon} — {ema_cross_note}\n"
         )
     else:
         ema_cross_line = ""
@@ -298,21 +297,15 @@ def send_alert(signal):
     chart_link = signal.get("chart_link")
     chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
 
-    # Angel One (added) — no official symbol-specific deep link exists
-    # (their app embeds TradingView internally but publishes no public
-    # URL scheme for it), so this just links to the Angel One web
-    # platform homepage — opens the platform, not the specific symbol.
-    angelone_line = "🅰️ <a href=\"https://web.angelone.in\">Open Angel One</a>\n"
+    # Angel One link removed per request (2026-08-18).
 
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{fno_line}"
         f"{chart_line}"
-        f"{angelone_line}"
         f"Timeframe: {timeframe_label} | {date_part} {time_part}\n"
         f"Close: {signal['close']}\n"
         f"{day_change_line}"
-        f"EMA{ema_fast_p}: {signal['ema_fast']}  EMA{ema_slow_p}: {signal['ema_slow']}\n"
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{delivery_line}"
@@ -326,8 +319,6 @@ def send_alert(signal):
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"{pcr_line}"
         f"{oi_buildup_line}"
-        f"Crossing Candle: {signal.get('cross_candle_pattern', 'N/A')}\n"
-        f"Previous Candle: {signal.get('prev_candle_pattern', 'N/A')}\n"
         f"{trend3_block}"
     ).rstrip()
 
@@ -337,6 +328,7 @@ def send_alert(signal):
             "chat_id": config.TELEGRAM_CHAT_ID,
             "text": text,
             "parse_mode": "HTML",
+            "disable_web_page_preview": True,
         }, timeout=15)
         r.raise_for_status()
     except Exception as e:
