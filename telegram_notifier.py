@@ -56,6 +56,14 @@ def send_alert(signal):
     smart_money = signal.get("smart_money")
     if smart_money:
         header_tag += " 🐋 Smart Money"
+    # Volume Spike (SHORTENED, per request): now a single icon in the
+    # header instead of its own line — it's a required/blocking
+    # condition now (see config.REQUIRE_VOLUME_SPIKE), so on any alert
+    # that reaches this point it's already Yes (for stocks/
+    # commodities; indices aren't gated on it, so it can still be
+    # False/None there, in which case the icon is simply omitted).
+    if signal.get("volume_spike") is True:
+        header_tag += " 📊"
     trade_plan_block = ""
 
     # PCR (Put-Call Ratio) — informational only, present on index
@@ -80,11 +88,10 @@ def send_alert(signal):
         bias_icon = "📉" if bias == "BEARISH" else ("📈" if bias == "BULLISH" else "➖")
         since_hours = signal.get("oi_buildup_since_hours")
         since_note = f" (vs snapshot {since_hours}h ago)" if since_hours is not None else ""
-        oi_buildup_line = (
-            f"OI Buildup: {bias} {bias_icon} ({oi_buildup['note']}){since_note}\n"
-            f"  Call writing: {oi_buildup['call_writing_oi']:,}  "
-            f"Put writing: {oi_buildup['put_writing_oi']:,}\n"
-        )
+        # SHORTENED (per request): merged to one line, dropped the raw
+        # Call/Put writing OI numbers (the bias + note already say
+        # what matters).
+        oi_buildup_line = f"OI Buildup: {bias} {bias_icon} ({oi_buildup['note']}){since_note}\n"
 
     # F&O / Cash flag — shown at the TOP of the message, right under the
     # header line. Only present for actual stock signals (both the F&O
@@ -190,17 +197,14 @@ def send_alert(signal):
     sector_index = signal.get("sector_index")
     sector_trend = signal.get("sector_trend")
     sector_line = ""
-    if sector_index:
-        if sector_trend:
-            sector_icon = "📈" if sector_trend == "UPTREND" else "📉"
-            stock_trend_as_sector = "UPTREND" if stock_trend == "BULLISH" else "DOWNTREND"
-            agree_note = (
-                " (agrees with stock trend ✅)" if sector_trend == stock_trend_as_sector
-                else " (diverges from stock trend ⚠️)"
-            )
-            sector_line = f"Sector ({sector_index}): {sector_trend} {sector_icon}{agree_note}\n"
-        else:
-            sector_line = f"Sector ({sector_index}): not enough data yet\n"
+    # SHORTENED (per request): dropped the "not enough data yet" line
+    # (shown only when there's something to say) and the "agrees/
+    # diverges" phrase, kept as a short ✅/⚠️ icon instead.
+    if sector_index and sector_trend:
+        sector_icon = "📈" if sector_trend == "UPTREND" else "📉"
+        stock_trend_as_sector = "UPTREND" if stock_trend == "BULLISH" else "DOWNTREND"
+        agree_icon = "✅" if sector_trend == stock_trend_as_sector else "⚠️"
+        sector_line = f"Sector: {sector_trend} {sector_icon} {agree_icon}\n"
 
     # Delivery % — informational only, previous trading day's NSE
     # delivery percentage (see main.py / delivery_data.py). Stocks
@@ -214,26 +218,19 @@ def send_alert(signal):
     # ~4 weeks (20 completed trading days) — see
     # main.py's build_momentum_volume_data. Omitted entirely if there
     # wasn't enough daily history to compute it for this symbol today.
+    # SHORTENED (per request): one compact line instead of a full
+    # sentence, and skipped entirely when False (a "No" line rarely
+    # changes the reader's decision — only shown when it's actually
+    # above the 4-week high, worth flagging).
     momentum = signal.get("momentum")
     four_week_high = signal.get("four_week_high_close")
-    if momentum is not None:
-        momentum_icon = "🚀" if momentum else "➖"
-        momentum_note = f"Above last 4-week high ({four_week_high})" if momentum else f"Below last 4-week high ({four_week_high})"
-        momentum_line = f"Momentum: {'Yes' if momentum else 'No'} {momentum_icon} ({momentum_note})\n"
+    if momentum is True:
+        momentum_line = f"Momentum: 🚀 Above 4-wk high ({four_week_high})\n"
     else:
         momentum_line = ""
 
-    # Volume Spike (added) — informational only. True when the most
-    # recent COMPLETED trading day's total volume is higher than the
-    # volume from 5 trading days before that — see main.py's
-    # build_momentum_volume_data. Omitted entirely if there wasn't
-    # enough daily history to compute it for this symbol today.
-    volume_spike = signal.get("volume_spike")
-    if volume_spike is not None:
-        vs_icon = "📊" if volume_spike else "➖"
-        volume_spike_line = f"Volume Spike: {'Yes' if volume_spike else 'No'} {vs_icon} (prev day vol vs 5-day-ago vol)\n"
-    else:
-        volume_spike_line = ""
+    # Volume Spike (SHORTENED, per request) — moved to a header icon
+    # (📊, see header_tag above) instead of its own line.
 
     # EMA50/200 daily cross (added) — informational only, the classic
     # Golden Cross (EMA50 above EMA200 = long-term bullish) / Death
@@ -279,10 +276,10 @@ def send_alert(signal):
     bulk_block_block = ""
     if last_deal:
         side_icon = "🟢" if last_deal["buy_sell"] == "BUY" else ("🔴" if last_deal["buy_sell"] == "SELL" else "➖")
+        # SHORTENED (per request): merged to one line.
         bulk_block_block = (
-            f"Last Bulk/Block Deal: {last_deal['date']} [{last_deal['type']}]\n"
-            f"  {last_deal['client']} {last_deal['buy_sell']} {side_icon} "
-            f"{last_deal['quantity']} @ {last_deal['price']}\n"
+            f"Bulk/Block ({last_deal['date']}): {last_deal['client']} "
+            f"{last_deal['buy_sell']} {side_icon} {last_deal['quantity']} @ {last_deal['price']}\n"
         )
 
     # EMA period labels — default to 9/20 (F&O scan) for backward
@@ -299,19 +296,41 @@ def send_alert(signal):
 
     # Angel One link removed per request (2026-08-18).
 
+    # SHORTENED (per request): merged the "Timeframe: X | date time"
+    # line with "Close: Y" into one line -- the header already states
+    # the timeframe, so repeating it as its own line was redundant.
+    # Trade Signal Score (added, per request) — rolls up every
+    # already-shown quality signal (Confluence, Volume Spike, Momentum,
+    # EMA50/200, Sector, OI Buildup, VWAP cushion, Bulk/Block, candle
+    # volume, other-timeframe agreement) into one headline /10 number —
+    # see strategy.compute_trade_score. Shown right under the header so
+    # it's the first thing read, before any of the individual detail
+    # lines below. Icon reflects the score band: 7-10 strong, 5-6
+    # decent, 0-4 weak.
+    trade_score = signal.get("trade_score")
+    trade_score_line = ""
+    if trade_score:
+        if trade_score["score"] >= 7:
+            score_icon = "⭐"
+        elif trade_score["score"] >= 5:
+            score_icon = "✅"
+        else:
+            score_icon = "⚠️"
+        trade_score_line = f"{score_icon} Trade Score: <b>{trade_score['label']}</b> ({trade_score['possible']} factors)\n"
+
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
+        f"{trade_score_line}"
         f"{fno_line}"
         f"{chart_line}"
-        f"Timeframe: {timeframe_label} | {date_part} {time_part}\n"
-        f"Close: {signal['close']}\n"
+        f"{date_part} {time_part} | Close: {signal['close']}\n"
         f"{day_change_line}"
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{delivery_line}"
         f"{momentum_line}"
-        f"{volume_spike_line}"
         f"{ema_cross_line}"
+        f"{trend3_block}"
         f"{smart_money_block}"
         f"{bulk_block_block}"
         f"{sector_line}"
@@ -319,7 +338,6 @@ def send_alert(signal):
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"{pcr_line}"
         f"{oi_buildup_line}"
-        f"{trend3_block}"
     ).rstrip()
 
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -444,3 +462,49 @@ def _send_15min_alert(signal):
         r.raise_for_status()
     except Exception as e:
         print("Telegram send failed (15-min):", e)
+
+
+def send_breakout_alert(signal):
+    """
+    Breakout scan alert (added 2026-08-18) — sent by
+    main.run_breakout_scan when a stock passes all 12 conditions of
+    strategy.check_breakout_scan (Row 2/Market Cap omitted, see chat).
+    Chart link always opens on the 15-min interval, same convention as
+    send_alert (see build_chart_link in main.py). Link preview
+    disabled, same as send_alert.
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", signal)
+        return
+
+    symbol = signal["symbol"]
+    chart_link = signal.get("chart_link")
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+
+    text = (
+        f"🚀 <b>{symbol}</b> — Breakout Scan match\n"
+        f"{chart_line}"
+        f"Date: {signal['date']}\n"
+        f"Close: {signal['close']}\n"
+        f"Volume: {signal['volume']:,}\n"
+        f"Turnover: ₹{signal['turnover_cr']:,.1f} Cr\n"
+        f"SMA50: {signal['sma50']}  |  SMA200: {signal['sma200']}\n"
+        f"RSI(14): {signal['rsi']}\n"
+        f"52-week High: {signal['high_250d']} (Close is {signal['pct_of_52w_high']}% of it)\n"
+        f"20-day High: {signal['high_20d']} (today's close broke above it)\n"
+        f"10-day range: {signal['tight_base_range_pct']}% of close (tight base)\n"
+        f"ATR(14): {signal['atr']} ({signal['atr_pct']}% of close)\n"
+        f"VWAP: {signal['vwap']} (Close above)\n"
+    )
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (breakout scan):", e)
