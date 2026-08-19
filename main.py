@@ -133,8 +133,8 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal
-from telegram_notifier import send_alert, send_ema_cross_report
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score
+from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -983,8 +983,12 @@ def fetch_daily_history(instrument_key, days_back=40):
     (strictly before today) for one instrument, via the same
     Upstox daily-candle endpoint used by fetch_prev_day_ohlc — reuses
     the same rate limiter (_pivot_fetch_limiter) since it's the same
-    Upstox endpoint/budget. Returns a list of {"date", "close",
-    "volume"} sorted oldest -> newest, or [] on failure/no data.
+    Upstox endpoint/budget. Returns a list of {"date", "open", "high",
+    "low", "close", "volume"} sorted oldest -> newest, or [] on
+    failure/no data. (open/high/low added 2026-08-18 for
+    run_breakout_scan's Rows 9-12, which need the daily range, not just
+    close/volume — existing callers that only read "close"/"volume"
+    are unaffected.)
     """
     headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
     today = _now_ist().date()
@@ -1005,7 +1009,10 @@ def fetch_daily_history(instrument_key, days_back=40):
         return []
 
     candles_sorted = sorted(candles, key=lambda c: c[0])
-    return [{"date": c[0], "close": c[4], "volume": c[5]} for c in candles_sorted]
+    return [
+        {"date": c[0], "open": c[1], "high": c[2], "low": c[3], "close": c[4], "volume": c[5]}
+        for c in candles_sorted
+    ]
 
 
 MOMENTUM_VOLUME_CACHE_FILE = "momentum_volume_cache.json"
@@ -1683,6 +1690,14 @@ def run_fo_scan(now_ist, index_only=False):
                         signal["pcr"] = oi["pcr"]
                         if oi["buildup"]:
                             signal["oi_buildup"] = oi["buildup"]
+
+                    # Trade Signal Score — indices have far fewer
+                    # dimensions available (no sector/delivery/bulk-
+                    # block/confluence), but whatever IS available
+                    # (volume vs previous candle, OI buildup, other-
+                    # timeframe agreement) still rolls up into the
+                    # same /10 scale.
+                    signal["trade_score"] = compute_trade_score(signal)
                 else:
                     # "Smart Money Entry" 🐋 (added) — purely
                     # informational, like everything else on this
@@ -1695,6 +1710,15 @@ def run_fo_scan(now_ist, index_only=False):
                     smart_money = compute_smart_money_signal(signal)
                     if smart_money:
                         signal["smart_money"] = smart_money
+
+                    # Volume Spike gate (CHANGED, per request — was
+                    # informational-only before). Only blocks on an
+                    # explicit False; None (data missing/not fetched
+                    # yet for this symbol) still passes through, so a
+                    # daily-history fetch hiccup never silently eats a
+                    # real signal. See config.REQUIRE_VOLUME_SPIKE.
+                    if config.REQUIRE_VOLUME_SPIKE and signal.get("volume_spike") is False:
+                        continue
 
                     # Confluence "High R:R" filter (added) — never
                     # applied to indices (see above). Combines fields
@@ -1710,6 +1734,14 @@ def run_fo_scan(now_ist, index_only=False):
                     if config.CONFLUENCE_FILTER_ENABLED and not passes_confluence_filter(signal):
                         continue
                     signal["confluence_passed"] = True
+
+                # Trade Signal Score (added, per request) — rolls up
+                # every quality signal already attached above into one
+                # 0-10 number. Computed for both indices and stocks
+                # (whatever dimensions are available for each — see
+                # strategy.compute_trade_score), right before sending,
+                # since every relevant field is attached by this point.
+                signal["trade_score"] = compute_trade_score(signal)
 
                 # Mark BEFORE sending: if send_alert() raises after the
                 # Telegram API call already succeeded (e.g. a parsing
@@ -1948,9 +1980,18 @@ def run_nifty500_scan(now_ist):
                 if smart_money:
                     signal["smart_money"] = smart_money
 
+                # Volume Spike gate — see the matching comment in
+                # run_fo_scan() above.
+                if config.REQUIRE_VOLUME_SPIKE and signal.get("volume_spike") is False:
+                    continue
+
                 if config.CONFLUENCE_FILTER_ENABLED and not passes_confluence_filter(signal):
                     continue
                 signal["confluence_passed"] = True
+
+                # Trade Signal Score — see the matching comment in
+                # run_fo_scan() above.
+                signal["trade_score"] = compute_trade_score(signal)
 
                 # Mark BEFORE sending -- see the matching comment in
                 # run_fo_scan() above for why.
@@ -1970,6 +2011,101 @@ def run_nifty500_scan(now_ist):
     if failed_symbols:
         print(f"{len(failed_symbols)} Nifty 500 instrument(s) failed to fetch this run: {failed_symbols}")
     print(f"Nifty 500 scan done. {alerts_sent} alert(s) sent.")
+    return alerts_sent, failed_symbols, len(watchlist)
+
+
+def build_todays_daily_bar(df5, today_date_str):
+    """
+    Aggregates today's own 5-min intraday candles (df5, already fetched
+    by fetch_all for the current session) into a single daily-candle-
+    shaped dict — {"date","open","high","low","close","volume","vwap"}
+    — for run_breakout_scan. This is "today's row" that combines with
+    fetch_daily_history's pre-today history to give the scan a
+    complete, up-to-the-moment daily series without a separate API
+    call. vwap is today's cumulative session VWAP (see
+    strategy.compute_session_vwap) — None if df5 is empty/all-zero-
+    volume, in which case Row 13 (Close > VWAP) will just fail
+    gracefully for that symbol.
+
+    Returns None if df5 is None or empty (nothing to aggregate yet —
+    e.g. very early in the session, or fetch failed for this symbol).
+    """
+    if df5 is None or len(df5) == 0:
+        return None
+    return {
+        "date": today_date_str,
+        "open": float(df5.iloc[0]["open"]),
+        "high": float(df5["high"].max()),
+        "low": float(df5["low"].min()),
+        "close": float(df5.iloc[-1]["close"]),
+        "volume": float(df5["volume"].sum()),
+        "vwap": compute_session_vwap(df5),
+    }
+
+
+def run_breakout_scan(now_ist):
+    """
+    Standalone daily breakout screener (added 2026-08-18) — the
+    12-condition Chartink-style scan (Row 2/Market Cap omitted, see
+    chat) from strategy.check_breakout_scan(). Own SCAN_MODE
+    ("breakout_scan"), own cron trigger — meant to run once per day,
+    at/after market close (so today's daily candle is fully formed).
+    Runs across the same Nifty 500 cash universe as run_nifty500_scan,
+    reusing build_nifty500_watchlist. Sends at most ONE alert per
+    symbol per day (dedup key includes today's date, not a candle
+    time — see state_symbol below).
+    """
+    watchlist = build_nifty500_watchlist(now_ist)
+    if not watchlist:
+        print("Breakout scan: empty watchlist (outside session or list unavailable) — skipping.")
+        return 0, [], 0
+
+    print(f"Breakout scan: scanning {len(watchlist)} Nifty 500 stocks...")
+
+    saved_state = state.load_state()
+    alerts_sent = 0
+    today_str = now_ist.date().isoformat()
+
+    hist_cache = build_hist1min_cache(watchlist)
+    dfs, failed_symbols = fetch_all(watchlist, now_ist, config.FETCH_WORKERS, hist_cache)
+
+    for symbol, (df5, df75, df15) in dfs.items():
+        try:
+            instrument_key = watchlist[symbol]
+            history = fetch_daily_history(instrument_key, days_back=config.BREAKOUT_HISTORY_LOOKBACK_DAYS)
+            if not history:
+                continue
+
+            today_bar = build_todays_daily_bar(df5, today_str)
+            if today_bar is None:
+                continue
+
+            signal = check_breakout_scan(history, today_bar, symbol)
+            if signal is None:
+                continue
+
+            state_symbol = f"{symbol}::BREAKOUT"
+            if state.already_alerted(saved_state, state_symbol, "BULLISH", today_str):
+                continue
+
+            signal["chart_link"] = build_chart_link(symbol)
+
+            state.mark_alerted(saved_state, state_symbol, "BULLISH", today_str)
+            try:
+                send_breakout_alert(signal)
+                alerts_sent += 1
+            except Exception as e:
+                import traceback
+                print(f"send_breakout_alert failed for {symbol} (state already marked, won't re-send): {e}")
+                traceback.print_exc()
+
+        except Exception as e:
+            print(f"Error on {symbol} (Breakout scan): {e}")
+
+    state.save_state(saved_state)
+    if failed_symbols:
+        print(f"{len(failed_symbols)} Breakout-scan instrument(s) failed to fetch this run: {failed_symbols}")
+    print(f"Breakout scan done. {alerts_sent} alert(s) sent.")
     return alerts_sent, failed_symbols, len(watchlist)
 
 
@@ -2017,6 +2153,14 @@ def run():
     # 75-min alert scan instead of the intended lightweight report.
     if mode == "ema_cross_report":
         run_ema_cross_report(now_ist)
+        return
+
+    # SCAN_MODE=breakout_scan -> the standalone 12-condition daily
+    # breakout screener (added 2026-08-18), fully separate from the
+    # EMA-cross alert scan above — see run_breakout_scan. Meant to run
+    # once/day via its own cron trigger, at/after market close.
+    if mode == "breakout_scan":
+        run_breakout_scan(now_ist)
         return
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
