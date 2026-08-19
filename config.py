@@ -102,7 +102,7 @@ STRONG_CANDLE_BODY_RATIO = 0.30  # unused by current strategy.py (strong-candle 
 # on 15-min candles instead, with 75-min shown as informational
 # context under the alert. Flip this ONE setting to switch; nothing
 # else needs to change.
-PRIMARY_TIMEFRAME = "75min"
+PRIMARY_TIMEFRAME = "15min"
 
 # Three independently toggleable gating conditions on the primary-
 # timeframe crossing candle (see strategy.check_signals /
@@ -115,6 +115,20 @@ PRIMARY_TIMEFRAME = "75min"
 REQUIRE_TREND_CONFIRMATION = True
 REQUIRE_VOLUME_CONFIRMATION = True
 REQUIRE_STRONG_CANDLE = False
+
+# CHANGED (per request): Volume Spike was purely informational before
+# (shown on every alert, never blocked anything). Now it's a BLOCKING
+# condition on the F&O stocks/commodities and Nifty 500 stock alerts
+# (never applied to indices -- same precedent as the confluence filter
+# below, which also skips indices): the crossing signal is only sent
+# if yesterday's completed daily volume also exceeded the volume from
+# 5 trading days before that (see main.py's build_momentum_volume_data
+# / signal["volume_spike"]). If the daily-history fetch for this
+# symbol failed or didn't have enough days yet today (volume_spike is
+# None, not False), this does NOT block the alert -- only an explicit
+# "No" blocks it, so a data-fetch hiccup never silently swallows a
+# real signal. Set back to False to make it informational-only again.
+REQUIRE_VOLUME_SPIKE = True
 
 # Minimum distance between EMA9 and EMA20 at the moment of crossover,
 # as a % of close price. unused by current strategy.py (gap filter
@@ -458,3 +472,72 @@ STOCK_OI_BUILDUP_CACHE_FILE = "oi_buildup_stock_cache.json"
 # shows up as a visible signal instead of silently vanishing into the
 # GitHub Actions log. Set to a high number (e.g. 9999) to disable.
 FAILURE_ALERT_MIN_COUNT = 5
+
+# ---------- Breakout Scan (added 2026-08-18) — Chartink-style 13-row
+# screener, minus Row 2 (Market Cap — no data source in this bot; see
+# chat). Runs on daily candles, once per day (own SCAN_MODE, own cron
+# trigger — see scan.yml), across the Nifty 500 cash universe. See
+# strategy.check_breakout_scan() for exactly how each row maps to a
+# condition. Every threshold below is independently editable without
+# touching strategy.py.
+BREAKOUT_SCAN_ENABLED = True
+
+# Row 1 — price floor
+BREAKOUT_MIN_PRICE = 100
+
+# Row 3 — turnover floor (₹100 crore = 1,000,000,000; use the full
+# 10-digit number, NOT 100000000 which is only ₹10 crore)
+BREAKOUT_MIN_TURNOVER = 1_000_000_000
+
+# Row 4 — volume spike: today's volume vs the 20-day average volume AS
+# OF YESTERDAY (today's own volume is never part of the baseline it's
+# being compared to)
+BREAKOUT_VOLUME_SMA_PERIOD = 20
+BREAKOUT_VOLUME_SPIKE_MULTIPLIER = 2.5
+
+# Rows 5/6 — trend filter (today's close vs its own 50/200-day SMA,
+# both including today)
+BREAKOUT_SMA_SHORT_PERIOD = 50
+BREAKOUT_SMA_LONG_PERIOD = 200
+
+# Rows 7/8 — RSI band
+BREAKOUT_RSI_PERIOD = 14
+BREAKOUT_RSI_MIN = 60
+BREAKOUT_RSI_MAX = 75
+
+# Row 9 — near 52-week high: today's close >= this fraction of the
+# highest daily HIGH over the trailing BREAKOUT_NEAR_HIGH_LOOKBACK_DAYS
+# days AS OF YESTERDAY (excludes today's own high, same "offset 1 day
+# ago" reasoning as Row 4)
+BREAKOUT_NEAR_HIGH_LOOKBACK_DAYS = 250
+BREAKOUT_NEAR_HIGH_PCT = 0.97
+
+# Row 10 — new breakout high: today's close > the highest daily HIGH
+# over the trailing BREAKOUT_NEW_HIGH_LOOKBACK_DAYS days AS OF
+# YESTERDAY (excludes today's own high — without this exclusion the
+# row can never fire, since today's close can never beat a max that
+# already includes today's own high)
+BREAKOUT_NEW_HIGH_LOOKBACK_DAYS = 20
+
+# Row 11 — tight base / volatility contraction: the trailing
+# BREAKOUT_TIGHT_BASE_LOOKBACK_DAYS days' (high-low) range, INCLUDING
+# today, must be under this fraction of today's close
+BREAKOUT_TIGHT_BASE_LOOKBACK_DAYS = 10
+BREAKOUT_TIGHT_BASE_MAX_RANGE_PCT = 0.08
+
+# Row 12 — enough volatility to realistically move: today's ATR(14)
+# (including today) must exceed this fraction of today's close
+BREAKOUT_ATR_PERIOD = 14
+BREAKOUT_ATR_MIN_PCT = 0.025
+
+# Row 13 — bulls in charge: today's close vs today's cumulative session
+# VWAP (needs today's own 5-min intraday candles — see
+# run_breakout_scan)
+
+# How many calendar days of pre-today daily history to fetch per
+# symbol. Must comfortably exceed BREAKOUT_NEAR_HIGH_LOOKBACK_DAYS
+# (250 calendar-day lookback needs ~250 trading days, which is
+# ~350 calendar days including weekends/holidays); 380 gives margin.
+BREAKOUT_HISTORY_LOOKBACK_DAYS = 380
+BREAKOUT_HISTORY_CACHE_FILE = "breakout_history_cache.json"
+
