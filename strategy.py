@@ -99,10 +99,12 @@ to the signal but never block it from firing.
 
 import datetime as _dt
 
+import pandas as pd
+
 import config
 from indicators import (
     add_emas, add_rsi, add_volume_avg, add_ema50, add_macd,
-    detect_candle_pattern,
+    detect_candle_pattern, add_atr,
 )
 
 # How close price needs to be to R3/S3 (as a % of price) to be flagged
@@ -925,3 +927,272 @@ def check_vwap_momentum(df5, symbol, lookback=None):
 def pd_isna(val):
     import pandas as pd
     return pd.isna(val)
+
+
+def compute_session_vwap(df):
+    """
+    Public wrapper around _compute_vwap_at for the LATEST row of `df`
+    — the cumulative session VWAP as of the most recent candle. Used
+    by run_breakout_scan (main.py) on today's full-day 5-min candles
+    to get today's session VWAP for Row 13 ("Bulls in charge": Close >
+    VWAP). Returns None if df is empty or has zero cumulative volume.
+    """
+    if df is None or len(df) == 0:
+        return None
+    return _compute_vwap_at(df, len(df) - 1)
+
+
+def check_breakout_scan(history, today_bar, symbol):
+    """
+    12-condition daily breakout screener (Chartink-style scan supplied
+    2026-08-18), Row 2 (Market Cap) omitted — no data source in this
+    bot (see chat). ALL 12 must pass for a signal to fire:
+
+      1.  Close > config.BREAKOUT_MIN_PRICE
+      3.  Close * Volume > config.BREAKOUT_MIN_TURNOVER
+      4.  Volume > MULTIPLIER * 20-day-avg-Volume AS OF YESTERDAY
+      5.  Close > 50-day SMA (including today)
+      6.  Close > 200-day SMA (including today)
+      7.  RSI(14) > BREAKOUT_RSI_MIN
+      8.  RSI(14) < BREAKOUT_RSI_MAX
+      9.  Close >= PCT * 250-day-High AS OF YESTERDAY
+      10. Close > 20-day-High AS OF YESTERDAY
+      11. (10-day High - 10-day Low) < PCT * Close (including today)
+      12. ATR(14) > PCT * Close (including today)
+      13. Close > today's session VWAP
+
+    "AS OF YESTERDAY" = computed over `history` alone (which already
+    excludes today — see main.fetch_daily_history), matching the
+    Chartink build's "offset: 1 day ago" gear-icon setting on those
+    three terms. Every other rolling stat is computed over
+    `history + [today_bar]` (i.e. including today), matching the rows
+    that had NO offset specified.
+
+    history: list of {"date","open","high","low","close","volume"},
+    oldest -> newest, strictly BEFORE today (main.fetch_daily_history's
+    output).
+    today_bar: {"date","open","high","low","close","volume","vwap"} for
+    today, built from today's own intraday session (see
+    main.build_todays_daily_bar). vwap may be None if today's intraday
+    fetch failed/is empty — Row 13 then just fails gracefully (no
+    signal), same as any other missing-data case in this bot.
+
+    Returns a signal dict (all 12 conditions' raw numbers included, for
+    the alert message) if every condition passes, else None. Returns
+    None immediately if there isn't enough daily history yet for the
+    250-day lookback to be meaningful.
+    """
+    needed = max(config.BREAKOUT_NEAR_HIGH_LOOKBACK_DAYS, config.BREAKOUT_SMA_LONG_PERIOD)
+    if len(history) < needed or today_bar is None:
+        return None
+
+    hist_df = pd.DataFrame(history)
+
+    # ---- "AS OF YESTERDAY" stats (history only, today excluded) ----
+    vol_sma20_yday = float(hist_df["volume"].iloc[-config.BREAKOUT_VOLUME_SMA_PERIOD:].mean())
+    high_250_yday = float(hist_df["high"].iloc[-config.BREAKOUT_NEAR_HIGH_LOOKBACK_DAYS:].max())
+    high_20_yday = float(hist_df["high"].iloc[-config.BREAKOUT_NEW_HIGH_LOOKBACK_DAYS:].max())
+
+    # ---- "INCLUDING TODAY" stats (history + today_bar) ----
+    combined = history + [today_bar]
+    cdf = pd.DataFrame(combined)
+    if len(cdf) < config.BREAKOUT_SMA_LONG_PERIOD:
+        return None
+
+    sma50 = float(cdf["close"].iloc[-config.BREAKOUT_SMA_SHORT_PERIOD:].mean())
+    sma200 = float(cdf["close"].iloc[-config.BREAKOUT_SMA_LONG_PERIOD:].mean())
+
+    cdf = add_rsi(cdf, config.BREAKOUT_RSI_PERIOD)
+    rsi_today = cdf["rsi"].iloc[-1]
+
+    cdf = add_atr(cdf, config.BREAKOUT_ATR_PERIOD)
+    atr_today = cdf["atr"].iloc[-1]
+
+    tight_window = cdf.iloc[-config.BREAKOUT_TIGHT_BASE_LOOKBACK_DAYS:]
+    tight_base_range = float(tight_window["high"].max() - tight_window["low"].min())
+
+    close_today = float(today_bar["close"])
+    volume_today = float(today_bar["volume"])
+    turnover_today = close_today * volume_today
+    vwap_today = today_bar.get("vwap")
+
+    if pd.isna(rsi_today) or pd.isna(atr_today):
+        return None
+    rsi_today = float(rsi_today)
+    atr_today = float(atr_today)
+
+    checks = {
+        "price_floor":       close_today > config.BREAKOUT_MIN_PRICE,
+        "turnover":          turnover_today > config.BREAKOUT_MIN_TURNOVER,
+        "volume_spike":      vol_sma20_yday > 0 and volume_today > (config.BREAKOUT_VOLUME_SPIKE_MULTIPLIER * vol_sma20_yday),
+        "above_sma50":       close_today > sma50,
+        "above_sma200":      close_today > sma200,
+        "rsi_floor":         rsi_today > config.BREAKOUT_RSI_MIN,
+        "rsi_ceiling":       rsi_today < config.BREAKOUT_RSI_MAX,
+        "near_52w_high":     high_250_yday > 0 and close_today >= (config.BREAKOUT_NEAR_HIGH_PCT * high_250_yday),
+        "new_breakout_high": high_20_yday > 0 and close_today > high_20_yday,
+        "tight_base":        tight_base_range < (config.BREAKOUT_TIGHT_BASE_MAX_RANGE_PCT * close_today),
+        "enough_volatility": atr_today > (config.BREAKOUT_ATR_MIN_PCT * close_today),
+        "above_vwap":        vwap_today is not None and close_today > vwap_today,
+    }
+
+    if not all(checks.values()):
+        return None
+
+    return {
+        "symbol": symbol,
+        "date": today_bar["date"],
+        "close": round(close_today, 2),
+        "volume": int(volume_today),
+        "turnover_cr": round(turnover_today / 1e7, 1),
+        "sma50": round(sma50, 2),
+        "sma200": round(sma200, 2),
+        "rsi": round(rsi_today, 1),
+        "high_250d": round(high_250_yday, 2),
+        "pct_of_52w_high": round((close_today / high_250_yday) * 100, 1),
+        "high_20d": round(high_20_yday, 2),
+        "tight_base_range_pct": round((tight_base_range / close_today) * 100, 2),
+        "atr": round(atr_today, 2),
+        "atr_pct": round((atr_today / close_today) * 100, 2),
+        "vwap": round(vwap_today, 2),
+        "checks": checks,
+    }
+
+
+def compute_trade_score(signal):
+    """
+    "Trade Signal Score" (added, per request) — a single 0-10 number
+    that rolls up every already-computed quality signal on this alert
+    into one headline number, so the reader doesn't have to mentally
+    combine Confluence/Smart Money/Sector/EMA50-200/OI/VWAP/Momentum/
+    Volume-Spike/Bulk-Block/other-timeframe-agreement themselves.
+    PURELY INFORMATIONAL — like everything else this touches, it never
+    blocks or filters an alert; it's computed AFTER all filtering
+    (confluence, volume-spike gate, etc.) has already decided the
+    alert is going out.
+
+    10 independent 1-point dimensions, built entirely from fields the
+    signal already carries by the time this is called (see main.py —
+    no new fetch, no extra API call):
+      1.  Confluence "High R:R" filter passed (signal["confluence_passed"])
+      2.  Volume Spike (signal["volume_spike"] is True)
+      3.  Momentum — close above the trailing 4-week high
+      4.  EMA50/200 (daily) bias agrees with the signal direction
+      5.  Sector index trend agrees with the signal direction
+      6.  OI buildup bias agrees with the signal direction (F&O only)
+      7.  VWAP cushion in the signal's favor (>= config.SMART_MONEY_VWAP_MIN_PCT)
+      8.  Same-direction Bulk/Block deal within the recent lookback window
+      9.  Crossing candle's volume beat the previous candle (vol_change_pct > 0)
+      10. The OTHER (informational) timeframe's own EMA bias agrees
+          with the signal direction (signal["trend_3min"]["bias"])
+
+    Each dimension only counts toward "possible" if its underlying
+    data was actually available this run (same graceful-skip pattern
+    as compute_smart_money_signal) — a stock with, say, no sector
+    mapping or no F&O option chain isn't unfairly penalized for a
+    dimension that was never computable for it. The final score is
+    scaled from whatever "possible" was up to a common /10 scale, so
+    a stock scored on 7 available dimensions and one scored on 10 are
+    still comparable.
+
+    Returns {"score": int (0-10), "possible": int, "raw_score": int,
+    "label": str} — never None; if literally nothing was available
+    (shouldn't happen in practice, since direction/close always are),
+    returns a 0/10.
+    """
+    direction = signal["direction"]
+    raw_score = 0
+    possible = 0
+
+    # ---- 1. Confluence "High R:R" filter ----
+    if signal.get("confluence_passed") is not None:
+        possible += 1
+        if signal.get("confluence_passed"):
+            raw_score += 1
+
+    # ---- 2. Volume Spike ----
+    volume_spike = signal.get("volume_spike")
+    if volume_spike is not None:
+        possible += 1
+        if volume_spike:
+            raw_score += 1
+
+    # ---- 3. Momentum (4-week high) ----
+    momentum = signal.get("momentum")
+    if momentum is not None:
+        possible += 1
+        if momentum:
+            raw_score += 1
+
+    # ---- 4. EMA50/200 (daily) bias ----
+    ema_cross = signal.get("ema_cross")
+    if ema_cross:
+        possible += 1
+        if ema_cross.get("bias") == direction:
+            raw_score += 1
+
+    # ---- 5. Sector trend agreement ----
+    sector_trend = signal.get("sector_trend")
+    if sector_trend:
+        possible += 1
+        stock_trend_as_sector = "UPTREND" if direction == "BULLISH" else "DOWNTREND"
+        if sector_trend == stock_trend_as_sector:
+            raw_score += 1
+
+    # ---- 6. OI buildup direction ----
+    oi_buildup = signal.get("oi_buildup")
+    if oi_buildup:
+        possible += 1
+        if oi_buildup.get("bias") == direction:
+            raw_score += 1
+
+    # ---- 7. VWAP cushion ----
+    vwap = signal.get("vwap")
+    close = signal.get("close")
+    if vwap and close:
+        possible += 1
+        gap_pct = (close - vwap) / vwap * 100
+        if direction == "BULLISH" and gap_pct >= config.SMART_MONEY_VWAP_MIN_PCT:
+            raw_score += 1
+        elif direction == "BEARISH" and gap_pct <= -config.SMART_MONEY_VWAP_MIN_PCT:
+            raw_score += 1
+
+    # ---- 8. same-direction Bulk/Block deal, recent ----
+    deal = signal.get("last_bulk_block_deal")
+    if deal and deal.get("date") and signal.get("candle_time"):
+        possible += 1
+        expected_side = "BUY" if direction == "BULLISH" else "SELL"
+        if (deal.get("buy_sell") or "").upper() == expected_side:
+            deal_dt = _parse_deal_date(deal["date"])
+            candle_dt = _parse_candle_time(signal["candle_time"])
+            if deal_dt is not None and candle_dt is not None:
+                if 0 <= (candle_dt.date() - deal_dt.date()).days <= config.SMART_MONEY_DEAL_LOOKBACK_DAYS:
+                    raw_score += 1
+
+    # ---- 9. volume beat previous candle ----
+    vol_change_pct = signal.get("vol_change_pct")
+    if vol_change_pct is not None:
+        possible += 1
+        if vol_change_pct > 0:
+            raw_score += 1
+
+    # ---- 10. other-timeframe EMA bias agreement ----
+    trend3 = signal.get("trend_3min")
+    if trend3 and trend3.get("bias"):
+        possible += 1
+        if trend3["bias"] == direction:
+            raw_score += 1
+
+    if possible == 0:
+        return {"score": 0, "possible": 0, "raw_score": 0, "label": "0/10"}
+
+    # Scale raw_score (out of "possible" dimensions that had data) up
+    # to a common /10 scale, rounded to the nearest whole point.
+    scaled = round((raw_score / possible) * 10)
+
+    return {
+        "score": scaled,
+        "possible": possible,
+        "raw_score": raw_score,
+        "label": f"{scaled}/10",
+    }
