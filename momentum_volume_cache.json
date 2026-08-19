@@ -45,28 +45,6 @@
         "cross_date": "2026-02-02"
       }
     },
-    "NATIONALUM": {
-      "four_week_high_close": 420.0,
-      "prev_day_volume": 2824411,
-      "volume_5day_ago": 8155315,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 371.52,
-        "ema200": 348.43,
-        "cross_date": "2025-10-09"
-      }
-    },
-    "MANAPPURAM": {
-      "four_week_high_close": 371.85,
-      "prev_day_volume": 2534288,
-      "volume_5day_ago": 6097517,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 340.55,
-        "ema200": 309.86,
-        "cross_date": "2026-05-13"
-      }
-    },
     "DALBHARAT": {
       "four_week_high_close": 1864.2,
       "prev_day_volume": 246659,
@@ -78,6 +56,17 @@
         "cross_date": "2025-10-06"
       }
     },
+    "NATIONALUM": {
+      "four_week_high_close": 420.0,
+      "prev_day_volume": 2824411,
+      "volume_5day_ago": 8155315,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 371.52,
+        "ema200": 348.43,
+        "cross_date": "2025-10-09"
+      }
+    },
     "BAJAJ-AUTO": {
       "four_week_high_close": 11856.0,
       "prev_day_volume": 237816,
@@ -87,6 +76,17 @@
         "ema50": 10909.26,
         "ema200": 9973.81,
         "cross_date": "2025-10-06"
+      }
+    },
+    "MANAPPURAM": {
+      "four_week_high_close": 371.85,
+      "prev_day_volume": 2534288,
+      "volume_5day_ago": 6097517,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 340.55,
+        "ema200": 309.86,
+        "cross_date": "2026-05-13"
       }
     },
     "HINDZINC": {
@@ -133,6 +133,17 @@
         "cross_date": "2026-07-10"
       }
     },
+    "BDL": {
+      "four_week_high_close": 1398.0,
+      "prev_day_volume": 2608024,
+      "volume_5day_ago": 505756,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1307.99,
+        "ema200": 1360.38,
+        "cross_date": "2025-10-06"
+      }
+    },
     "COFORGE": {
       "four_week_high_close": 1829.0,
       "prev_day_volume": 1572547,
@@ -153,17 +164,6 @@
         "ema50": 111.16,
         "ema200": 112.79,
         "cross_date": "2026-03-27"
-      }
-    },
-    "BDL": {
-      "four_week_high_close": 1398.0,
-      "prev_day_volume": 2608024,
-      "volume_5day_ago": 505756,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1307.99,
-        "ema200": 1360.38,
-        "cross_date": "2025-10-06"
       }
     },
     "CDSL": {
@@ -243,17 +243,6 @@
         "cross_date": "2026-05-12"
       }
     },
-    "PATANJALI": {
-      "four_week_high_close": 364.0,
-      "prev_day_volume": 3890440,
-      "volume_5day_ago": 8725259,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 381.22,
-        "ema200": 461.72,
-        "cross_date": "2025-11-10"
-      }
-    },
     "BHARATFORG": {
       "four_week_high_close": 2265.2,
       "prev_day_volume": 771575,
@@ -265,15 +254,15 @@
         "cross_date": "2025-10-16"
       }
     },
-    "ALKEM": {
-      "four_week_high_close": 5816.5,
-      "prev_day_volume": 127028,
-      "volume_5day_ago": 115598,
+    "PATANJALI": {
+      "four_week_high_close": 364.0,
+      "prev_day_volume": 3890440,
+      "volume_5day_ago": 8725259,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 5542.31,
-        "ema200": 5513.8,
-        "cross_date": "2026-07-20"
+        "bias": "BEARISH",
+        "ema50": 381.22,
+        "ema200": 461.72,
+        "cross_date": "2025-11-10"
       }
     },
     "KOTAKBANK": {
@@ -296,6 +285,17 @@
         "ema50": 7561.39,
         "ema200": 6743.65,
         "cross_date": "2026-04-23"
+      }
+    },
+    "ALKEM": {
+      "four_week_high_close": 5816.5,
+      "prev_day_volume": 127028,
+      "volume_5day_ago": 115598,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 5542.31,
+        "ema200": 5513.8,
+        "cross_date": "2026-07-20"
       }
     },
     "PRESTIGE": {
@@ -331,17 +331,6 @@
         "cross_date": "2025-10-27"
       }
     },
-    "CANBK": {
-      "four_week_high_close": 132.0,
-      "prev_day_volume": 6622726,
-      "volume_5day_ago": 11765490,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 129.38,
-        "ema200": 133.87,
-        "cross_date": "2026-05-13"
-      }
-    },
     "MCX": {
       "four_week_high_close": 3040.0,
       "prev_day_volume": 3187586,
@@ -364,6 +353,17 @@
         "cross_date": "2025-10-06"
       }
     },
+    "CANBK": {
+      "four_week_high_close": 132.0,
+      "prev_day_volume": 6622726,
+      "volume_5day_ago": 11765490,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 129.38,
+        "ema200": 133.87,
+        "cross_date": "2026-05-13"
+      }
+    },
     "BANKBARODA": {
       "four_week_high_close": 251.0,
       "prev_day_volume": 3521816,
@@ -373,6 +373,17 @@
         "ema50": 253.77,
         "ema200": 268.37,
         "cross_date": "2026-04-29"
+      }
+    },
+    "LODHA": {
+      "four_week_high_close": 1316.35,
+      "prev_day_volume": 1547121,
+      "volume_5day_ago": 795290,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1131.5,
+        "ema200": 1040.12,
+        "cross_date": "2026-07-17"
       }
     },
     "HEROMOTOCO": {
@@ -397,17 +408,6 @@
         "cross_date": "2026-08-18"
       }
     },
-    "LODHA": {
-      "four_week_high_close": 1316.35,
-      "prev_day_volume": 1547121,
-      "volume_5day_ago": 795290,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1131.5,
-        "ema200": 1040.12,
-        "cross_date": "2026-07-17"
-      }
-    },
     "SBILIFE": {
       "four_week_high_close": 1915.0,
       "prev_day_volume": 584461,
@@ -428,6 +428,17 @@
         "ema50": 1101.1,
         "ema200": 1126.61,
         "cross_date": "2026-06-22"
+      }
+    },
+    "BAJAJHLDNG": {
+      "four_week_high_close": 11599.0,
+      "prev_day_volume": 21569,
+      "volume_5day_ago": 36058,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 10906.91,
+        "ema200": 10851.63,
+        "cross_date": "2026-08-13"
       }
     },
     "ABCAPITAL": {
@@ -452,15 +463,15 @@
         "cross_date": "2026-02-20"
       }
     },
-    "BAJAJHLDNG": {
-      "four_week_high_close": 11599.0,
-      "prev_day_volume": 21569,
-      "volume_5day_ago": 36058,
+    "YESBANK": {
+      "four_week_high_close": 23.24,
+      "prev_day_volume": 49817232,
+      "volume_5day_ago": 31365174,
       "ema_cross": {
         "bias": "BULLISH",
-        "ema50": 10906.91,
-        "ema200": 10851.63,
-        "cross_date": "2026-08-13"
+        "ema50": 22.99,
+        "ema200": 22.16,
+        "cross_date": "2026-06-04"
       }
     },
     "OBEROIRLTY": {
@@ -474,17 +485,6 @@
         "cross_date": "2026-05-04"
       }
     },
-    "ICICIPRULI": {
-      "four_week_high_close": 522.35,
-      "prev_day_volume": 1584467,
-      "volume_5day_ago": 1605136,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 507.41,
-        "ema200": 551.24,
-        "cross_date": "2026-03-24"
-      }
-    },
     "SONACOMS": {
       "four_week_high_close": 824.0,
       "prev_day_volume": 2864893,
@@ -494,17 +494,6 @@
         "ema50": 713.47,
         "ema200": 587.77,
         "cross_date": "2025-10-10"
-      }
-    },
-    "YESBANK": {
-      "four_week_high_close": 23.24,
-      "prev_day_volume": 49817232,
-      "volume_5day_ago": 31365174,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 22.99,
-        "ema200": 22.16,
-        "cross_date": "2026-06-04"
       }
     },
     "ASTRAL": {
@@ -527,6 +516,28 @@
         "ema50": 2964.88,
         "ema200": 2889.7,
         "cross_date": "2026-06-24"
+      }
+    },
+    "ICICIPRULI": {
+      "four_week_high_close": 522.35,
+      "prev_day_volume": 1584467,
+      "volume_5day_ago": 1605136,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 507.41,
+        "ema200": 551.24,
+        "cross_date": "2026-03-24"
+      }
+    },
+    "TECHM": {
+      "four_week_high_close": 1669.0,
+      "prev_day_volume": 1904893,
+      "volume_5day_ago": 1923031,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1552.69,
+        "ema200": 1493.28,
+        "cross_date": "2026-07-22"
       }
     },
     "BRITANNIA": {
@@ -562,17 +573,6 @@
         "cross_date": "2025-10-10"
       }
     },
-    "TECHM": {
-      "four_week_high_close": 1669.0,
-      "prev_day_volume": 1904893,
-      "volume_5day_ago": 1923031,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1552.69,
-        "ema200": 1493.28,
-        "cross_date": "2026-07-22"
-      }
-    },
     "TATASTEEL": {
       "four_week_high_close": 192.99,
       "prev_day_volume": 13393441,
@@ -582,17 +582,6 @@
         "ema50": 190.89,
         "ema200": 191.52,
         "cross_date": "2026-08-13"
-      }
-    },
-    "LTF": {
-      "four_week_high_close": 325.1,
-      "prev_day_volume": 10165537,
-      "volume_5day_ago": 2372366,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 306.42,
-        "ema200": 290.08,
-        "cross_date": "2026-06-22"
       }
     },
     "WIPRO": {
@@ -606,6 +595,17 @@
         "cross_date": "2026-02-13"
       }
     },
+    "LTF": {
+      "four_week_high_close": 325.1,
+      "prev_day_volume": 10165537,
+      "volume_5day_ago": 2372366,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 306.42,
+        "ema200": 290.08,
+        "cross_date": "2026-06-22"
+      }
+    },
     "WAAREEENER": {
       "four_week_high_close": 2741.4,
       "prev_day_volume": 396655,
@@ -614,72 +614,6 @@
         "bias": "BEARISH",
         "ema50": 2815.77,
         "ema200": 3013.47,
-        "cross_date": "2026-05-13"
-      }
-    },
-    "MAXHEALTH": {
-      "four_week_high_close": 1124.8,
-      "prev_day_volume": 2219107,
-      "volume_5day_ago": 2892166,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1063.75,
-        "ema200": 1054.33,
-        "cross_date": "2026-07-03"
-      }
-    },
-    "TIINDIA": {
-      "four_week_high_close": 2959.0,
-      "prev_day_volume": 4188005,
-      "volume_5day_ago": 152287,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2880.9,
-        "ema200": 2875.39,
-        "cross_date": "2026-05-22"
-      }
-    },
-    "NAM-INDIA": {
-      "four_week_high_close": 1215.0,
-      "prev_day_volume": 1023188,
-      "volume_5day_ago": 827143,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1153.02,
-        "ema200": 1028.72,
-        "cross_date": "2026-04-16"
-      }
-    },
-    "UNITDSPR": {
-      "four_week_high_close": 1548.7,
-      "prev_day_volume": 328688,
-      "volume_5day_ago": 546668,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1437.71,
-        "ema200": 1374.55,
-        "cross_date": "2026-07-22"
-      }
-    },
-    "ADANIPORTS": {
-      "four_week_high_close": 1819.4,
-      "prev_day_volume": 1298165,
-      "volume_5day_ago": 2263466,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1739.1,
-        "ema200": 1626.25,
-        "cross_date": "2026-04-20"
-      }
-    },
-    "VOLTAS": {
-      "four_week_high_close": 1333.2,
-      "prev_day_volume": 995520,
-      "volume_5day_ago": 529635,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1308.97,
-        "ema200": 1346.34,
         "cross_date": "2026-05-13"
       }
     },
@@ -705,6 +639,72 @@
         "cross_date": "2026-05-14"
       }
     },
+    "MAXHEALTH": {
+      "four_week_high_close": 1124.8,
+      "prev_day_volume": 2219107,
+      "volume_5day_ago": 2892166,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1063.75,
+        "ema200": 1054.33,
+        "cross_date": "2026-07-03"
+      }
+    },
+    "NAM-INDIA": {
+      "four_week_high_close": 1215.0,
+      "prev_day_volume": 1023188,
+      "volume_5day_ago": 827143,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1153.02,
+        "ema200": 1028.72,
+        "cross_date": "2026-04-16"
+      }
+    },
+    "TIINDIA": {
+      "four_week_high_close": 2959.0,
+      "prev_day_volume": 4188005,
+      "volume_5day_ago": 152287,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2880.9,
+        "ema200": 2875.39,
+        "cross_date": "2026-05-22"
+      }
+    },
+    "UNITDSPR": {
+      "four_week_high_close": 1548.7,
+      "prev_day_volume": 328688,
+      "volume_5day_ago": 546668,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1437.71,
+        "ema200": 1374.55,
+        "cross_date": "2026-07-22"
+      }
+    },
+    "ADANIPORTS": {
+      "four_week_high_close": 1819.4,
+      "prev_day_volume": 1298165,
+      "volume_5day_ago": 2263466,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1739.1,
+        "ema200": 1626.25,
+        "cross_date": "2026-04-20"
+      }
+    },
+    "GRASIM": {
+      "four_week_high_close": 3380.5,
+      "prev_day_volume": 1498859,
+      "volume_5day_ago": 755928,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 3157.04,
+        "ema200": 2964.49,
+        "cross_date": "2026-05-13"
+      }
+    },
     "LUPIN": {
       "four_week_high_close": 2447.0,
       "prev_day_volume": 694324,
@@ -716,14 +716,14 @@
         "cross_date": "2025-11-14"
       }
     },
-    "GRASIM": {
-      "four_week_high_close": 3380.5,
-      "prev_day_volume": 1498859,
-      "volume_5day_ago": 755928,
+    "VOLTAS": {
+      "four_week_high_close": 1333.2,
+      "prev_day_volume": 995520,
+      "volume_5day_ago": 529635,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 3157.04,
-        "ema200": 2964.49,
+        "bias": "BEARISH",
+        "ema50": 1308.97,
+        "ema200": 1346.34,
         "cross_date": "2026-05-13"
       }
     },
@@ -760,17 +760,6 @@
         "cross_date": "2026-04-20"
       }
     },
-    "MUTHOOTFIN": {
-      "four_week_high_close": 3119.6,
-      "prev_day_volume": 499431,
-      "volume_5day_ago": 932507,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 3028.14,
-        "ema200": 3257.77,
-        "cross_date": "2026-05-22"
-      }
-    },
     "INOXWIND": {
       "four_week_high_close": 79.21,
       "prev_day_volume": 18198825,
@@ -782,15 +771,15 @@
         "cross_date": "2025-12-04"
       }
     },
-    "ADANIENSOL": {
-      "four_week_high_close": 1724.4,
-      "prev_day_volume": 2294009,
-      "volume_5day_ago": 2222288,
+    "MUTHOOTFIN": {
+      "four_week_high_close": 3119.6,
+      "prev_day_volume": 499431,
+      "volume_5day_ago": 932507,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1583.43,
-        "ema200": 1300.25,
-        "cross_date": "2025-10-06"
+        "bias": "BEARISH",
+        "ema50": 3028.14,
+        "ema200": 3257.77,
+        "cross_date": "2026-05-22"
       }
     },
     "ONGC": {
@@ -802,6 +791,17 @@
         "ema50": 247.27,
         "ema200": 256.07,
         "cross_date": "2026-07-03"
+      }
+    },
+    "ADANIENSOL": {
+      "four_week_high_close": 1724.4,
+      "prev_day_volume": 2294009,
+      "volume_5day_ago": 2222288,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1583.43,
+        "ema200": 1300.25,
+        "cross_date": "2025-10-06"
       }
     },
     "COCHINSHIP": {
@@ -859,6 +859,28 @@
         "cross_date": "2026-07-23"
       }
     },
+    "IEX": {
+      "four_week_high_close": 134.19,
+      "prev_day_volume": 1978111,
+      "volume_5day_ago": 1905837,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 125.49,
+        "ema200": 129.1,
+        "cross_date": "2025-10-06"
+      }
+    },
+    "LICHSGFIN": {
+      "four_week_high_close": 553.45,
+      "prev_day_volume": 1854138,
+      "volume_5day_ago": 1493009,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 529.75,
+        "ema200": 540.98,
+        "cross_date": "2026-07-31"
+      }
+    },
     "MPHASIS": {
       "four_week_high_close": 2545.0,
       "prev_day_volume": 504720,
@@ -881,14 +903,14 @@
         "cross_date": "2026-05-14"
       }
     },
-    "IEX": {
-      "four_week_high_close": 134.19,
-      "prev_day_volume": 1978111,
-      "volume_5day_ago": 1905837,
+    "NYKAA": {
+      "four_week_high_close": 344.9,
+      "prev_day_volume": 1681742,
+      "volume_5day_ago": 7891934,
       "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 125.49,
-        "ema200": 129.1,
+        "bias": "BULLISH",
+        "ema50": 314.94,
+        "ema200": 279.96,
         "cross_date": "2025-10-06"
       }
     },
@@ -901,28 +923,6 @@
         "ema50": 1909.83,
         "ema200": 1893.04,
         "cross_date": "2026-08-14"
-      }
-    },
-    "LICHSGFIN": {
-      "four_week_high_close": 553.45,
-      "prev_day_volume": 1854138,
-      "volume_5day_ago": 1493009,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 529.75,
-        "ema200": 540.98,
-        "cross_date": "2026-07-31"
-      }
-    },
-    "NYKAA": {
-      "four_week_high_close": 344.9,
-      "prev_day_volume": 1681742,
-      "volume_5day_ago": 7891934,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 314.94,
-        "ema200": 279.96,
-        "cross_date": "2025-10-06"
       }
     },
     "ABB": {
@@ -947,28 +947,6 @@
         "cross_date": "2025-10-06"
       }
     },
-    "APOLLOHOSP": {
-      "four_week_high_close": 9050.0,
-      "prev_day_volume": 474997,
-      "volume_5day_ago": 562067,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 8691.4,
-        "ema200": 8055.27,
-        "cross_date": "2026-03-05"
-      }
-    },
-    "TATAPOWER": {
-      "four_week_high_close": 383.0,
-      "prev_day_volume": 2827459,
-      "volume_5day_ago": 2965048,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 385.67,
-        "ema200": 391.86,
-        "cross_date": "2026-07-16"
-      }
-    },
     "INDHOTEL": {
       "four_week_high_close": 752.0,
       "prev_day_volume": 1151586,
@@ -978,6 +956,17 @@
         "ema50": 717.5,
         "ema200": 696.62,
         "cross_date": "2026-07-07"
+      }
+    },
+    "APOLLOHOSP": {
+      "four_week_high_close": 9050.0,
+      "prev_day_volume": 474997,
+      "volume_5day_ago": 562067,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 8691.4,
+        "ema200": 8055.27,
+        "cross_date": "2026-03-05"
       }
     },
     "MARICO": {
@@ -1000,6 +989,17 @@
         "ema50": 395.0,
         "ema200": 403.78,
         "cross_date": "2026-07-23"
+      }
+    },
+    "TATAPOWER": {
+      "four_week_high_close": 383.0,
+      "prev_day_volume": 2827459,
+      "volume_5day_ago": 2965048,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 385.67,
+        "ema200": 391.86,
+        "cross_date": "2026-07-16"
       }
     },
     "JSWENERGY": {
@@ -1167,6 +1167,17 @@
         "cross_date": "2026-02-10"
       }
     },
+    "AMBER": {
+      "four_week_high_close": 7526.0,
+      "prev_day_volume": 578175,
+      "volume_5day_ago": 290400,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 7462.67,
+        "ema200": 7496.72,
+        "cross_date": "2026-08-12"
+      }
+    },
     "PIIND": {
       "four_week_high_close": 2810.0,
       "prev_day_volume": 623898,
@@ -1187,17 +1198,6 @@
         "ema50": 121.92,
         "ema200": 129.88,
         "cross_date": "2025-10-06"
-      }
-    },
-    "AMBER": {
-      "four_week_high_close": 7526.0,
-      "prev_day_volume": 578175,
-      "volume_5day_ago": 290400,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 7462.67,
-        "ema200": 7496.72,
-        "cross_date": "2026-08-12"
       }
     },
     "NAUKRI": {
@@ -1222,6 +1222,17 @@
         "cross_date": "2026-05-26"
       }
     },
+    "POWERGRID": {
+      "four_week_high_close": 289.8,
+      "prev_day_volume": 6792173,
+      "volume_5day_ago": 7553241,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 282.21,
+        "ema200": 287.52,
+        "cross_date": "2026-07-17"
+      }
+    },
     "DLF": {
       "four_week_high_close": 671.0,
       "prev_day_volume": 6099954,
@@ -1242,17 +1253,6 @@
         "ema50": 1600.0,
         "ema200": 1509.81,
         "cross_date": "2026-06-16"
-      }
-    },
-    "POWERGRID": {
-      "four_week_high_close": 289.8,
-      "prev_day_volume": 6792173,
-      "volume_5day_ago": 7553241,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 282.21,
-        "ema200": 287.52,
-        "cross_date": "2026-07-17"
       }
     },
     "LAURUSLABS": {
@@ -1288,6 +1288,17 @@
         "cross_date": "2025-12-17"
       }
     },
+    "DRREDDY": {
+      "four_week_high_close": 1206.0,
+      "prev_day_volume": 805633,
+      "volume_5day_ago": 3936813,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1223.91,
+        "ema200": 1253.24,
+        "cross_date": "2026-07-27"
+      }
+    },
     "NHPC": {
       "four_week_high_close": 80.5,
       "prev_day_volume": 5338983,
@@ -1299,15 +1310,15 @@
         "cross_date": "2025-10-06"
       }
     },
-    "DRREDDY": {
-      "four_week_high_close": 1206.0,
-      "prev_day_volume": 805633,
-      "volume_5day_ago": 3936813,
+    "PAYTM": {
+      "four_week_high_close": 1649.5,
+      "prev_day_volume": 3848121,
+      "volume_5day_ago": 8421264,
       "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1223.91,
-        "ema200": 1253.24,
-        "cross_date": "2026-07-27"
+        "bias": "BULLISH",
+        "ema50": 1342.64,
+        "ema200": 1220.81,
+        "cross_date": "2026-07-15"
       }
     },
     "PAGEIND": {
@@ -1332,17 +1343,6 @@
         "cross_date": "2026-06-23"
       }
     },
-    "PAYTM": {
-      "four_week_high_close": 1649.5,
-      "prev_day_volume": 3848121,
-      "volume_5day_ago": 8421264,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1342.64,
-        "ema200": 1220.81,
-        "cross_date": "2026-07-15"
-      }
-    },
     "TVSMOTOR": {
       "four_week_high_close": 4466.2,
       "prev_day_volume": 444890,
@@ -1352,17 +1352,6 @@
         "ema50": 3947.86,
         "ema200": 3679.85,
         "cross_date": "2026-07-22"
-      }
-    },
-    "ZYDUSLIFE": {
-      "four_week_high_close": 1205.0,
-      "prev_day_volume": 810133,
-      "volume_5day_ago": 8187351,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1110.54,
-        "ema200": 1020.34,
-        "cross_date": "2026-05-22"
       }
     },
     "INDIGO": {
@@ -1376,17 +1365,6 @@
         "cross_date": "2026-07-21"
       }
     },
-    "MANKIND": {
-      "four_week_high_close": 2617.9,
-      "prev_day_volume": 366118,
-      "volume_5day_ago": 229702,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2452.93,
-        "ema200": 2355.14,
-        "cross_date": "2026-05-20"
-      }
-    },
     "HYUNDAI": {
       "four_week_high_close": 2240.0,
       "prev_day_volume": 474077,
@@ -1396,6 +1374,17 @@
         "ema50": 2056.79,
         "ema200": 2096.7,
         "cross_date": "2025-10-06"
+      }
+    },
+    "ZYDUSLIFE": {
+      "four_week_high_close": 1205.0,
+      "prev_day_volume": 810133,
+      "volume_5day_ago": 8187351,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1110.54,
+        "ema200": 1020.34,
+        "cross_date": "2026-05-22"
       }
     },
     "BHARTIARTL": {
@@ -1420,15 +1409,15 @@
         "cross_date": "2026-07-17"
       }
     },
-    "ANGELONE": {
-      "four_week_high_close": 312.4,
-      "prev_day_volume": 7260733,
-      "volume_5day_ago": 6599125,
+    "MANKIND": {
+      "four_week_high_close": 2617.9,
+      "prev_day_volume": 366118,
+      "volume_5day_ago": 229702,
       "ema_cross": {
         "bias": "BULLISH",
-        "ema50": 311.11,
-        "ema200": 287.44,
-        "cross_date": "2026-04-06"
+        "ema50": 2452.93,
+        "ema200": 2355.14,
+        "cross_date": "2026-05-20"
       }
     },
     "MOTHERSON": {
@@ -1442,17 +1431,6 @@
         "cross_date": "2025-11-19"
       }
     },
-    "KFINTECH": {
-      "four_week_high_close": 973.75,
-      "prev_day_volume": 1298792,
-      "volume_5day_ago": 344812,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 911.63,
-        "ema200": 949.05,
-        "cross_date": "2026-01-19"
-      }
-    },
     "CIPLA": {
       "four_week_high_close": 1477.0,
       "prev_day_volume": 589396,
@@ -1462,6 +1440,28 @@
         "ema50": 1430.13,
         "ema200": 1413.27,
         "cross_date": "2026-07-28"
+      }
+    },
+    "ANGELONE": {
+      "four_week_high_close": 312.4,
+      "prev_day_volume": 7260733,
+      "volume_5day_ago": 6599125,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 311.11,
+        "ema200": 287.44,
+        "cross_date": "2026-04-06"
+      }
+    },
+    "KFINTECH": {
+      "four_week_high_close": 973.75,
+      "prev_day_volume": 1298792,
+      "volume_5day_ago": 344812,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 911.63,
+        "ema200": 949.05,
+        "cross_date": "2026-01-19"
       }
     },
     "JUBLFOOD": {
@@ -1497,17 +1497,6 @@
         "cross_date": "2025-10-06"
       }
     },
-    "HDFCLIFE": {
-      "four_week_high_close": 558.75,
-      "prev_day_volume": 1271552,
-      "volume_5day_ago": 3642366,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 561.28,
-        "ema200": 633.91,
-        "cross_date": "2026-01-14"
-      }
-    },
     "OFSS": {
       "four_week_high_close": 11896.0,
       "prev_day_volume": 111496,
@@ -1519,15 +1508,15 @@
         "cross_date": "2026-05-11"
       }
     },
-    "TMPV": {
-      "four_week_high_close": 349.8,
-      "prev_day_volume": 9865820,
-      "volume_5day_ago": 4864857,
+    "HDFCLIFE": {
+      "four_week_high_close": 558.75,
+      "prev_day_volume": 1271552,
+      "volume_5day_ago": 3642366,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 344.45,
-        "ema200": 397.14,
-        "cross_date": "2025-10-06"
+        "ema50": 561.28,
+        "ema200": 633.91,
+        "cross_date": "2026-01-14"
       }
     },
     "TITAN": {
@@ -1541,17 +1530,6 @@
         "cross_date": "2025-10-08"
       }
     },
-    "OIL": {
-      "four_week_high_close": 480.5,
-      "prev_day_volume": 5000847,
-      "volume_5day_ago": 11117093,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 452.51,
-        "ema200": 449.53,
-        "cross_date": "2026-08-13"
-      }
-    },
     "CUMMINSIND": {
       "four_week_high_close": 5629.5,
       "prev_day_volume": 177068,
@@ -1561,6 +1539,28 @@
         "ema50": 5468.81,
         "ema200": 4999.67,
         "cross_date": "2025-10-06"
+      }
+    },
+    "TMPV": {
+      "four_week_high_close": 349.8,
+      "prev_day_volume": 9865820,
+      "volume_5day_ago": 4864857,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 344.45,
+        "ema200": 397.14,
+        "cross_date": "2025-10-06"
+      }
+    },
+    "OIL": {
+      "four_week_high_close": 480.5,
+      "prev_day_volume": 5000847,
+      "volume_5day_ago": 11117093,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 452.51,
+        "ema200": 449.53,
+        "cross_date": "2026-08-13"
       }
     },
     "RADICO": {
@@ -1706,17 +1706,6 @@
         "cross_date": "2026-04-01"
       }
     },
-    "FORTIS": {
-      "four_week_high_close": 955.15,
-      "prev_day_volume": 1108225,
-      "volume_5day_ago": 1666135,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 942.01,
-        "ema200": 936.7,
-        "cross_date": "2026-06-05"
-      }
-    },
     "UNIONBANK": {
       "four_week_high_close": 188.9,
       "prev_day_volume": 6684017,
@@ -1737,6 +1726,28 @@
         "ema50": 633.79,
         "ema200": 811.52,
         "cross_date": "2026-01-29"
+      }
+    },
+    "FORTIS": {
+      "four_week_high_close": 955.15,
+      "prev_day_volume": 1108225,
+      "volume_5day_ago": 1666135,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 942.01,
+        "ema200": 936.7,
+        "cross_date": "2026-06-05"
+      }
+    },
+    "BEL": {
+      "four_week_high_close": 412.45,
+      "prev_day_volume": 9120934,
+      "volume_5day_ago": 6803132,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 408.36,
+        "ema200": 417.02,
+        "cross_date": "2026-06-15"
       }
     },
     "RECLTD": {
@@ -1761,17 +1772,6 @@
         "cross_date": "2025-10-06"
       }
     },
-    "BEL": {
-      "four_week_high_close": 412.45,
-      "prev_day_volume": 9120934,
-      "volume_5day_ago": 6803132,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 408.36,
-        "ema200": 417.02,
-        "cross_date": "2026-06-15"
-      }
-    },
     "SRF": {
       "four_week_high_close": 2867.2,
       "prev_day_volume": 238565,
@@ -1783,15 +1783,15 @@
         "cross_date": "2026-01-30"
       }
     },
-    "HCLTECH": {
-      "four_week_high_close": 1377.0,
-      "prev_day_volume": 3056990,
-      "volume_5day_ago": 1828636,
+    "PREMIERENE": {
+      "four_week_high_close": 1050.0,
+      "prev_day_volume": 538817,
+      "volume_5day_ago": 470027,
       "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1267.37,
-        "ema200": 1333.77,
-        "cross_date": "2026-03-12"
+        "bias": "BULLISH",
+        "ema50": 1034.73,
+        "ema200": 984.63,
+        "cross_date": "2026-05-06"
       }
     },
     "SWIGGY": {
@@ -1805,6 +1805,17 @@
         "cross_date": "2025-11-13"
       }
     },
+    "HCLTECH": {
+      "four_week_high_close": 1377.0,
+      "prev_day_volume": 3056990,
+      "volume_5day_ago": 1828636,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1267.37,
+        "ema200": 1333.77,
+        "cross_date": "2026-03-12"
+      }
+    },
     "FEDERALBNK": {
       "four_week_high_close": 371.7,
       "prev_day_volume": 2828360,
@@ -1814,17 +1825,6 @@
         "ema50": 338.88,
         "ema200": 292.09,
         "cross_date": "2025-10-06"
-      }
-    },
-    "BANKINDIA": {
-      "four_week_high_close": 145.5,
-      "prev_day_volume": 2382166,
-      "volume_5day_ago": 6783716,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 142.76,
-        "ema200": 143.27,
-        "cross_date": "2026-07-28"
       }
     },
     "RBLBANK": {
@@ -1838,17 +1838,6 @@
         "cross_date": "2025-10-08"
       }
     },
-    "KEI": {
-      "four_week_high_close": 5873.0,
-      "prev_day_volume": 311725,
-      "volume_5day_ago": 415486,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 5289.42,
-        "ema200": 4816.57,
-        "cross_date": "2025-10-06"
-      }
-    },
     "PERSISTENT": {
       "four_week_high_close": 5580.0,
       "prev_day_volume": 353161,
@@ -1858,6 +1847,28 @@
         "ema50": 5236.22,
         "ema200": 5260.59,
         "cross_date": "2026-03-06"
+      }
+    },
+    "BANKINDIA": {
+      "four_week_high_close": 145.5,
+      "prev_day_volume": 2382166,
+      "volume_5day_ago": 6783716,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 142.76,
+        "ema200": 143.27,
+        "cross_date": "2026-07-28"
+      }
+    },
+    "KEI": {
+      "four_week_high_close": 5873.0,
+      "prev_day_volume": 311725,
+      "volume_5day_ago": 415486,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 5289.42,
+        "ema200": 4816.57,
+        "cross_date": "2025-10-06"
       }
     },
     "SBICARD": {
@@ -1871,15 +1882,15 @@
         "cross_date": "2025-11-18"
       }
     },
-    "PREMIERENE": {
-      "four_week_high_close": 1050.0,
-      "prev_day_volume": 538817,
-      "volume_5day_ago": 470027,
+    "GMRAIRPORT": {
+      "four_week_high_close": 109.83,
+      "prev_day_volume": 6639327,
+      "volume_5day_ago": 10991427,
       "ema_cross": {
         "bias": "BULLISH",
-        "ema50": 1034.73,
-        "ema200": 984.63,
-        "cross_date": "2026-05-06"
+        "ema50": 105.78,
+        "ema200": 100.33,
+        "cross_date": "2026-04-20"
       }
     },
     "POLICYBZR": {
@@ -1970,17 +1981,6 @@
         "cross_date": "2026-04-15"
       }
     },
-    "GMRAIRPORT": {
-      "four_week_high_close": 109.83,
-      "prev_day_volume": 6639327,
-      "volume_5day_ago": 10991427,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 105.78,
-        "ema200": 100.33,
-        "cross_date": "2026-04-20"
-      }
-    },
     "ETERNAL": {
       "four_week_high_close": 318.5,
       "prev_day_volume": 18387007,
@@ -1990,17 +1990,6 @@
         "ema50": 290.96,
         "ema200": 280.99,
         "cross_date": "2026-08-03"
-      }
-    },
-    "ITC": {
-      "four_week_high_close": 289.0,
-      "prev_day_volume": 14561572,
-      "volume_5day_ago": 13053722,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 285.1,
-        "ema200": 318.87,
-        "cross_date": "2025-12-16"
       }
     },
     "POLYCAB": {
@@ -2034,6 +2023,17 @@
         "ema50": 3267.01,
         "ema200": 3300.57,
         "cross_date": "2026-03-02"
+      }
+    },
+    "ITC": {
+      "four_week_high_close": 289.0,
+      "prev_day_volume": 14561572,
+      "volume_5day_ago": 13053722,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 285.1,
+        "ema200": 318.87,
+        "cross_date": "2025-12-16"
       }
     },
     "ASHOKLEY": {
@@ -2102,17 +2102,6 @@
         "cross_date": "2026-03-09"
       }
     },
-    "SUZLON": {
-      "four_week_high_close": 53.15,
-      "prev_day_volume": 62318243,
-      "volume_5day_ago": 37012060,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 51.05,
-        "ema200": 51.56,
-        "cross_date": "2026-08-12"
-      }
-    },
     "LT": {
       "four_week_high_close": 4086.7,
       "prev_day_volume": 1355575,
@@ -2179,15 +2168,26 @@
         "cross_date": "2026-04-21"
       }
     },
-    "ICICIGI": {
-      "four_week_high_close": 1684.0,
-      "prev_day_volume": 625804,
-      "volume_5day_ago": 514500,
+    "POWERINDIA": {
+      "four_week_high_close": 36050.0,
+      "prev_day_volume": 47426,
+      "volume_5day_ago": 215956,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 33273.28,
+        "ema200": 28195.31,
+        "cross_date": "2026-02-06"
+      }
+    },
+    "SUZLON": {
+      "four_week_high_close": 53.15,
+      "prev_day_volume": 62318243,
+      "volume_5day_ago": 37012060,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 1699.59,
-        "ema200": 1803.83,
-        "cross_date": "2026-01-23"
+        "ema50": 51.05,
+        "ema200": 51.56,
+        "cross_date": "2026-08-12"
       }
     },
     "BHEL": {
@@ -2201,17 +2201,6 @@
         "cross_date": "2025-11-06"
       }
     },
-    "POWERINDIA": {
-      "four_week_high_close": 36050.0,
-      "prev_day_volume": 47426,
-      "volume_5day_ago": 215956,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 33273.28,
-        "ema200": 28195.31,
-        "cross_date": "2026-02-06"
-      }
-    },
     "GAIL": {
       "four_week_high_close": 181.44,
       "prev_day_volume": 6079875,
@@ -2223,26 +2212,15 @@
         "cross_date": "2026-07-01"
       }
     },
-    "SAIL": {
-      "four_week_high_close": 176.74,
-      "prev_day_volume": 11053548,
-      "volume_5day_ago": 13260979,
+    "ICICIGI": {
+      "four_week_high_close": 1684.0,
+      "prev_day_volume": 625804,
+      "volume_5day_ago": 514500,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 171.97,
-        "ema200": 163.44,
-        "cross_date": "2026-01-02"
-      }
-    },
-    "GLENMARK": {
-      "four_week_high_close": 2329.0,
-      "prev_day_volume": 379551,
-      "volume_5day_ago": 284670,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2248.34,
-        "ema200": 2155.09,
-        "cross_date": "2026-01-02"
+        "bias": "BEARISH",
+        "ema50": 1699.59,
+        "ema200": 1803.83,
+        "cross_date": "2026-01-23"
       }
     },
     "ULTRACEMCO": {
@@ -2254,6 +2232,17 @@
         "ema50": 11728.75,
         "ema200": 11771.31,
         "cross_date": "2026-03-20"
+      }
+    },
+    "SAIL": {
+      "four_week_high_close": 176.74,
+      "prev_day_volume": 11053548,
+      "volume_5day_ago": 13260979,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 171.97,
+        "ema200": 163.44,
+        "cross_date": "2026-01-02"
       }
     },
     "SIEMENS": {
@@ -2278,6 +2267,17 @@
         "cross_date": "2026-03-19"
       }
     },
+    "GLENMARK": {
+      "four_week_high_close": 2329.0,
+      "prev_day_volume": 379551,
+      "volume_5day_ago": 284670,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2248.34,
+        "ema200": 2155.09,
+        "cross_date": "2026-01-02"
+      }
+    },
     "TATAELXSI": {
       "four_week_high_close": 3808.0,
       "prev_day_volume": 192129,
@@ -2288,12 +2288,6 @@
         "ema200": 4393.53,
         "cross_date": "2026-02-13"
       }
-    },
-    "GOLD": {
-      "four_week_high_close": 15522.0,
-      "prev_day_volume": 169130,
-      "volume_5day_ago": 242585,
-      "ema_cross": null
     },
     "VBL": {
       "four_week_high_close": 464.5,
@@ -2306,10 +2300,22 @@
         "cross_date": "2026-08-12"
       }
     },
+    "GOLD": {
+      "four_week_high_close": 15522.0,
+      "prev_day_volume": 169130,
+      "volume_5day_ago": 242585,
+      "ema_cross": null
+    },
     "SILVER": {
       "four_week_high_close": 239224.0,
       "prev_day_volume": 92595,
       "volume_5day_ago": 126807,
+      "ema_cross": null
+    },
+    "CRUDEOIL": {
+      "four_week_high_close": 9024.0,
+      "prev_day_volume": 21901,
+      "volume_5day_ago": 96078,
       "ema_cross": null
     },
     "DABUR": {
@@ -2322,12 +2328,6 @@
         "ema200": 456.66,
         "cross_date": "2026-03-12"
       }
-    },
-    "CRUDEOIL": {
-      "four_week_high_close": 9024.0,
-      "prev_day_volume": 21901,
-      "volume_5day_ago": 96078,
-      "ema_cross": null
     },
     "TARIL": {
       "four_week_high_close": 307.15,
@@ -2351,6 +2351,17 @@
         "cross_date": "2025-10-06"
       }
     },
+    "CHALET": {
+      "four_week_high_close": 863.1,
+      "prev_day_volume": 57779,
+      "volume_5day_ago": 154118,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 821.9,
+        "ema200": 835.61,
+        "cross_date": "2025-10-06"
+      }
+    },
     "TMCV": {
       "four_week_high_close": 474.8,
       "prev_day_volume": 6376666,
@@ -2366,28 +2377,6 @@
         "ema50": 3422.72,
         "ema200": 3228.4,
         "cross_date": "2026-05-19"
-      }
-    },
-    "KIRLOSENG": {
-      "four_week_high_close": 2283.1,
-      "prev_day_volume": 200593,
-      "volume_5day_ago": 662007,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2126.98,
-        "ema200": 1676.45,
-        "cross_date": "2025-10-28"
-      }
-    },
-    "CHALET": {
-      "four_week_high_close": 863.1,
-      "prev_day_volume": 57779,
-      "volume_5day_ago": 154118,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 821.9,
-        "ema200": 835.61,
-        "cross_date": "2025-10-06"
       }
     },
     "ANANTRAJ": {
@@ -2412,6 +2401,17 @@
         "cross_date": "2026-07-02"
       }
     },
+    "KIRLOSENG": {
+      "four_week_high_close": 2283.1,
+      "prev_day_volume": 200593,
+      "volume_5day_ago": 662007,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2126.98,
+        "ema200": 1676.45,
+        "cross_date": "2025-10-28"
+      }
+    },
     "SIGNATURE": {
       "four_week_high_close": 833.65,
       "prev_day_volume": 173951,
@@ -2428,6 +2428,17 @@
       "prev_day_volume": 1134683,
       "volume_5day_ago": 1382856,
       "ema_cross": null
+    },
+    "LALPATHLAB": {
+      "four_week_high_close": 1968.4,
+      "prev_day_volume": 211640,
+      "volume_5day_ago": 198678,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1771.44,
+        "ema200": 1598.24,
+        "cross_date": "2026-05-20"
+      }
     },
     "PARADEEP": {
       "four_week_high_close": 156.54,
@@ -2451,37 +2462,15 @@
         "cross_date": "2026-08-13"
       }
     },
-    "LALPATHLAB": {
-      "four_week_high_close": 1968.4,
-      "prev_day_volume": 211640,
-      "volume_5day_ago": 198678,
+    "NAVINFLUOR": {
+      "four_week_high_close": 8650.0,
+      "prev_day_volume": 107257,
+      "volume_5day_ago": 237800,
       "ema_cross": {
         "bias": "BULLISH",
-        "ema50": 1771.44,
-        "ema200": 1598.24,
-        "cross_date": "2026-05-20"
-      }
-    },
-    "NLCINDIA": {
-      "four_week_high_close": 304.4,
-      "prev_day_volume": 866666,
-      "volume_5day_ago": 2444934,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 299.61,
-        "ema200": 291.65,
-        "cross_date": "2026-04-20"
-      }
-    },
-    "IRCON": {
-      "four_week_high_close": 132.11,
-      "prev_day_volume": 946997,
-      "volume_5day_ago": 1047600,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 131.12,
-        "ema200": 144.58,
-        "cross_date": "2025-10-20"
+        "ema50": 7680.29,
+        "ema200": 6678.75,
+        "cross_date": "2025-10-10"
       }
     },
     "BERGEPAINT": {
@@ -2495,15 +2484,15 @@
         "cross_date": "2026-07-30"
       }
     },
-    "NAVINFLUOR": {
-      "four_week_high_close": 8650.0,
-      "prev_day_volume": 107257,
-      "volume_5day_ago": 237800,
+    "IRCON": {
+      "four_week_high_close": 132.11,
+      "prev_day_volume": 946997,
+      "volume_5day_ago": 1047600,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 7680.29,
-        "ema200": 6678.75,
-        "cross_date": "2025-10-10"
+        "bias": "BEARISH",
+        "ema50": 131.12,
+        "ema200": 144.58,
+        "cross_date": "2025-10-20"
       }
     },
     "ACMESOLAR": {
@@ -2515,6 +2504,17 @@
         "ema50": 359.27,
         "ema200": 307.75,
         "cross_date": "2026-04-21"
+      }
+    },
+    "NLCINDIA": {
+      "four_week_high_close": 304.4,
+      "prev_day_volume": 866666,
+      "volume_5day_ago": 2444934,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 299.61,
+        "ema200": 291.65,
+        "cross_date": "2026-04-20"
       }
     },
     "ZEEL": {
@@ -2616,6 +2616,17 @@
         "cross_date": "2025-12-10"
       }
     },
+    "ANTHEM": {
+      "four_week_high_close": 898.0,
+      "prev_day_volume": 477452,
+      "volume_5day_ago": 1605598,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 804.63,
+        "ema200": 747.89,
+        "cross_date": "2026-04-30"
+      }
+    },
     "SAGILITY": {
       "four_week_high_close": 45.98,
       "prev_day_volume": 11644898,
@@ -2636,17 +2647,6 @@
         "ema50": 1246.86,
         "ema200": 1245.9,
         "cross_date": "2025-11-20"
-      }
-    },
-    "ANTHEM": {
-      "four_week_high_close": 898.0,
-      "prev_day_volume": 477452,
-      "volume_5day_ago": 1605598,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 804.63,
-        "ema200": 747.89,
-        "cross_date": "2026-04-30"
       }
     },
     "HINDCOPPER": {
@@ -2693,6 +2693,17 @@
         "cross_date": "2026-02-18"
       }
     },
+    "TATACAP": {
+      "four_week_high_close": 382.7,
+      "prev_day_volume": 854053,
+      "volume_5day_ago": 1019980,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 353.1,
+        "ema200": 338.26,
+        "cross_date": "2026-06-29"
+      }
+    },
     "RRKABEL": {
       "four_week_high_close": 2834.2,
       "prev_day_volume": 698009,
@@ -2715,17 +2726,6 @@
         "cross_date": "2026-01-22"
       }
     },
-    "TATACAP": {
-      "four_week_high_close": 382.7,
-      "prev_day_volume": 854053,
-      "volume_5day_ago": 1019980,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 353.1,
-        "ema200": 338.26,
-        "cross_date": "2026-06-29"
-      }
-    },
     "GRAPHITE": {
       "four_week_high_close": 737.15,
       "prev_day_volume": 943780,
@@ -2735,6 +2735,17 @@
         "ema50": 678.42,
         "ema200": 647.73,
         "cross_date": "2025-12-29"
+      }
+    },
+    "NUVAMA": {
+      "four_week_high_close": 1980.1,
+      "prev_day_volume": 342098,
+      "volume_5day_ago": 536662,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1727.54,
+        "ema200": 1534.91,
+        "cross_date": "2026-05-14"
       }
     },
     "MEESHO": {
@@ -2754,33 +2765,11 @@
         "cross_date": "2026-05-20"
       }
     },
-    "NUVAMA": {
-      "four_week_high_close": 1980.1,
-      "prev_day_volume": 342098,
-      "volume_5day_ago": 536662,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1727.54,
-        "ema200": 1534.91,
-        "cross_date": "2026-05-14"
-      }
-    },
     "ICICIAMC": {
       "four_week_high_close": 3147.0,
       "prev_day_volume": 215913,
       "volume_5day_ago": 290518,
       "ema_cross": null
-    },
-    "ITI": {
-      "four_week_high_close": 287.25,
-      "prev_day_volume": 233923,
-      "volume_5day_ago": 257344,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 285.96,
-        "ema200": 293.26,
-        "cross_date": "2025-12-03"
-      }
     },
     "TATATECH": {
       "four_week_high_close": 879.15,
@@ -2791,6 +2780,17 @@
         "ema50": 760.25,
         "ema200": 690.82,
         "cross_date": "2026-06-08"
+      }
+    },
+    "ITI": {
+      "four_week_high_close": 287.25,
+      "prev_day_volume": 233923,
+      "volume_5day_ago": 257344,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 285.96,
+        "ema200": 293.26,
+        "cross_date": "2025-12-03"
       }
     },
     "KARURVYSYA": {
@@ -2826,17 +2826,6 @@
         "cross_date": "2025-12-16"
       }
     },
-    "GILLETTE": {
-      "four_week_high_close": 7940.5,
-      "prev_day_volume": 12673,
-      "volume_5day_ago": 11533,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 7739.21,
-        "ema200": 8124.2,
-        "cross_date": "2025-10-06"
-      }
-    },
     "COROMANDEL": {
       "four_week_high_close": 2115.5,
       "prev_day_volume": 58848,
@@ -2848,17 +2837,6 @@
         "cross_date": "2026-03-02"
       }
     },
-    "MGL": {
-      "four_week_high_close": 1139.6,
-      "prev_day_volume": 277306,
-      "volume_5day_ago": 108937,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1116.7,
-        "ema200": 1133.99,
-        "cross_date": "2025-11-07"
-      }
-    },
     "FINCABLES": {
       "four_week_high_close": 1329.35,
       "prev_day_volume": 884780,
@@ -2868,6 +2846,28 @@
         "ema50": 1081.91,
         "ema200": 959.05,
         "cross_date": "2026-03-05"
+      }
+    },
+    "GILLETTE": {
+      "four_week_high_close": 7940.5,
+      "prev_day_volume": 12673,
+      "volume_5day_ago": 11533,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 7739.21,
+        "ema200": 8124.2,
+        "cross_date": "2025-10-06"
+      }
+    },
+    "CGCL": {
+      "four_week_high_close": 244.27,
+      "prev_day_volume": 2703979,
+      "volume_5day_ago": 2491050,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 227.24,
+        "ema200": 202.88,
+        "cross_date": "2026-05-22"
       }
     },
     "FIVESTAR": {
@@ -2892,15 +2892,26 @@
         "cross_date": "2025-10-06"
       }
     },
-    "CGCL": {
-      "four_week_high_close": 244.27,
-      "prev_day_volume": 2703979,
-      "volume_5day_ago": 2491050,
+    "MGL": {
+      "four_week_high_close": 1139.6,
+      "prev_day_volume": 277306,
+      "volume_5day_ago": 108937,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 227.24,
-        "ema200": 202.88,
-        "cross_date": "2026-05-22"
+        "bias": "BEARISH",
+        "ema50": 1116.7,
+        "ema200": 1133.99,
+        "cross_date": "2025-11-07"
+      }
+    },
+    "AAVAS": {
+      "four_week_high_close": 1444.0,
+      "prev_day_volume": 49386,
+      "volume_5day_ago": 159507,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1412.02,
+        "ema200": 1428.95,
+        "cross_date": "2025-10-09"
       }
     },
     "KPIL": {
@@ -2925,15 +2936,15 @@
         "cross_date": "2026-02-18"
       }
     },
-    "AAVAS": {
-      "four_week_high_close": 1444.0,
-      "prev_day_volume": 49386,
-      "volume_5day_ago": 159507,
+    "MRF": {
+      "four_week_high_close": 134860.0,
+      "prev_day_volume": 2637,
+      "volume_5day_ago": 17256,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 1412.02,
-        "ema200": 1428.95,
-        "cross_date": "2025-10-09"
+        "ema50": 131932.9,
+        "ema200": 137269.72,
+        "cross_date": "2025-12-29"
       }
     },
     "AEGISVOPAK": {
@@ -2958,17 +2969,6 @@
         "cross_date": "2026-06-10"
       }
     },
-    "MRF": {
-      "four_week_high_close": 134860.0,
-      "prev_day_volume": 2637,
-      "volume_5day_ago": 17256,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 131932.9,
-        "ema200": 137269.72,
-        "cross_date": "2025-12-29"
-      }
-    },
     "FACT": {
       "four_week_high_close": 843.25,
       "prev_day_volume": 54378,
@@ -2989,17 +2989,6 @@
         "ema50": 271.91,
         "ema200": 250.85,
         "cross_date": "2025-12-10"
-      }
-    },
-    "GRANULES": {
-      "four_week_high_close": 873.85,
-      "prev_day_volume": 407105,
-      "volume_5day_ago": 377278,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 827.48,
-        "ema200": 708.16,
-        "cross_date": "2025-12-12"
       }
     },
     "AIAENG": {
@@ -3024,6 +3013,17 @@
         "cross_date": "2026-05-11"
       }
     },
+    "GRANULES": {
+      "four_week_high_close": 873.85,
+      "prev_day_volume": 407105,
+      "volume_5day_ago": 377278,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 827.48,
+        "ema200": 708.16,
+        "cross_date": "2025-12-12"
+      }
+    },
     "TEJASNET": {
       "four_week_high_close": 540.2,
       "prev_day_volume": 757795,
@@ -3033,17 +3033,6 @@
         "ema50": 530.18,
         "ema200": 504.27,
         "cross_date": "2026-06-10"
-      }
-    },
-    "MEDANTA": {
-      "four_week_high_close": 1476.2,
-      "prev_day_volume": 309148,
-      "volume_5day_ago": 224097,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1352.75,
-        "ema200": 1255.08,
-        "cross_date": "2026-06-22"
       }
     },
     "SCHNEIDER": {
@@ -3068,26 +3057,15 @@
         "cross_date": "2026-06-19"
       }
     },
-    "JSL": {
-      "four_week_high_close": 744.5,
-      "prev_day_volume": 658364,
-      "volume_5day_ago": 327591,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 725.93,
-        "ema200": 745.3,
-        "cross_date": "2026-03-04"
-      }
-    },
-    "NETWEB": {
-      "four_week_high_close": 5354.5,
-      "prev_day_volume": 2395703,
-      "volume_5day_ago": 682980,
+    "MEDANTA": {
+      "four_week_high_close": 1476.2,
+      "prev_day_volume": 309148,
+      "volume_5day_ago": 224097,
       "ema_cross": {
         "bias": "BULLISH",
-        "ema50": 4570.29,
-        "ema200": 4093.29,
-        "cross_date": "2026-05-11"
+        "ema50": 1352.75,
+        "ema200": 1255.08,
+        "cross_date": "2026-06-22"
       }
     },
     "HBLENGINE": {
@@ -3112,6 +3090,28 @@
         "cross_date": "2025-10-06"
       }
     },
+    "JSL": {
+      "four_week_high_close": 744.5,
+      "prev_day_volume": 658364,
+      "volume_5day_ago": 327591,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 725.93,
+        "ema200": 745.3,
+        "cross_date": "2026-03-04"
+      }
+    },
+    "NETWEB": {
+      "four_week_high_close": 5354.5,
+      "prev_day_volume": 2395703,
+      "volume_5day_ago": 682980,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 4570.29,
+        "ema200": 4093.29,
+        "cross_date": "2026-05-11"
+      }
+    },
     "BSOFT": {
       "four_week_high_close": 323.65,
       "prev_day_volume": 565208,
@@ -3121,6 +3121,17 @@
         "ema50": 310.2,
         "ema200": 343.53,
         "cross_date": "2026-04-01"
+      }
+    },
+    "BELRISE": {
+      "four_week_high_close": 261.35,
+      "prev_day_volume": 5153065,
+      "volume_5day_ago": 2947908,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 235.29,
+        "ema200": 206.18,
+        "cross_date": "2025-12-29"
       }
     },
     "HFCL": {
@@ -3145,15 +3156,15 @@
         "cross_date": "2026-06-09"
       }
     },
-    "BELRISE": {
-      "four_week_high_close": 261.35,
-      "prev_day_volume": 5153065,
-      "volume_5day_ago": 2947908,
+    "RHIM": {
+      "four_week_high_close": 423.35,
+      "prev_day_volume": 434035,
+      "volume_5day_ago": 1614800,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 235.29,
-        "ema200": 206.18,
-        "cross_date": "2025-12-29"
+        "bias": "BEARISH",
+        "ema50": 395.63,
+        "ema200": 409.64,
+        "cross_date": "2026-03-02"
       }
     },
     "JINDALSAW": {
@@ -3178,17 +3189,6 @@
         "cross_date": "2026-08-17"
       }
     },
-    "RHIM": {
-      "four_week_high_close": 423.35,
-      "prev_day_volume": 434035,
-      "volume_5day_ago": 1614800,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 395.63,
-        "ema200": 409.64,
-        "cross_date": "2026-03-02"
-      }
-    },
     "CIEINDIA": {
       "four_week_high_close": 472.5,
       "prev_day_volume": 249282,
@@ -3198,17 +3198,6 @@
         "ema50": 435.77,
         "ema200": 440.99,
         "cross_date": "2026-08-10"
-      }
-    },
-    "JSWINFRA": {
-      "four_week_high_close": 346.6,
-      "prev_day_volume": 1863660,
-      "volume_5day_ago": 2466677,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 321.13,
-        "ema200": 296.61,
-        "cross_date": "2026-06-24"
       }
     },
     "ABBOTINDIA": {
@@ -3244,6 +3233,17 @@
         "cross_date": "2025-10-07"
       }
     },
+    "JSWINFRA": {
+      "four_week_high_close": 346.6,
+      "prev_day_volume": 1863660,
+      "volume_5day_ago": 2466677,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 321.13,
+        "ema200": 296.61,
+        "cross_date": "2026-06-24"
+      }
+    },
     "VTL": {
       "four_week_high_close": 629.55,
       "prev_day_volume": 253029,
@@ -3253,6 +3253,17 @@
         "ema50": 611.66,
         "ema200": 550.89,
         "cross_date": "2025-10-24"
+      }
+    },
+    "MSUMI": {
+      "four_week_high_close": 41.74,
+      "prev_day_volume": 5783732,
+      "volume_5day_ago": 4961779,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 40.27,
+        "ema200": 41.62,
+        "cross_date": "2026-01-29"
       }
     },
     "IRCTC": {
@@ -3277,28 +3288,6 @@
         "cross_date": "2025-12-17"
       }
     },
-    "MSUMI": {
-      "four_week_high_close": 41.74,
-      "prev_day_volume": 5783732,
-      "volume_5day_ago": 4961779,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 40.27,
-        "ema200": 41.62,
-        "cross_date": "2026-01-29"
-      }
-    },
-    "AFFLE": {
-      "four_week_high_close": 1711.3,
-      "prev_day_volume": 124757,
-      "volume_5day_ago": 345397,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1563.89,
-        "ema200": 1587.24,
-        "cross_date": "2025-10-14"
-      }
-    },
     "NAVA": {
       "four_week_high_close": 594.2,
       "prev_day_volume": 276543,
@@ -3310,26 +3299,15 @@
         "cross_date": "2026-07-22"
       }
     },
-    "ATHERENERG": {
-      "four_week_high_close": 1569.4,
-      "prev_day_volume": 2760706,
-      "volume_5day_ago": 4867021,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1254.53,
-        "ema200": 945.77,
-        "cross_date": "2025-10-06"
-      }
-    },
-    "EIHOTEL": {
-      "four_week_high_close": 335.75,
-      "prev_day_volume": 111718,
-      "volume_5day_ago": 184703,
+    "AFFLE": {
+      "four_week_high_close": 1711.3,
+      "prev_day_volume": 124757,
+      "volume_5day_ago": 345397,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 318.29,
-        "ema200": 333.96,
-        "cross_date": "2025-10-06"
+        "ema50": 1563.89,
+        "ema200": 1587.24,
+        "cross_date": "2025-10-14"
       }
     },
     "HONAUT": {
@@ -3354,15 +3332,15 @@
         "cross_date": "2025-11-14"
       }
     },
-    "CAPLIPOINT": {
-      "four_week_high_close": 2629.6,
-      "prev_day_volume": 70633,
-      "volume_5day_ago": 93909,
+    "EIHOTEL": {
+      "four_week_high_close": 335.75,
+      "prev_day_volume": 111718,
+      "volume_5day_ago": 184703,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2456.75,
-        "ema200": 2128.41,
-        "cross_date": "2026-06-04"
+        "bias": "BEARISH",
+        "ema50": 318.29,
+        "ema200": 333.96,
+        "cross_date": "2025-10-06"
       }
     },
     "IOB": {
@@ -3374,6 +3352,28 @@
         "ema50": 34.03,
         "ema200": 35.22,
         "cross_date": "2025-11-06"
+      }
+    },
+    "ATHERENERG": {
+      "four_week_high_close": 1569.4,
+      "prev_day_volume": 2760706,
+      "volume_5day_ago": 4867021,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1254.53,
+        "ema200": 945.77,
+        "cross_date": "2025-10-06"
+      }
+    },
+    "CAPLIPOINT": {
+      "four_week_high_close": 2629.6,
+      "prev_day_volume": 70633,
+      "volume_5day_ago": 93909,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2456.75,
+        "ema200": 2128.41,
+        "cross_date": "2026-06-04"
       }
     },
     "FSL": {
@@ -3398,17 +3398,6 @@
         "cross_date": "2025-11-07"
       }
     },
-    "ANANDRATHI": {
-      "four_week_high_close": 2198.8,
-      "prev_day_volume": 132277,
-      "volume_5day_ago": 248922,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2023.3,
-        "ema200": 1764.62,
-        "cross_date": "2025-10-06"
-      }
-    },
     "JYOTICNC": {
       "four_week_high_close": 929.2,
       "prev_day_volume": 5438972,
@@ -3418,6 +3407,17 @@
         "ema50": 792.39,
         "ema200": 806.74,
         "cross_date": "2026-01-27"
+      }
+    },
+    "ANANDRATHI": {
+      "four_week_high_close": 2198.8,
+      "prev_day_volume": 132277,
+      "volume_5day_ago": 248922,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2023.3,
+        "ema200": 1764.62,
+        "cross_date": "2025-10-06"
       }
     },
     "USHAMART": {
@@ -3442,6 +3442,17 @@
         "cross_date": "2026-08-10"
       }
     },
+    "DEEPAKNTR": {
+      "four_week_high_close": 1796.5,
+      "prev_day_volume": 229368,
+      "volume_5day_ago": 370508,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1691.52,
+        "ema200": 1674.25,
+        "cross_date": "2026-08-07"
+      }
+    },
     "JBMA": {
       "four_week_high_close": 678.45,
       "prev_day_volume": 138248,
@@ -3462,17 +3473,6 @@
         "ema50": 84.82,
         "ema200": 81.02,
         "cross_date": "2026-05-18"
-      }
-    },
-    "DEEPAKNTR": {
-      "four_week_high_close": 1796.5,
-      "prev_day_volume": 229368,
-      "volume_5day_ago": 370508,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1691.52,
-        "ema200": 1674.25,
-        "cross_date": "2026-08-07"
       }
     },
     "ATUL": {
@@ -3552,6 +3552,17 @@
         "cross_date": "2026-01-20"
       }
     },
+    "GRAVITA": {
+      "four_week_high_close": 1821.7,
+      "prev_day_volume": 138790,
+      "volume_5day_ago": 177973,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1726.76,
+        "ema200": 1662.45,
+        "cross_date": "2026-06-16"
+      }
+    },
     "TITAGARH": {
       "four_week_high_close": 861.65,
       "prev_day_volume": 435134,
@@ -3572,17 +3583,6 @@
         "ema50": 547.56,
         "ema200": 568.01,
         "cross_date": "2026-02-12"
-      }
-    },
-    "GRAVITA": {
-      "four_week_high_close": 1821.7,
-      "prev_day_volume": 138790,
-      "volume_5day_ago": 177973,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1726.76,
-        "ema200": 1662.45,
-        "cross_date": "2026-06-16"
       }
     },
     "DATAPATTNS": {
@@ -3640,6 +3640,17 @@
         "cross_date": "2025-10-06"
       }
     },
+    "RAINBOW": {
+      "four_week_high_close": 1598.6,
+      "prev_day_volume": 52308,
+      "volume_5day_ago": 68590,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1459.63,
+        "ema200": 1358.17,
+        "cross_date": "2026-06-01"
+      }
+    },
     "IGL": {
       "four_week_high_close": 156.17,
       "prev_day_volume": 755290,
@@ -3660,17 +3671,6 @@
         "ema50": 522.24,
         "ema200": 592.2,
         "cross_date": "2025-12-12"
-      }
-    },
-    "RAINBOW": {
-      "four_week_high_close": 1598.6,
-      "prev_day_volume": 52308,
-      "volume_5day_ago": 68590,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1459.63,
-        "ema200": 1358.17,
-        "cross_date": "2026-06-01"
       }
     },
     "SCI": {
@@ -3750,17 +3750,6 @@
         "cross_date": "2025-10-06"
       }
     },
-    "NTPCGREEN": {
-      "four_week_high_close": 97.22,
-      "prev_day_volume": 1292982,
-      "volume_5day_ago": 3179422,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 94.4,
-        "ema200": 96.67,
-        "cross_date": "2026-07-17"
-      }
-    },
     "CHOLAHLDNG": {
       "four_week_high_close": 1648.0,
       "prev_day_volume": 67053,
@@ -3794,6 +3783,28 @@
         "cross_date": "2026-06-23"
       }
     },
+    "NTPCGREEN": {
+      "four_week_high_close": 97.22,
+      "prev_day_volume": 1292982,
+      "volume_5day_ago": 3179422,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 94.4,
+        "ema200": 96.67,
+        "cross_date": "2026-07-17"
+      }
+    },
+    "GALLANTT": {
+      "four_week_high_close": 629.2,
+      "prev_day_volume": 18807,
+      "volume_5day_ago": 85957,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 630.96,
+        "ema200": 644.3,
+        "cross_date": "2026-08-05"
+      }
+    },
     "PWL": {
       "four_week_high_close": 133.25,
       "prev_day_volume": 52106492,
@@ -3811,17 +3822,6 @@
         "cross_date": "2026-07-24"
       }
     },
-    "GALLANTT": {
-      "four_week_high_close": 629.2,
-      "prev_day_volume": 18807,
-      "volume_5day_ago": 85957,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 630.96,
-        "ema200": 644.3,
-        "cross_date": "2026-08-05"
-      }
-    },
     "CESC": {
       "four_week_high_close": 170.22,
       "prev_day_volume": 2555495,
@@ -3831,6 +3831,17 @@
         "ema50": 166.81,
         "ema200": 167.12,
         "cross_date": "2026-08-07"
+      }
+    },
+    "RKFORGE": {
+      "four_week_high_close": 755.0,
+      "prev_day_volume": 858508,
+      "volume_5day_ago": 1655288,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 637.38,
+        "ema200": 577.31,
+        "cross_date": "2026-04-29"
       }
     },
     "HOMEFIRST": {
@@ -3853,17 +3864,6 @@
         "ema50": 1150.84,
         "ema200": 1067.32,
         "cross_date": "2025-11-06"
-      }
-    },
-    "RKFORGE": {
-      "four_week_high_close": 755.0,
-      "prev_day_volume": 858508,
-      "volume_5day_ago": 1655288,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 637.38,
-        "ema200": 577.31,
-        "cross_date": "2026-04-29"
       }
     },
     "TRAVELFOOD": {
@@ -3910,15 +3910,15 @@
         "cross_date": "2026-08-13"
       }
     },
-    "INTELLECT": {
-      "four_week_high_close": 748.85,
-      "prev_day_volume": 334407,
-      "volume_5day_ago": 180178,
+    "DCMSHRIRAM": {
+      "four_week_high_close": 1055.9,
+      "prev_day_volume": 173224,
+      "volume_5day_ago": 62848,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 730.51,
-        "ema200": 794.38,
-        "cross_date": "2026-01-14"
+        "ema50": 1037.5,
+        "ema200": 1104.58,
+        "cross_date": "2026-01-22"
       }
     },
     "ESCORTS": {
@@ -3932,17 +3932,6 @@
         "cross_date": "2026-02-23"
       }
     },
-    "DCMSHRIRAM": {
-      "four_week_high_close": 1055.9,
-      "prev_day_volume": 173224,
-      "volume_5day_ago": 62848,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1037.5,
-        "ema200": 1104.58,
-        "cross_date": "2026-01-22"
-      }
-    },
     "BATAINDIA": {
       "four_week_high_close": 758.1,
       "prev_day_volume": 592566,
@@ -3954,15 +3943,15 @@
         "cross_date": "2025-10-09"
       }
     },
-    "TECHNOE": {
-      "four_week_high_close": 1066.25,
-      "prev_day_volume": 444335,
-      "volume_5day_ago": 136004,
+    "INTELLECT": {
+      "four_week_high_close": 748.85,
+      "prev_day_volume": 334407,
+      "volume_5day_ago": 180178,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 1038.11,
-        "ema200": 1125.24,
-        "cross_date": "2025-10-06"
+        "ema50": 730.51,
+        "ema200": 794.38,
+        "cross_date": "2026-01-14"
       }
     },
     "TRIDENT": {
@@ -3976,6 +3965,17 @@
         "cross_date": "2025-10-06"
       }
     },
+    "ENDURANCE": {
+      "four_week_high_close": 3019.7,
+      "prev_day_volume": 130419,
+      "volume_5day_ago": 216591,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2764.83,
+        "ema200": 2658.55,
+        "cross_date": "2026-07-16"
+      }
+    },
     "ZENTEC": {
       "four_week_high_close": 1982.4,
       "prev_day_volume": 2742695,
@@ -3987,26 +3987,15 @@
         "cross_date": "2026-04-17"
       }
     },
-    "STARHEALTH": {
-      "four_week_high_close": 610.4,
-      "prev_day_volume": 182916,
-      "volume_5day_ago": 469134,
+    "TECHNOE": {
+      "four_week_high_close": 1066.25,
+      "prev_day_volume": 444335,
+      "volume_5day_ago": 136004,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 572.85,
-        "ema200": 519.05,
-        "cross_date": "2026-04-16"
-      }
-    },
-    "ENDURANCE": {
-      "four_week_high_close": 3019.7,
-      "prev_day_volume": 130419,
-      "volume_5day_ago": 216591,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2764.83,
-        "ema200": 2658.55,
-        "cross_date": "2026-07-16"
+        "bias": "BEARISH",
+        "ema50": 1038.11,
+        "ema200": 1125.24,
+        "cross_date": "2025-10-06"
       }
     },
     "CEMPRO": {
@@ -4031,6 +4020,17 @@
         "cross_date": "2026-04-20"
       }
     },
+    "STARHEALTH": {
+      "four_week_high_close": 610.4,
+      "prev_day_volume": 182916,
+      "volume_5day_ago": 469134,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 572.85,
+        "ema200": 519.05,
+        "cross_date": "2026-04-16"
+      }
+    },
     "APTUS": {
       "four_week_high_close": 294.65,
       "prev_day_volume": 706252,
@@ -4040,17 +4040,6 @@
         "ema50": 268.79,
         "ema200": 272.2,
         "cross_date": "2026-08-07"
-      }
-    },
-    "ZFCVINDIA": {
-      "four_week_high_close": 2672.7,
-      "prev_day_volume": 142083,
-      "volume_5day_ago": 50484,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2487.45,
-        "ema200": 2415.13,
-        "cross_date": "2025-12-10"
       }
     },
     "HEG": {
@@ -4064,17 +4053,6 @@
         "cross_date": "2026-07-14"
       }
     },
-    "TBOTEK": {
-      "four_week_high_close": 1708.2,
-      "prev_day_volume": 371186,
-      "volume_5day_ago": 119073,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1500.15,
-        "ema200": 1435.1,
-        "cross_date": "2026-07-29"
-      }
-    },
     "POLYMED": {
       "four_week_high_close": 1869.4,
       "prev_day_volume": 224876,
@@ -4084,6 +4062,28 @@
         "ema50": 1671.47,
         "ema200": 1633.06,
         "cross_date": "2026-08-04"
+      }
+    },
+    "ZFCVINDIA": {
+      "four_week_high_close": 2672.7,
+      "prev_day_volume": 142083,
+      "volume_5day_ago": 50484,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2487.45,
+        "ema200": 2415.13,
+        "cross_date": "2025-12-10"
+      }
+    },
+    "TBOTEK": {
+      "four_week_high_close": 1708.2,
+      "prev_day_volume": 371186,
+      "volume_5day_ago": 119073,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1500.15,
+        "ema200": 1435.1,
+        "cross_date": "2026-07-29"
       }
     },
     "TENNIND": {
@@ -4191,6 +4191,12 @@
         "cross_date": "2026-03-24"
       }
     },
+    "PIRAMALFIN": {
+      "four_week_high_close": 2146.7,
+      "prev_day_volume": 176263,
+      "volume_5day_ago": 144121,
+      "ema_cross": null
+    },
     "DOMS": {
       "four_week_high_close": 2292.0,
       "prev_day_volume": 16908,
@@ -4212,12 +4218,6 @@
         "ema200": 2064.87,
         "cross_date": "2025-12-08"
       }
-    },
-    "PIRAMALFIN": {
-      "four_week_high_close": 2146.7,
-      "prev_day_volume": 176263,
-      "volume_5day_ago": 144121,
-      "ema_cross": null
     },
     "BLUEJET": {
       "four_week_high_close": 626.25,
@@ -4274,6 +4274,17 @@
         "cross_date": "2025-10-29"
       }
     },
+    "BAJAJHFL": {
+      "four_week_high_close": 87.63,
+      "prev_day_volume": 1890650,
+      "volume_5day_ago": 2192616,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 85.96,
+        "ema200": 90.79,
+        "cross_date": "2025-10-07"
+      }
+    },
     "EMCURE": {
       "four_week_high_close": 2009.6,
       "prev_day_volume": 136782,
@@ -4296,17 +4307,6 @@
         "cross_date": "2026-02-02"
       }
     },
-    "BAJAJHFL": {
-      "four_week_high_close": 87.63,
-      "prev_day_volume": 1890650,
-      "volume_5day_ago": 2192616,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 85.96,
-        "ema200": 90.79,
-        "cross_date": "2025-10-07"
-      }
-    },
     "GICRE": {
       "four_week_high_close": 361.45,
       "prev_day_volume": 744475,
@@ -4316,17 +4316,6 @@
         "ema50": 363.12,
         "ema200": 372.32,
         "cross_date": "2026-07-01"
-      }
-    },
-    "CHOICEIN": {
-      "four_week_high_close": 844.75,
-      "prev_day_volume": 260260,
-      "volume_5day_ago": 820404,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 782.92,
-        "ema200": 752.14,
-        "cross_date": "2026-07-17"
       }
     },
     "ASAHIINDIA": {
@@ -4351,26 +4340,15 @@
         "cross_date": "2026-06-04"
       }
     },
-    "NUVOCO": {
-      "four_week_high_close": 361.85,
-      "prev_day_volume": 193929,
-      "volume_5day_ago": 259991,
+    "CHOICEIN": {
+      "four_week_high_close": 844.75,
+      "prev_day_volume": 260260,
+      "volume_5day_ago": 820404,
       "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 334.14,
-        "ema200": 342.07,
-        "cross_date": "2025-10-16"
-      }
-    },
-    "CLEAN": {
-      "four_week_high_close": 840.0,
-      "prev_day_volume": 265290,
-      "volume_5day_ago": 575716,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 778.09,
-        "ema200": 827.22,
-        "cross_date": "2025-10-06"
+        "bias": "BULLISH",
+        "ema50": 782.92,
+        "ema200": 752.14,
+        "cross_date": "2026-07-17"
       }
     },
     "JKCEMENT": {
@@ -4382,6 +4360,17 @@
         "ema50": 5427.21,
         "ema200": 5572.69,
         "cross_date": "2025-11-06"
+      }
+    },
+    "NUVOCO": {
+      "four_week_high_close": 361.85,
+      "prev_day_volume": 193929,
+      "volume_5day_ago": 259991,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 334.14,
+        "ema200": 342.07,
+        "cross_date": "2025-10-16"
       }
     },
     "WHIRLPOOL": {
@@ -4417,6 +4406,17 @@
         "cross_date": "2026-06-25"
       }
     },
+    "CLEAN": {
+      "four_week_high_close": 840.0,
+      "prev_day_volume": 265290,
+      "volume_5day_ago": 575716,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 778.09,
+        "ema200": 827.22,
+        "cross_date": "2025-10-06"
+      }
+    },
     "GODIGIT": {
       "four_week_high_close": 283.0,
       "prev_day_volume": 58616,
@@ -4439,17 +4439,6 @@
         "cross_date": "2026-06-25"
       }
     },
-    "BALRAMCHIN": {
-      "four_week_high_close": 658.7,
-      "prev_day_volume": 1122218,
-      "volume_5day_ago": 645686,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 593.92,
-        "ema200": 524.84,
-        "cross_date": "2026-03-10"
-      }
-    },
     "AARTIIND": {
       "four_week_high_close": 538.2,
       "prev_day_volume": 830422,
@@ -4461,15 +4450,15 @@
         "cross_date": "2026-02-09"
       }
     },
-    "KPRMILL": {
-      "four_week_high_close": 1135.6,
-      "prev_day_volume": 110490,
-      "volume_5day_ago": 1361133,
+    "BALRAMCHIN": {
+      "four_week_high_close": 658.7,
+      "prev_day_volume": 1122218,
+      "volume_5day_ago": 645686,
       "ema_cross": {
         "bias": "BULLISH",
-        "ema50": 1077.73,
-        "ema200": 1017.23,
-        "cross_date": "2026-06-15"
+        "ema50": 593.92,
+        "ema200": 524.84,
+        "cross_date": "2026-03-10"
       }
     },
     "SUMICHEM": {
@@ -4483,6 +4472,17 @@
         "cross_date": "2026-07-14"
       }
     },
+    "CANHLIFE": {
+      "four_week_high_close": 152.91,
+      "prev_day_volume": 248175,
+      "volume_5day_ago": 1086576,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 146.26,
+        "ema200": 138.64,
+        "cross_date": "2025-10-24"
+      }
+    },
     "RPOWER": {
       "four_week_high_close": 24.34,
       "prev_day_volume": 13059635,
@@ -4494,6 +4494,17 @@
         "cross_date": "2025-10-06"
       }
     },
+    "KPRMILL": {
+      "four_week_high_close": 1135.6,
+      "prev_day_volume": 110490,
+      "volume_5day_ago": 1361133,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1077.73,
+        "ema200": 1017.23,
+        "cross_date": "2026-06-15"
+      }
+    },
     "APARINDS": {
       "four_week_high_close": 18000.0,
       "prev_day_volume": 338500,
@@ -4503,17 +4514,6 @@
         "ema50": 14882.3,
         "ema200": 12081.15,
         "cross_date": "2026-02-12"
-      }
-    },
-    "CANHLIFE": {
-      "four_week_high_close": 152.91,
-      "prev_day_volume": 248175,
-      "volume_5day_ago": 1086576,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 146.26,
-        "ema200": 138.64,
-        "cross_date": "2025-10-24"
       }
     },
     "ACUTAAS": {
@@ -4615,15 +4615,15 @@
         "cross_date": "2026-05-21"
       }
     },
-    "SCHAEFFLER": {
-      "four_week_high_close": 4199.2,
-      "prev_day_volume": 107257,
-      "volume_5day_ago": 91373,
+    "JMFINANCIL": {
+      "four_week_high_close": 129.78,
+      "prev_day_volume": 1377973,
+      "volume_5day_ago": 1823489,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 4100.92,
-        "ema200": 4076.1,
-        "cross_date": "2026-05-06"
+        "bias": "BEARISH",
+        "ema50": 126.2,
+        "ema200": 135.14,
+        "cross_date": "2025-11-10"
       }
     },
     "WOCKPHARMA": {
@@ -4637,6 +4637,17 @@
         "cross_date": "2026-05-08"
       }
     },
+    "SCHAEFFLER": {
+      "four_week_high_close": 4199.2,
+      "prev_day_volume": 107257,
+      "volume_5day_ago": 91373,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 4100.92,
+        "ema200": 4076.1,
+        "cross_date": "2026-05-06"
+      }
+    },
     "CENTRALBK": {
       "four_week_high_close": 31.51,
       "prev_day_volume": 3762242,
@@ -4646,17 +4657,6 @@
         "ema50": 31.89,
         "ema200": 34.4,
         "cross_date": "2026-03-10"
-      }
-    },
-    "JMFINANCIL": {
-      "four_week_high_close": 129.78,
-      "prev_day_volume": 1377973,
-      "volume_5day_ago": 1823489,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 126.2,
-        "ema200": 135.14,
-        "cross_date": "2025-11-10"
       }
     },
     "CYIENT": {
@@ -4692,15 +4692,15 @@
         "cross_date": "2026-05-04"
       }
     },
-    "J&KBANK": {
-      "four_week_high_close": 179.82,
-      "prev_day_volume": 2545070,
-      "volume_5day_ago": 1631465,
+    "JWL": {
+      "four_week_high_close": 264.95,
+      "prev_day_volume": 295272,
+      "volume_5day_ago": 2774010,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 158.95,
-        "ema200": 135.49,
-        "cross_date": "2026-02-26"
+        "bias": "BEARISH",
+        "ema50": 261.39,
+        "ema200": 283.17,
+        "cross_date": "2025-10-09"
       }
     },
     "AFCONS": {
@@ -4714,17 +4714,6 @@
         "cross_date": "2025-11-07"
       }
     },
-    "JWL": {
-      "four_week_high_close": 264.95,
-      "prev_day_volume": 295272,
-      "volume_5day_ago": 2774010,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 261.39,
-        "ema200": 283.17,
-        "cross_date": "2025-10-09"
-      }
-    },
     "INDGN": {
       "four_week_high_close": 569.8,
       "prev_day_volume": 161896,
@@ -4734,6 +4723,17 @@
         "ema50": 528.09,
         "ema200": 519.19,
         "cross_date": "2026-08-07"
+      }
+    },
+    "J&KBANK": {
+      "four_week_high_close": 179.82,
+      "prev_day_volume": 2545070,
+      "volume_5day_ago": 1631465,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 158.95,
+        "ema200": 135.49,
+        "cross_date": "2026-02-26"
       }
     },
     "ITCHOTELS": {
@@ -4746,6 +4746,12 @@
         "ema200": 176.45,
         "cross_date": "2025-10-06"
       }
+    },
+    "PINELABS": {
+      "four_week_high_close": 169.93,
+      "prev_day_volume": 13598806,
+      "volume_5day_ago": 50029710,
+      "ema_cross": null
     },
     "GPIL": {
       "four_week_high_close": 255.22,
@@ -4769,12 +4775,6 @@
         "cross_date": "2026-06-23"
       }
     },
-    "PINELABS": {
-      "four_week_high_close": 169.93,
-      "prev_day_volume": 13598806,
-      "volume_5day_ago": 50029710,
-      "ema_cross": null
-    },
     "SJVN": {
       "four_week_high_close": 69.42,
       "prev_day_volume": 1069394,
@@ -4786,28 +4786,6 @@
         "cross_date": "2025-10-06"
       }
     },
-    "PPLPHARMA": {
-      "four_week_high_close": 214.19,
-      "prev_day_volume": 5337954,
-      "volume_5day_ago": 3675806,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 187.9,
-        "ema200": 176.87,
-        "cross_date": "2026-07-28"
-      }
-    },
-    "MAPMYINDIA": {
-      "four_week_high_close": 1196.0,
-      "prev_day_volume": 188680,
-      "volume_5day_ago": 242175,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1023.76,
-        "ema200": 1162.68,
-        "cross_date": "2026-01-12"
-      }
-    },
     "HUDCO": {
       "four_week_high_close": 203.41,
       "prev_day_volume": 1134421,
@@ -4817,6 +4795,17 @@
         "ema50": 200.53,
         "ema200": 206.83,
         "cross_date": "2025-12-03"
+      }
+    },
+    "PPLPHARMA": {
+      "four_week_high_close": 214.19,
+      "prev_day_volume": 5337954,
+      "volume_5day_ago": 3675806,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 187.9,
+        "ema200": 176.87,
+        "cross_date": "2026-07-28"
       }
     },
     "GMDCLTD": {
@@ -4839,6 +4828,17 @@
         "ema50": 843.29,
         "ema200": 852.5,
         "cross_date": "2026-08-04"
+      }
+    },
+    "MAPMYINDIA": {
+      "four_week_high_close": 1196.0,
+      "prev_day_volume": 188680,
+      "volume_5day_ago": 242175,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1023.76,
+        "ema200": 1162.68,
+        "cross_date": "2026-01-12"
       }
     },
     "LTTS": {
@@ -4902,6 +4902,28 @@
       "volume_5day_ago": 4346106,
       "ema_cross": null
     },
+    "REDINGTON": {
+      "four_week_high_close": 354.85,
+      "prev_day_volume": 2030364,
+      "volume_5day_ago": 3999369,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 295.44,
+        "ema200": 267.24,
+        "cross_date": "2026-07-14"
+      }
+    },
+    "SOBHA": {
+      "four_week_high_close": 1426.0,
+      "prev_day_volume": 42674,
+      "volume_5day_ago": 265077,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1380.83,
+        "ema200": 1410.9,
+        "cross_date": "2026-01-23"
+      }
+    },
     "CPPLUS": {
       "four_week_high_close": 3899.1,
       "prev_day_volume": 412214,
@@ -4924,17 +4946,6 @@
         "cross_date": "2026-06-17"
       }
     },
-    "REDINGTON": {
-      "four_week_high_close": 354.85,
-      "prev_day_volume": 2030364,
-      "volume_5day_ago": 3999369,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 295.44,
-        "ema200": 267.24,
-        "cross_date": "2026-07-14"
-      }
-    },
     "TIMKEN": {
       "four_week_high_close": 3351.0,
       "prev_day_volume": 10814,
@@ -4944,17 +4955,6 @@
         "ema50": 3303.21,
         "ema200": 3288.54,
         "cross_date": "2026-02-09"
-      }
-    },
-    "SOBHA": {
-      "four_week_high_close": 1426.0,
-      "prev_day_volume": 42674,
-      "volume_5day_ago": 265077,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1380.83,
-        "ema200": 1410.9,
-        "cross_date": "2026-01-23"
       }
     },
     "CREDITACC": {
@@ -4968,28 +4968,6 @@
         "cross_date": "2026-06-23"
       }
     },
-    "OLAELEC": {
-      "four_week_high_close": 41.44,
-      "prev_day_volume": 18175012,
-      "volume_5day_ago": 35661768,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 39.56,
-        "ema200": 39.61,
-        "cross_date": "2026-08-14"
-      }
-    },
-    "GLAND": {
-      "four_week_high_close": 2970.2,
-      "prev_day_volume": 488656,
-      "volume_5day_ago": 8760097,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2502.46,
-        "ema200": 2122.65,
-        "cross_date": "2026-05-20"
-      }
-    },
     "IKS": {
       "four_week_high_close": 1877.7,
       "prev_day_volume": 129336,
@@ -4999,6 +4977,17 @@
         "ema50": 1776.91,
         "ema200": 1650.49,
         "cross_date": "2026-05-19"
+      }
+    },
+    "OLAELEC": {
+      "four_week_high_close": 41.44,
+      "prev_day_volume": 18175012,
+      "volume_5day_ago": 35661768,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 39.56,
+        "ema200": 39.61,
+        "cross_date": "2026-08-14"
       }
     },
     "PCBL": {
@@ -5023,6 +5012,17 @@
         "cross_date": "2025-12-19"
       }
     },
+    "GLAND": {
+      "four_week_high_close": 2970.2,
+      "prev_day_volume": 488656,
+      "volume_5day_ago": 8760097,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2502.46,
+        "ema200": 2122.65,
+        "cross_date": "2026-05-20"
+      }
+    },
     "IRB": {
       "four_week_high_close": 20.25,
       "prev_day_volume": 6032637,
@@ -5032,6 +5032,17 @@
         "ema50": 20.17,
         "ema200": 20.8,
         "cross_date": "2026-07-09"
+      }
+    },
+    "RITES": {
+      "four_week_high_close": 234.24,
+      "prev_day_volume": 242345,
+      "volume_5day_ago": 451457,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 218.88,
+        "ema200": 222.09,
+        "cross_date": "2025-10-09"
       }
     },
     "PFIZER": {
@@ -5053,17 +5064,6 @@
         "bias": "BEARISH",
         "ema50": 408.88,
         "ema200": 449.78,
-        "cross_date": "2025-10-09"
-      }
-    },
-    "RITES": {
-      "four_week_high_close": 234.24,
-      "prev_day_volume": 242345,
-      "volume_5day_ago": 451457,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 218.88,
-        "ema200": 222.09,
         "cross_date": "2025-10-09"
       }
     },
@@ -5221,17 +5221,6 @@
         "cross_date": "2026-03-02"
       }
     },
-    "ABLBL": {
-      "four_week_high_close": 95.91,
-      "prev_day_volume": 427800,
-      "volume_5day_ago": 498817,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 95.27,
-        "ema200": 107.0,
-        "cross_date": "2025-11-10"
-      }
-    },
     "OLECTRA": {
       "four_week_high_close": 1399.4,
       "prev_day_volume": 189197,
@@ -5265,15 +5254,15 @@
         "cross_date": "2026-05-13"
       }
     },
-    "M&MFIN": {
-      "four_week_high_close": 412.3,
-      "prev_day_volume": 1441684,
-      "volume_5day_ago": 1587021,
+    "ABLBL": {
+      "four_week_high_close": 95.91,
+      "prev_day_volume": 427800,
+      "volume_5day_ago": 498817,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 357.58,
-        "ema200": 331.08,
-        "cross_date": "2026-07-22"
+        "bias": "BEARISH",
+        "ema50": 95.27,
+        "ema200": 107.0,
+        "cross_date": "2025-11-10"
       }
     },
     "SUNTV": {
@@ -5285,6 +5274,17 @@
         "ema50": 504.16,
         "ema200": 542.27,
         "cross_date": "2026-05-21"
+      }
+    },
+    "M&MFIN": {
+      "four_week_high_close": 412.3,
+      "prev_day_volume": 1441684,
+      "volume_5day_ago": 1587021,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 357.58,
+        "ema200": 331.08,
+        "cross_date": "2026-07-22"
       }
     },
     "MINDACORP": {
@@ -5364,17 +5364,6 @@
         "cross_date": "2025-12-10"
       }
     },
-    "LATENTVIEW": {
-      "four_week_high_close": 317.6,
-      "prev_day_volume": 510178,
-      "volume_5day_ago": 223740,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 298.99,
-        "ema200": 339.78,
-        "cross_date": "2026-02-16"
-      }
-    },
     "GODREJIND": {
       "four_week_high_close": 1354.9,
       "prev_day_volume": 197223,
@@ -5386,15 +5375,26 @@
         "cross_date": "2026-06-15"
       }
     },
-    "JSWDULUX": {
-      "four_week_high_close": 3167.4,
-      "prev_day_volume": 10435,
-      "volume_5day_ago": 62678,
+    "AJANTPHARM": {
+      "four_week_high_close": 3718.2,
+      "prev_day_volume": 145440,
+      "volume_5day_ago": 86524,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 3382.79,
+        "ema200": 3009.5,
+        "cross_date": "2025-10-06"
+      }
+    },
+    "LATENTVIEW": {
+      "four_week_high_close": 317.6,
+      "prev_day_volume": 510178,
+      "volume_5day_ago": 223740,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 3057.85,
-        "ema200": 3094.09,
-        "cross_date": "2025-12-29"
+        "ema50": 298.99,
+        "ema200": 339.78,
+        "cross_date": "2026-02-16"
       }
     },
     "TATACHEM": {
@@ -5406,17 +5406,6 @@
         "ema50": 692.71,
         "ema200": 743.95,
         "cross_date": "2025-10-07"
-      }
-    },
-    "AJANTPHARM": {
-      "four_week_high_close": 3718.2,
-      "prev_day_volume": 145440,
-      "volume_5day_ago": 86524,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 3382.79,
-        "ema200": 3009.5,
-        "cross_date": "2025-10-06"
       }
     },
     "SYRMA": {
@@ -5441,6 +5430,17 @@
         "cross_date": "2026-02-24"
       }
     },
+    "JSWDULUX": {
+      "four_week_high_close": 3167.4,
+      "prev_day_volume": 10435,
+      "volume_5day_ago": 62678,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 3057.85,
+        "ema200": 3094.09,
+        "cross_date": "2025-12-29"
+      }
+    },
     "CRAFTSMAN": {
       "four_week_high_close": 10890.5,
       "prev_day_volume": 58181,
@@ -5463,6 +5463,17 @@
         "cross_date": "2026-03-27"
       }
     },
+    "IGIL": {
+      "four_week_high_close": 364.95,
+      "prev_day_volume": 608062,
+      "volume_5day_ago": 221537,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 350.58,
+        "ema200": 345.51,
+        "cross_date": "2026-04-29"
+      }
+    },
     "GROWW": {
       "four_week_high_close": 203.9,
       "prev_day_volume": 57106951,
@@ -5478,17 +5489,6 @@
         "ema50": 18127.84,
         "ema200": 17473.13,
         "cross_date": "2026-06-10"
-      }
-    },
-    "IGIL": {
-      "four_week_high_close": 364.95,
-      "prev_day_volume": 608062,
-      "volume_5day_ago": 221537,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 350.58,
-        "ema200": 345.51,
-        "cross_date": "2026-04-29"
       }
     }
   }
