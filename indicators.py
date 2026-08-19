@@ -92,6 +92,27 @@ def detect_candle_pattern(row):
     return "Normal"
 
 
+def add_atr(df, period):
+    """
+    Adds an 'atr' column — Average True Range, Wilder-smoothed (same
+    ewm(alpha=1/period) style as add_rsi above, the standard ATR
+    convention). True Range for each row = max of:
+      high - low
+      abs(high - previous close)
+      abs(low - previous close)
+    First row has no previous close, so its True Range is just
+    high - low (no different-day gap to measure yet).
+    """
+    prev_close = df["close"].shift(1)
+    tr1 = df["high"] - df["low"]
+    tr2 = (df["high"] - prev_close).abs()
+    tr3 = (df["low"] - prev_close).abs()
+    true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    true_range.iloc[0] = tr1.iloc[0]
+    df["atr"] = true_range.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    return df
+
+
 def calculate_r3_s3(prev_high, prev_low, prev_close):
     candle_range = prev_high - prev_low
     r3 = prev_close + candle_range * 1.1 / 4
