@@ -431,6 +431,42 @@ SMART_MONEY_DELIVERY_THRESHOLD = 50.0
 SMART_MONEY_VWAP_MIN_PCT = 0.3
 SMART_MONEY_DEAL_LOOKBACK_DAYS = 3
 
+# ---------- Trade Signal Score gate (added, per request) ----------
+# Applies ONLY to F&O stocks/commodities and Nifty 500 stock alerts
+# (never to indices — same precedent as the confluence filter and
+# Volume Spike gate above: index signals have far fewer of the 10
+# dimensions available, so a /10 score there isn't comparable to a
+# stock's). A qualifying EMA cross is only actually sent if
+# strategy.compute_trade_score(signal)["score"] >= this. Set to 9 or
+# 10 for only the strongest setups; lower it (or set to 0) to go back
+# to informational-only (score shown, nothing blocked).
+MIN_TRADE_SCORE = 9
+
+# Safety floor alongside MIN_TRADE_SCORE: requires at least this many
+# of the 10 dimensions to have actually had data this run before the
+# score gate applies at all. Without this, a symbol with e.g. only 2
+# dimensions available (say, no sector map, no F&O option chain, no
+# bulk/block data) could trivially score a "10/10" by passing just
+# those 2 -- which isn't the same strength of signal as a 9-or-10 out
+# of a full 10. If fewer than this many dimensions were available,
+# the score gate is skipped (signal passes through on its other
+# merits) rather than unfairly blocking a symbol that simply has less
+# data plumbed in for it.
+MIN_TRADE_SCORE_FACTORS = 6
+
+# ---------- Same-direction alert cooldown (added, per request) ----------
+# Applies ONLY to F&O stocks/commodities and Nifty 500 stock alerts
+# (same scope as the Trade Score gate above -- index alerts are meant
+# to be fast/frequent and keep their own separate, already-existing
+# lookback logic untouched). Even if a genuinely NEW EMA cross fires
+# on a later candle, the alert is suppressed if the same
+# (symbol, direction) already alerted within this many minutes -- this
+# is what stops a whipsaw-y stock from re-alerting the same direction
+# again too soon (see state.in_cooldown). Set to 0 to disable and go
+# back to alerting on every new qualifying candle regardless of how
+# recently the same symbol+direction last fired.
+SAME_DIRECTION_COOLDOWN_MINUTES = 60
+
 # ---------- State / alert de-dup ----------
 STATE_FILE = "alert_state.json"
 DEDUPE_MINUTES = 30
