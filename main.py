@@ -1743,6 +1743,24 @@ def run_fo_scan(now_ist, index_only=False):
                 # since every relevant field is attached by this point.
                 signal["trade_score"] = compute_trade_score(signal)
 
+                # Trade Score gate (added, per request) — only blocks
+                # if enough dimensions had data (MIN_TRADE_SCORE_FACTORS
+                # floor) AND the resulting score is still below the
+                # threshold. See config.MIN_TRADE_SCORE /
+                # MIN_TRADE_SCORE_FACTORS.
+                ts = signal["trade_score"]
+                if ts["possible"] >= config.MIN_TRADE_SCORE_FACTORS and ts["score"] < config.MIN_TRADE_SCORE:
+                    continue
+
+                # Same-direction cooldown (added, per request) — blocks
+                # only if this exact (symbol, direction) already
+                # alerted within config.SAME_DIRECTION_COOLDOWN_MINUTES,
+                # even on a genuinely new/different candle. This is
+                # separate from state.already_alerted() above, which
+                # only catches the exact-same-candle case.
+                if state.in_cooldown(saved_state, symbol, signal["direction"], signal["candle_time"], config.SAME_DIRECTION_COOLDOWN_MINUTES):
+                    continue
+
                 # Mark BEFORE sending: if send_alert() raises after the
                 # Telegram API call already succeeded (e.g. a parsing
                 # or logging error on our side, post-send), the alert
@@ -1992,6 +2010,14 @@ def run_nifty500_scan(now_ist):
                 # Trade Signal Score — see the matching comment in
                 # run_fo_scan() above.
                 signal["trade_score"] = compute_trade_score(signal)
+
+                # Trade Score gate + same-direction cooldown — see the
+                # matching comments in run_fo_scan() above.
+                ts = signal["trade_score"]
+                if ts["possible"] >= config.MIN_TRADE_SCORE_FACTORS and ts["score"] < config.MIN_TRADE_SCORE:
+                    continue
+                if state.in_cooldown(saved_state, state_symbol, signal["direction"], signal["candle_time"], config.SAME_DIRECTION_COOLDOWN_MINUTES):
+                    continue
 
                 # Mark BEFORE sending -- see the matching comment in
                 # run_fo_scan() above for why.
