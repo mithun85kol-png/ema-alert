@@ -594,4 +594,12 @@ TRENDLINE_SWING_STRENGTH = 3
 # re-alerts are suppressed within this cooldown, same idea as
 # config.SAME_DIRECTION_COOLDOWN_MINUTES for the EMA cross alert.
 TRENDLINE_COOLDOWN_MINUTES = 75
+# Turned OFF (per request 2026-08-21) — was firing too many standalone
+# messages. The trendline_break INFO LINE inside the existing EMA
+# cross alert (telegram_notifier.send_alert) is unaffected by this
+# flag and keeps showing whenever it coincides with an EMA cross —
+# this only silences the separate standalone message
+# (send_trendline_alert / run_fo_scan / run_nifty500_scan). Flip back
+# to True to re-enable.
+TRENDLINE_STANDALONE_ALERT_ENABLED = False
 
