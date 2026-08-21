@@ -17,8 +17,9 @@ def send_alert(signal):
 
     # Timeframe label — set by main.py per signal: "15-min" or
     # "75-min" for stocks/commodities/cash (whichever
-    # config.PRIMARY_TIMEFRAME currently selects), "5-min" for
-    # indices. Defaults to "75-min" for backward compatibility if an
+    # config.PRIMARY_TIMEFRAME currently selects), "15-min" for
+    # indices too (CHANGED from 5-min, per request). Defaults to
+    # "75-min" for backward compatibility if an
     # older caller didn't set this.
     timeframe_label = signal.get("timeframe", "75-min")
 
@@ -350,6 +351,18 @@ def send_alert(signal):
             f"{trendline['candles_in_trend']} candles)\n"
         )
 
+    # Opening 15-min candle bias (added, per request) — see
+    # strategy.get_opening_candle_bias / config.OPENING_CANDLE_BIAS_ENABLED.
+    # Omitted entirely when None (the normal case — price moved both
+    # above and below the day's open in the first 15 minutes).
+    opening_bias = signal.get("opening_candle_bias")
+    if opening_bias == "BULLISH":
+        opening_bias_line = "🟢 Opening 15-min: BULLISH (Open = Low)\n"
+    elif opening_bias == "BEARISH":
+        opening_bias_line = "🔴 Opening 15-min: BEARISH (Open = High)\n"
+    else:
+        opening_bias_line = ""
+
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{trade_score_line}"
@@ -364,6 +377,7 @@ def send_alert(signal):
         f"{delivery_line}"
         f"{momentum_line}"
         f"{ema_cross_line}"
+        f"{opening_bias_line}"
         f"{trend3_block}"
         f"{smart_money_block}"
         f"{bulk_block_block}"
@@ -554,6 +568,11 @@ def send_trendline_alert(signal):
     (same fetch, same cadence), just checked and sent separately —
     see run_trendline_scan for exactly when this fires.
     """
+    if not getattr(config, "ENABLE_TRENDLINE_ALERTS", True):
+        # Master switch off — trendline break alerts disabled (too
+        # noisy). See config.ENABLE_TRENDLINE_ALERTS.
+        return
+
     if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
         print("Telegram not configured, skipping send:", signal)
         return

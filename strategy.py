@@ -733,6 +733,49 @@ def get_3min_trend_info(df_3min, symbol, lookback_candles=None, ema_fast=None, e
     }
 
 
+def get_opening_candle_bias(df, symbol):
+    """
+    Opening 15-min candle bias (added, per request). Looks at the
+    FIRST 15-min candle of TODAY's session (the 09:15 candle) in df
+    (expects df15 — the 15-min resampled data). Compares that candle's
+    open/low/high with a small tolerance (config.OPENING_CANDLE_EPSILON,
+    default 0.01) instead of exact float equality, since real market
+    data can carry tiny floating-point noise even on a genuinely equal
+    tick:
+      - Open == Low  -> "BULLISH" (price never traded below the open
+        all through the first 15 minutes — no selling below open)
+      - Open == High -> "BEARISH" (price never traded above the open
+        — no buying above open)
+      - Neither (the normal case — price moved both above and below
+        open in the first 15 min) -> None, caller omits the line
+    Returns None if config.OPENING_CANDLE_BIAS_ENABLED is False, if df
+    is empty, or if today's first 15-min candle isn't in df yet (e.g.
+    called before/right at market open before that first candle has
+    actually closed).
+    """
+    if not config.OPENING_CANDLE_BIAS_ENABLED:
+        return None
+    if df is None or df.empty:
+        return None
+    ts = df["timestamp"]
+    today = ts.iloc[-1].date()
+    today_rows = df[ts.dt.date == today]
+    if today_rows.empty:
+        return None
+    first = today_rows.iloc[0]
+    o = float(first["open"])
+    h = float(first["high"])
+    l = float(first["low"])
+    eps = config.OPENING_CANDLE_EPSILON
+    open_eq_low = abs(o - l) <= eps
+    open_eq_high = abs(o - h) <= eps
+    if open_eq_low and not open_eq_high:
+        return "BULLISH"
+    if open_eq_high and not open_eq_low:
+        return "BEARISH"
+    return None
+
+
 def get_sector_trend(df):
     """
     Sector-index trend reading (added) — same rule the stock-level
