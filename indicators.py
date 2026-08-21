@@ -18,6 +18,19 @@ def add_ema50(df):
     return df
 
 
+def add_ema(df, period, col_name):
+    """
+    Generic single-EMA helper — writes EMA(close, period) into df[col_name].
+    Used where a fixed period is needed regardless of whatever
+    EMA_FAST/EMA_SLOW pair the caller's scan is configured with (e.g.
+    the Daily Score's EMA9/EMA21/EMA50 stack, which must stay 9/21/50
+    even on the Nifty 500 scan where the crossover pair itself is
+    9/50, not 9/21).
+    """
+    df[col_name] = df["close"].ewm(span=period, adjust=False).mean()
+    return df
+
+
 def add_macd(df, fast_period=12, slow_period=26, signal_period=9):
     """
     Adds 'macd_line', 'macd_signal', and 'macd_hist' columns.
