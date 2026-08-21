@@ -1576,17 +1576,20 @@ def run_fo_scan(now_ist, index_only=False):
                 # does NOT require an EMA cross; checked every run on
                 # the same df5 already fetched above, on the latest
                 # closed candle only (see strategy.check_trendline_scan).
-                tl_signal = check_trendline_scan(df5, symbol)
-                if tl_signal is not None:
-                    tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
-                    if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
-                        tl_signal["chart_link"] = build_chart_link(symbol, "5-min")
-                        state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
-                        try:
-                            send_trendline_alert(tl_signal)
-                            alerts_sent += 1
-                        except Exception as e:
-                            print(f"send_trendline_alert failed for {symbol}: {e}")
+                # Gated by TRENDLINE_STANDALONE_ALERT_ENABLED (OFF per
+                # request 2026-08-21 — too many messages).
+                if config.TRENDLINE_STANDALONE_ALERT_ENABLED:
+                    tl_signal = check_trendline_scan(df5, symbol)
+                    if tl_signal is not None:
+                        tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
+                        if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
+                            tl_signal["chart_link"] = build_chart_link(symbol, "5-min")
+                            state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
+                            try:
+                                send_trendline_alert(tl_signal)
+                                alerts_sent += 1
+                            except Exception as e:
+                                print(f"send_trendline_alert failed for {symbol}: {e}")
             else:
                 if config.PRIMARY_TIMEFRAME == "15min":
                     primary_df, primary_label = df15, "15-min"
@@ -1617,18 +1620,21 @@ def run_fo_scan(now_ist, index_only=False):
                 # the same primary_df already fetched above (whichever
                 # timeframe config.PRIMARY_TIMEFRAME currently selects),
                 # on the latest closed candle only (see
-                # strategy.check_trendline_scan).
-                tl_signal = check_trendline_scan(primary_df, symbol)
-                if tl_signal is not None:
-                    tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
-                    if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
-                        tl_signal["chart_link"] = build_chart_link(symbol, primary_label)
-                        state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
-                        try:
-                            send_trendline_alert(tl_signal)
-                            alerts_sent += 1
-                        except Exception as e:
-                            print(f"send_trendline_alert failed for {symbol}: {e}")
+                # strategy.check_trendline_scan). Gated by
+                # TRENDLINE_STANDALONE_ALERT_ENABLED (OFF per request
+                # 2026-08-21 — too many messages).
+                if config.TRENDLINE_STANDALONE_ALERT_ENABLED:
+                    tl_signal = check_trendline_scan(primary_df, symbol)
+                    if tl_signal is not None:
+                        tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
+                        if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
+                            tl_signal["chart_link"] = build_chart_link(symbol, primary_label)
+                            state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
+                            try:
+                                send_trendline_alert(tl_signal)
+                                alerts_sent += 1
+                            except Exception as e:
+                                print(f"send_trendline_alert failed for {symbol}: {e}")
 
             if not signals:
                 continue
@@ -1982,18 +1988,21 @@ def run_nifty500_scan(now_ist):
             # above, latest closed candle only (see
             # strategy.check_trendline_scan). Safe from double-firing
             # with run_fo_scan's own trendline check since F&O symbols
-            # are skipped entirely at the top of this loop.
-            tl_signal = check_trendline_scan(primary_df, symbol)
-            if tl_signal is not None:
-                tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
-                if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
-                    tl_signal["chart_link"] = build_chart_link(symbol, primary_label)
-                    state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
-                    try:
-                        send_trendline_alert(tl_signal)
-                        alerts_sent += 1
-                    except Exception as e:
-                        print(f"send_trendline_alert failed for {symbol}: {e}")
+            # are skipped entirely at the top of this loop. Gated by
+            # TRENDLINE_STANDALONE_ALERT_ENABLED (OFF per request
+            # 2026-08-21 — too many messages).
+            if config.TRENDLINE_STANDALONE_ALERT_ENABLED:
+                tl_signal = check_trendline_scan(primary_df, symbol)
+                if tl_signal is not None:
+                    tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
+                    if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
+                        tl_signal["chart_link"] = build_chart_link(symbol, primary_label)
+                        state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
+                        try:
+                            send_trendline_alert(tl_signal)
+                            alerts_sent += 1
+                        except Exception as e:
+                            print(f"send_trendline_alert failed for {symbol}: {e}")
 
             if not signals:
                 continue
