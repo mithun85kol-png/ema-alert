@@ -133,8 +133,8 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score
-from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score, check_trendline_scan
+from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -1571,6 +1571,22 @@ def run_fo_scan(now_ist, index_only=False):
                 for sig in signals:
                     sig["timeframe"] = "5-min"
                 info_df, info_label = None, None
+
+                # Trendline Break (added, per request) — standalone,
+                # does NOT require an EMA cross; checked every run on
+                # the same df5 already fetched above, on the latest
+                # closed candle only (see strategy.check_trendline_scan).
+                tl_signal = check_trendline_scan(df5, symbol)
+                if tl_signal is not None:
+                    tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
+                    if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
+                        tl_signal["chart_link"] = build_chart_link(symbol, "5-min")
+                        state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
+                        try:
+                            send_trendline_alert(tl_signal)
+                            alerts_sent += 1
+                        except Exception as e:
+                            print(f"send_trendline_alert failed for {symbol}: {e}")
             else:
                 if config.PRIMARY_TIMEFRAME == "15min":
                     primary_df, primary_label = df15, "15-min"
@@ -1595,6 +1611,24 @@ def run_fo_scan(now_ist, index_only=False):
                 )
                 for sig in signals:
                     sig["timeframe"] = primary_label
+
+                # Trendline Break (added, per request) — standalone,
+                # does NOT require an EMA cross; checked every run on
+                # the same primary_df already fetched above (whichever
+                # timeframe config.PRIMARY_TIMEFRAME currently selects),
+                # on the latest closed candle only (see
+                # strategy.check_trendline_scan).
+                tl_signal = check_trendline_scan(primary_df, symbol)
+                if tl_signal is not None:
+                    tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
+                    if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
+                        tl_signal["chart_link"] = build_chart_link(symbol, primary_label)
+                        state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
+                        try:
+                            send_trendline_alert(tl_signal)
+                            alerts_sent += 1
+                        except Exception as e:
+                            print(f"send_trendline_alert failed for {symbol}: {e}")
 
             if not signals:
                 continue
@@ -1938,6 +1972,29 @@ def run_nifty500_scan(now_ist):
             # still sends both directions.
             signals = [sig for sig in signals if sig["direction"] == "BULLISH"]
 
+            # Trendline Break (added, per request) — standalone, does
+            # NOT require an EMA cross, and NOT restricted to BULLISH
+            # only (unlike the EMA-cross filter just above) — a
+            # descending-resistance break is inherently bullish and an
+            # ascending-support break is inherently bearish, so both
+            # directions are meaningful trendline signals in their own
+            # right. Checked on the same primary_df already fetched
+            # above, latest closed candle only (see
+            # strategy.check_trendline_scan). Safe from double-firing
+            # with run_fo_scan's own trendline check since F&O symbols
+            # are skipped entirely at the top of this loop.
+            tl_signal = check_trendline_scan(primary_df, symbol)
+            if tl_signal is not None:
+                tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
+                if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
+                    tl_signal["chart_link"] = build_chart_link(symbol, primary_label)
+                    state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
+                    try:
+                        send_trendline_alert(tl_signal)
+                        alerts_sent += 1
+                    except Exception as e:
+                        print(f"send_trendline_alert failed for {symbol}: {e}")
+
             if not signals:
                 continue
 
@@ -2164,60 +2221,4 @@ def run():
         if not _in_stock_session(now_ist):
             print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — index-only scan skipping.", flush=True)
             return
-        run_fo_scan(now_ist, index_only=True)
-        return
-
-    # SCAN_MODE=ema_cross_report -> the standalone "EMA50/200
-    # (Golden/Death Cross) + Delivery%" report (RE-ADDED, was missing —
-    # see chat), fully separate from the alert scan — no session gate,
-    # since it can usefully run right at/just before market open too.
-    # See run_ema_cross_report / build_todays_ema_cross_list above for
-    # what "today" actually means here. IMPORTANT: without this check,
-    # SCAN_MODE=ema_cross_report was silently falling through to the
-    # normal full-scan path below (since it isn't "index" either) --
-    # meaning the two new cron-job.org triggers were firing a full
-    # 75-min alert scan instead of the intended lightweight report.
-    if mode == "ema_cross_report":
-        run_ema_cross_report(now_ist)
-        return
-
-    # SCAN_MODE=breakout_scan -> the standalone 12-condition daily
-    # breakout screener (added 2026-08-18), fully separate from the
-    # EMA-cross alert scan above — see run_breakout_scan. Meant to run
-    # once/day via its own cron trigger, at/after market close.
-    if mode == "breakout_scan":
-        run_breakout_scan(now_ist)
-        return
-
-    if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
-        print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)
-        return
-
-    _, fo_failed, fo_total = run_fo_scan(now_ist)
-
-    # ---- Corporate-action alerts (Dividend/Bonus/Buyback/Order Win) ----
-    # Same watchlist, same Telegram channel as the EMA alerts. Cheap to
-    # call every run -- corporate_actions.check_and_alert() only does
-    # real work (NSE fetch) once per calendar day; every other call
-    # this same day is a no-op (see its own cache check).
-    if corporate_actions is not None:
-        try:
-            corporate_actions.check_and_alert(now_ist)
-        except Exception as e:
-            print(f"Corporate-action check failed this run (non-blocking): {e}", flush=True)
-
-    # ---- Nifty 500 cash-stock scan (same conditions, EMA9/21) ----
-    n500_failed, n500_total = [], 0
-    if _in_stock_session(now_ist):
-        try:
-            _, n500_failed, n500_total = run_nifty500_scan(now_ist)
-        except Exception as e:
-            print(f"Nifty 500 scan failed this run (non-blocking): {e}", flush=True)
-
-    # ---- Fetch-failure visibility: one summary alert if enough
-    # instruments failed to fetch this run ----
-    maybe_send_failure_summary(fo_failed, fo_total, n500_failed, n500_total)
-
-
-if __name__ == "__main__":
-    run()
+        run_fo_scan(now_ist, index_only=T
