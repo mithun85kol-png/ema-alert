@@ -334,10 +334,27 @@ def send_alert(signal):
             ds_icon = "⚠️"
         daily_score_line = f"{ds_icon} Daily Score: <b>{daily_score['label']}</b>\n"
 
+    # Trendline break (added, per request) — informational only; only
+    # present when a diagonal trendline break happened to coincide
+    # with THIS EMA-cross candle (see strategy.detect_trendline_break,
+    # attached as signal["trendline_break"]). Most EMA-cross alerts
+    # won't have one — omitted entirely when None.
+    trendline = signal.get("trendline_break")
+    trendline_line = ""
+    if trendline:
+        tl_icon = "📐⬆️" if trendline["direction"] == "BULLISH" else "📐⬇️"
+        line_type_label = "Resistance" if trendline["line_type"] == "RESISTANCE" else "Support"
+        trendline_line = (
+            f"{tl_icon} Trendline Break: {line_type_label} broken "
+            f"{trendline['direction'].lower()} (line @ {trendline['line_value']}, "
+            f"{trendline['candles_in_trend']} candles)\n"
+        )
+
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{trade_score_line}"
         f"{daily_score_line}"
+        f"{trendline_line}"
         f"{fno_line}"
         f"{chart_line}"
         f"{date_part} {time_part} | Close: {signal['close']}\n"
@@ -525,3 +542,53 @@ def send_breakout_alert(signal):
         r.raise_for_status()
     except Exception as e:
         print("Telegram send failed (breakout scan):", e)
+
+
+def send_trendline_alert(signal):
+    """
+    Standalone Trendline Break alert (added, per request) — sent by
+    main.run_trendline_scan whenever strategy.check_trendline_scan
+    finds a break on the LATEST closed candle, completely independent
+    of the EMA cross alert (send_alert above) — no EMA cross needs to
+    have happened. Runs in the same scan cycle as the EMA cross scan
+    (same fetch, same cadence), just checked and sent separately —
+    see run_trendline_scan for exactly when this fires.
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", signal)
+        return
+
+    direction = signal["direction"]
+    arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
+    line_type_label = "Resistance" if signal["line_type"] == "RESISTANCE" else "Support"
+
+    candle_time = signal["candle_time"]
+    date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
+
+    chart_link = signal.get("chart_link")
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+
+    p1, p2 = signal["point1"], signal["point2"]
+    p1_time = str(p1["time"]).split(" ")[0] + " " + str(p1["time"]).split(" ")[1][:5]
+    p2_time = str(p2["time"]).split(" ")[0] + " " + str(p2["time"]).split(" ")[1][:5]
+
+    text = (
+        f"{arrow} <b>{signal['symbol']}</b> — Trendline Break ({line_type_label}, {direction})\n"
+        f"{chart_line}"
+        f"{date_part} {time_part} | Close: {signal['close']}\n"
+        f"Line value at break: {signal['line_value']}\n"
+        f"Trendline: {p1['price']} ({p1_time}) → {p2['price']} ({p2_time}) "
+        f"— {signal['candles_in_trend']} candles\n"
+    ).rstrip()
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (trendline break):", e)
