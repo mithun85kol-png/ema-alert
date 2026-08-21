@@ -316,11 +316,28 @@ def send_alert(signal):
             score_icon = "✅"
         else:
             score_icon = "⚠️"
-        trade_score_line = f"{score_icon} Trade Score: <b>{trade_score['label']}</b> ({trade_score['possible']} factors)\n"
+        trade_score_line = f"{score_icon} Trade Score: <b>{trade_score['label']}</b>\n"
+
+    # Daily Score (added, per request) — fixed 7-point bullish-quality
+    # checklist (Close>VWAP, EMA9>21>50 stack, RSI 50-70 band, Volume
+    # >1.5x its 20-SMA, Close > previous candle's High) — see
+    # strategy.compute_daily_score. Always out of a flat 7 (unlike
+    # Trade Score's variable "possible"), shown right under it.
+    daily_score = signal.get("daily_score")
+    daily_score_line = ""
+    if daily_score:
+        if daily_score["score"] >= 7:
+            ds_icon = "🔥"
+        elif daily_score["score"] >= 5:
+            ds_icon = "✅"
+        else:
+            ds_icon = "⚠️"
+        daily_score_line = f"{ds_icon} Daily Score: <b>{daily_score['label']}</b>\n"
 
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{trade_score_line}"
+        f"{daily_score_line}"
         f"{fno_line}"
         f"{chart_line}"
         f"{date_part} {time_part} | Close: {signal['close']}\n"
