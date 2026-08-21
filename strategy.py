@@ -176,6 +176,151 @@ def _compute_vwap_at(df, idx):
     return float((typical_price * window["volume"]).sum() / cum_vol)
 
 
+def _find_swing_points(df, end_idx, lookback, strength):
+    """
+    Fractal swing-point finder used by detect_trendline_break().
+    Scans df in [end_idx-lookback, end_idx-1] (never includes end_idx
+    itself — that's the candle being tested for a break) and returns
+    two lists of (idx, price) tuples, oldest first:
+      swing_highs: candles whose high is the max of the `strength`
+                   candles on BOTH sides of it
+      swing_lows:  candles whose low is the min of the `strength`
+                   candles on BOTH sides of it
+    A candle needs `strength` candles free on both sides to even be
+    checked, so the most recent possible swing point is at
+    end_idx-1-strength, not end_idx-1.
+    """
+    start = max(strength, end_idx - lookback)
+    stop = end_idx - strength  # exclusive
+    swing_highs, swing_lows = [], []
+    for p in range(start, stop):
+        window_hi = df["high"].iloc[p - strength: p + strength + 1]
+        window_lo = df["low"].iloc[p - strength: p + strength + 1]
+        if df["high"].iloc[p] == window_hi.max():
+            swing_highs.append((p, float(df["high"].iloc[p])))
+        if df["low"].iloc[p] == window_lo.min():
+            swing_lows.append((p, float(df["low"].iloc[p])))
+    return swing_highs, swing_lows
+
+
+def _trendline_value_at(p1, p2, x):
+    """Linear interpolation/extrapolation of the line through p1,p2 at x."""
+    (x1, y1), (x2, y2) = p1, p2
+    slope = (y2 - y1) / (x2 - x1)
+    return y2 + slope * (x - x2)
+
+
+def detect_trendline_break(df, idx, lookback=None, strength=None):
+    """
+    Diagonal trendline break (added, per request) — classic "connect
+    the last two swing highs/lows and watch for price to close through
+    that diagonal line" break, independent of EMA/RSI/VWAP/etc.
+
+    Resistance line: drawn through the last 2 confirmed swing HIGHS,
+    only valid if they're descending (2nd high < 1st high — a real
+    downtrend line, not a flat/rising one). A BULLISH break fires when
+    today's close crosses above that line while the previous candle's
+    close was still at/below it (catches the exact breaking candle,
+    not every candle after an old break).
+
+    Support line: mirror image — last 2 confirmed swing LOWS, only
+    valid if ascending (2nd low > 1st low). A BEARISH break fires when
+    close crosses below it, previous candle still at/above it.
+
+    Both lines are checked independently — in principle both a
+    resistance and a support line could exist at once (e.g. inside a
+    triangle), but only one can actually be broken by a single candle's
+    close, so at most one break is ever returned.
+
+    Returns None if no swing pair / no break, else:
+      {"direction": "BULLISH" | "BEARISH",
+       "line_type": "RESISTANCE" | "SUPPORT",
+       "line_value": float (line's value at the break candle),
+       "point1": {"idx", "time", "price"},   # older swing point
+       "point2": {"idx", "time", "price"},   # newer swing point
+       "candles_in_trend": int}              # point2.idx - point1.idx
+    """
+    lookback = lookback or config.TRENDLINE_LOOKBACK_CANDLES
+    strength = strength or config.TRENDLINE_SWING_STRENGTH
+
+    if idx < 1 or idx - lookback < strength + 1:
+        return None
+
+    swing_highs, swing_lows = _find_swing_points(df, idx, lookback, strength)
+
+    close_now = float(df["close"].iloc[idx])
+    close_prev = float(df["close"].iloc[idx - 1])
+
+    # ---- resistance line (descending swing highs) -> bullish break ----
+    if len(swing_highs) >= 2:
+        p1, p2 = swing_highs[-2], swing_highs[-1]
+        if p2[1] < p1[1]:  # descending
+            line_now = _trendline_value_at(p1, p2, idx)
+            line_prev = _trendline_value_at(p1, p2, idx - 1)
+            if close_now > line_now and close_prev <= line_prev:
+                return {
+                    "direction": "BULLISH",
+                    "line_type": "RESISTANCE",
+                    "line_value": round(line_now, 2),
+                    "point1": {"idx": p1[0], "time": df["timestamp"].iloc[p1[0]], "price": round(p1[1], 2)},
+                    "point2": {"idx": p2[0], "time": df["timestamp"].iloc[p2[0]], "price": round(p2[1], 2)},
+                    "candles_in_trend": p2[0] - p1[0],
+                }
+
+    # ---- support line (ascending swing lows) -> bearish break ----
+    if len(swing_lows) >= 2:
+        p1, p2 = swing_lows[-2], swing_lows[-1]
+        if p2[1] > p1[1]:  # ascending
+            line_now = _trendline_value_at(p1, p2, idx)
+            line_prev = _trendline_value_at(p1, p2, idx - 1)
+            if close_now < line_now and close_prev >= line_prev:
+                return {
+                    "direction": "BEARISH",
+                    "line_type": "SUPPORT",
+                    "line_value": round(line_now, 2),
+                    "point1": {"idx": p1[0], "time": df["timestamp"].iloc[p1[0]], "price": round(p1[1], 2)},
+                    "point2": {"idx": p2[0], "time": df["timestamp"].iloc[p2[0]], "price": round(p2[1], 2)},
+                    "candles_in_trend": p2[0] - p1[0],
+                }
+
+    return None
+
+
+def check_trendline_scan(df, symbol, lookback=None, strength=None):
+    """
+    Standalone Trendline Break scan entry point (added, per request) —
+    separate from check_signals()/EMA cross entirely; a break here
+    does NOT require an EMA cross on the same candle. Checks ONLY the
+    latest closed candle (unlike check_signals' multi-candle
+    CROSS_LOOKBACK_CANDLES catch-up window) since main.py calls this
+    every scan cycle on the freshly fetched df, so there's no gap to
+    catch up on, and re-scanning old candles every run would just
+    re-detect the same already-alerted break.
+
+    Returns a signal dict ready for telegram_notifier.send_trendline_alert,
+    or None if nothing broke on the latest candle.
+    """
+    if len(df) < 5:
+        return None
+    idx = len(df) - 1
+    brk = detect_trendline_break(df, idx, lookback=lookback, strength=strength)
+    if brk is None:
+        return None
+
+    candle_time = df["timestamp"].iloc[idx]
+    return {
+        "symbol": symbol,
+        "direction": brk["direction"],
+        "line_type": brk["line_type"],
+        "line_value": brk["line_value"],
+        "close": round(float(df["close"].iloc[idx]), 2),
+        "candle_time": candle_time,
+        "point1": brk["point1"],
+        "point2": brk["point2"],
+        "candles_in_trend": brk["candles_in_trend"],
+    }
+
+
 def compute_daily_score(curr, prev, vwap, close_price):
     """
     "Daily Score" (added, per request) — a fixed 8-point bullish-quality
@@ -352,6 +497,13 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
 
     daily_score = compute_daily_score(curr, prev, vwap, close_price)
 
+    # Trendline break (added, per request) — informational only here;
+    # this is the SAME detect_trendline_break used by the standalone
+    # check_trendline_scan, just also surfaced as an extra line when it
+    # happens to coincide with this EMA-cross candle. Does not require
+    # a break to have happened for the EMA-cross alert itself to fire.
+    trendline_break = detect_trendline_break(df, idx)
+
     return {
         "symbol": symbol,
         "direction": direction,
@@ -385,6 +537,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         "macd_hist": round(float(curr["macd_hist"]), 2),
         "macd_divergence": macd_divergence_note,
         "daily_score": daily_score,
+        "trendline_break": trendline_break,
     }
 
 
