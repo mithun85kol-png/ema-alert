@@ -351,22 +351,31 @@ def send_alert(signal):
             f"{trendline['candles_in_trend']} candles)\n"
         )
 
-    # Opening 15-min candle bias (added, per request) — see
-    # strategy.get_opening_candle_bias / config.OPENING_CANDLE_BIAS_ENABLED.
-    # Omitted entirely when None (the normal case — price moved both
-    # above and below the day's open in the first 15 minutes).
+    # Opening 15-min candle bias — see strategy.get_opening_candle_bias
+    # / config.OPENING_CANDLE_BIAS_ENABLED. CHANGED (per request):
+    # always shown now, even on the normal/None case (price moved both
+    # above and below the day's open in the first 15 minutes) — shown
+    # as "Neutral" instead of omitting the line. Placed right under
+    # Daily Score in the message body (see `text = (...)` below).
+    # CHANGED (per request): this line is now shown on EVERY alert,
+    # not just when a bias was actually detected — a Neutral/N/A
+    # reading is shown explicitly instead of omitting the line.
     opening_bias = signal.get("opening_candle_bias")
     if opening_bias == "BULLISH":
         opening_bias_line = "🟢 Opening 15-min: BULLISH (Open = Low)\n"
     elif opening_bias == "BEARISH":
         opening_bias_line = "🔴 Opening 15-min: BEARISH (Open = High)\n"
     else:
-        opening_bias_line = ""
+        # None covers both a genuinely neutral first 15-min candle
+        # (price moved both above and below open) and the rare case
+        # today's first 15-min candle isn't in df15 yet.
+        opening_bias_line = "⚪ Opening 15-min: Neutral\n"
 
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{trade_score_line}"
         f"{daily_score_line}"
+        f"{opening_bias_line}"
         f"{trendline_line}"
         f"{fno_line}"
         f"{chart_line}"
@@ -377,7 +386,6 @@ def send_alert(signal):
         f"{delivery_line}"
         f"{momentum_line}"
         f"{ema_cross_line}"
-        f"{opening_bias_line}"
         f"{trend3_block}"
         f"{smart_money_block}"
         f"{bulk_block_block}"

@@ -48,6 +48,24 @@ def _get_times(state, key):
     return []
 
 
+def _sorted_recent(times, limit):
+    """
+    Keeps the LIMIT most recent entries by actual chronological
+    candle_time, not append order. STRICTNESS FIX (per request, kept
+    in sync with merge_state.py's identical fix): prevents a rare edge
+    case where a genuinely recent candle_time gets trimmed out just
+    because of insertion order, which would make a later run see that
+    candle as "never alerted" and re-send it.
+    """
+    def _key(ct):
+        parsed = _parse_datetime(ct)
+        return parsed if parsed is not None else dt.datetime.min
+
+    unique = list(dict.fromkeys(times))
+    unique.sort(key=_key)
+    return unique[-limit:]
+
+
 def already_alerted(state, symbol, direction, candle_time):
     key = f"{symbol}:{direction}"
     return str(candle_time) in _get_times(state, key)
@@ -59,10 +77,11 @@ def mark_alerted(state, symbol, direction, candle_time):
     ct = str(candle_time)
     if ct not in times:
         times.append(ct)
-    # Keep only the most recent entries so the state file doesn't grow
+    # Keep only the most recent entries (by real time, not insertion
+    # order — see _sorted_recent) so the state file doesn't grow
     # forever; MAX_REMEMBERED_PER_KEY is comfortably larger than the
     # catch-up lookback window so nothing gets re-sent by accident.
-    state[key] = times[-MAX_REMEMBERED_PER_KEY:]
+    state[key] = _sorted_recent(times, MAX_REMEMBERED_PER_KEY)
 
 
 def _parse_datetime(candle_time_str):

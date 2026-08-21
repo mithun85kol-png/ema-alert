@@ -26,6 +26,7 @@ Either input file may be missing/empty/corrupt -- treated as {}.
 """
 import json
 import sys
+import datetime as dt
 
 MAX_REMEMBERED_PER_KEY = 50  # keep in sync with state.py
 
@@ -49,6 +50,43 @@ def _times(val):
     return []
 
 
+def _sorted_recent(times, limit):
+    """
+    Keeps the LIMIT most recent entries by actual chronological
+    candle_time, not by append/list order. STRICTNESS FIX (per
+    request): the old version did combined[-limit:], which trims by
+    whatever order local/remote happened to be concatenated in -- not
+    guaranteed to be time order. That could silently evict a genuinely
+    recent candle_time, and once evicted, a later run would see that
+    candle as "never alerted" and re-send it -- a real duplicate.
+    Sorting by parsed datetime before trimming closes that gap.
+    Entries that fail to parse are kept (never dropped just because
+    they're unparseable) and sorted to the front, so they're never the
+    ones evicted by a real duplicate-risk trim.
+    """
+    def _key(ct):
+        parsed = _parse_dt(ct)
+        return parsed if parsed is not None else dt.datetime.min
+
+    unique = list(dict.fromkeys(times))  # de-dupe, keep first occurrence
+    unique.sort(key=_key)
+    return unique[-limit:]
+
+
+def _parse_dt(candle_time_str):
+    if not candle_time_str:
+        return None
+    s = str(candle_time_str).strip()
+    if len(s) > 6 and s[-6] in ("+", "-") and s[-3] == ":":
+        s = s[:-6]
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return dt.datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    return None
+
+
 def merge(local, remote):
     keys = set(local.keys()) | set(remote.keys())
     merged = {}
@@ -57,7 +95,7 @@ def merge(local, remote):
         for ct in _times(remote.get(key)):
             if ct not in combined:
                 combined.append(ct)
-        merged[key] = combined[-MAX_REMEMBERED_PER_KEY:]
+        merged[key] = _sorted_recent(combined, MAX_REMEMBERED_PER_KEY)
     return merged
 
 

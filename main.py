@@ -1685,8 +1685,10 @@ def run_fo_scan(now_ist, index_only=False):
                     signal["trend_3min"] = info3
                     signal["info_timeframe_label"] = info_label
 
-                if opening_bias is not None:
-                    signal["opening_candle_bias"] = opening_bias
+                # Always attach (even when None/"neutral") so every
+                # alert carries this line — see telegram_notifier for
+                # how a None/neutral reading is displayed.
+                signal["opening_candle_bias"] = opening_bias
 
                 signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
 
@@ -2058,8 +2060,9 @@ def run_nifty500_scan(now_ist):
                     signal["trend_3min"] = info3
                     signal["info_timeframe_label"] = info_label
 
-                if opening_bias is not None:
-                    signal["opening_candle_bias"] = opening_bias
+                # Always attach (even when None/"neutral") — see
+                # run_fo_scan above / telegram_notifier for display.
+                signal["opening_candle_bias"] = opening_bias
 
                 signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
 
