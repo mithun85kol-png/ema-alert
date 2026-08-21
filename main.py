@@ -1543,6 +1543,22 @@ def run_fo_scan(now_ist, index_only=False):
 
     for symbol, (df5, df75, df15) in dfs.items():
         try:
+            # De-overlap fix (per request, to guarantee no duplicate
+            # index alerts): NIFTY 50/BANK/SENSEX are fully owned by
+            # the dedicated index-only cron (index_only=True). Without
+            # this skip, the separate "full" (75-min stock/commodity)
+            # cron ALSO evaluates these same 3 symbols every run (since
+            # build_watchlist() always includes them), so two
+            # independently-scheduled runs could both see an
+            # un-alerted candle at nearly the same moment and both fire
+            # before either commits alert_state.json — a real (if rare)
+            # double-send window. Skipping indices here whenever this
+            # is NOT the dedicated index_only run closes that window:
+            # each index candle is now only ever evaluated by ONE cron
+            # trigger, never two.
+            if symbol in index_symbols and not index_only:
+                continue
+
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
