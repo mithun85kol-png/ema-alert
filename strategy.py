@@ -104,7 +104,7 @@ import pandas as pd
 import config
 from indicators import (
     add_emas, add_rsi, add_volume_avg, add_ema50, add_macd,
-    detect_candle_pattern, add_atr,
+    detect_candle_pattern, add_atr, add_ema,
 )
 
 # How close price needs to be to R3/S3 (as a % of price) to be flagged
@@ -174,6 +174,65 @@ def _compute_vwap_at(df, idx):
     if cum_vol <= 0:
         return None
     return float((typical_price * window["volume"]).sum() / cum_vol)
+
+
+def compute_daily_score(curr, prev, vwap, close_price):
+    """
+    "Daily Score" (added, per request) — a fixed 8-point bullish-quality
+    checklist (was 7; MACD added per follow-up request), independent of
+    whatever direction the EMA cross itself fired in and independent of
+    the scan's own EMA_FAST/EMA_SLOW pair. Unlike compute_trade_score()
+    (which scales /10 over only the dimensions that had data), every one
+    of these 8 checks always has data by the time _evaluate_candle calls
+    this, so it's a plain count out of a fixed 8 — no scaling.
+
+    The 8 checks:
+      1. Close > VWAP
+      2. EMA9 > EMA21           (fixed ds_ema9 / ds_ema21 columns)
+      3. EMA21 > EMA50          (ds_ema21 vs ema_trend, also fixed)
+      4. RSI(14) > 50
+      5. RSI(14) < 70
+      6. Volume > SMA(Volume, 20) x 1.5   (curr.vol_avg is already
+         SMA(Volume, config.VOLUME_AVG_PERIOD=20))
+      7. Close > 1 candle ago High (prev.high)
+      8. MACD line > MACD signal (curr.macd_line/macd_signal — already
+         computed every run via add_macd, same 3-min df, no extra
+         fetch). Bullish-crossover framing, same as every other check
+         here — not compared against the alert's own direction (that's
+         what compute_trade_score's MACD dimension is for).
+
+    Purely informational — never blocks or filters an alert. Any check
+    whose input is missing (e.g. VWAP is None on the very first candle
+    of a session, or MACD hasn't warmed up yet) simply counts as
+    not-met rather than being excluded, so the score is always out of
+    a flat 8 and directly comparable across every alert.
+
+    Returns {"score": int (0-8), "total": 8, "checks": dict, "label": str}.
+    """
+    rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
+    vol_avg = curr["vol_avg"] if not pd_isna(curr["vol_avg"]) else None
+    macd_line = curr["macd_line"] if not pd_isna(curr["macd_line"]) else None
+    macd_signal = curr["macd_signal"] if not pd_isna(curr["macd_signal"]) else None
+
+    checks = {
+        "close_above_vwap":   vwap is not None and close_price > vwap,
+        "ema9_above_ema21":   float(curr["ds_ema9"]) > float(curr["ds_ema21"]),
+        "ema21_above_ema50":  float(curr["ds_ema21"]) > float(curr["ema_trend"]),
+        "rsi_above_50":       rsi_val is not None and rsi_val > 50,
+        "rsi_below_70":       rsi_val is not None and rsi_val < 70,
+        "volume_spike_1_5x":  vol_avg is not None and vol_avg > 0 and curr["volume"] > (1.5 * vol_avg),
+        "close_above_prev_high": close_price > float(prev["high"]),
+        "macd_bullish":       macd_line is not None and macd_signal is not None and macd_line > macd_signal,
+    }
+    score = sum(1 for v in checks.values() if v)
+    total = len(checks)
+
+    return {
+        "score": score,
+        "total": total,
+        "checks": checks,
+        "label": f"{score}/{total}",
+    }
 
 
 def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None,
@@ -291,6 +350,8 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
     if prev_close:
         day_change_pct = round((close_price - prev_close) / prev_close * 100, 2)
 
+    daily_score = compute_daily_score(curr, prev, vwap, close_price)
+
     return {
         "symbol": symbol,
         "direction": direction,
@@ -323,6 +384,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         "macd_signal": round(float(curr["macd_signal"]), 2),
         "macd_hist": round(float(curr["macd_hist"]), 2),
         "macd_divergence": macd_divergence_note,
+        "daily_score": daily_score,
     }
 
 
@@ -381,6 +443,12 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
     df = add_ema50(df)
     df = add_macd(df, config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL)
+    # Fixed EMA9/EMA21 for the Daily Score (see compute_daily_score) —
+    # kept separate from ema_fast/ema_slow above because those vary by
+    # scan (9/20 on F&O, 9/50 on Nifty 500), while the Daily Score's
+    # own EMA9 > EMA21 > EMA50 stack must always stay 9/21/50.
+    df = add_ema(df, 9, "ds_ema9")
+    df = add_ema(df, 21, "ds_ema21")
 
     signals = []
     n = len(df)
@@ -1085,6 +1153,8 @@ def compute_trade_score(signal):
       9.  Crossing candle's volume beat the previous candle (vol_change_pct > 0)
       10. The OTHER (informational) timeframe's own EMA bias agrees
           with the signal direction (signal["trend_3min"]["bias"])
+      11. MACD bias (line vs signal) agrees with the signal direction
+          (added, per follow-up request)
 
     Each dimension only counts toward "possible" if its underlying
     data was actually available this run (same graceful-skip pattern
@@ -1181,6 +1251,15 @@ def compute_trade_score(signal):
     if trend3 and trend3.get("bias"):
         possible += 1
         if trend3["bias"] == direction:
+            raw_score += 1
+
+    # ---- 11. MACD bias agreement (added) ----
+    macd_line = signal.get("macd_line")
+    macd_signal_val = signal.get("macd_signal")
+    if macd_line is not None and macd_signal_val is not None:
+        possible += 1
+        macd_bias = "BULLISH" if macd_line > macd_signal_val else "BEARISH"
+        if macd_bias == direction:
             raw_score += 1
 
     if possible == 0:
