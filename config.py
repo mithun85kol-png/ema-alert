@@ -577,3 +577,21 @@ BREAKOUT_ATR_MIN_PCT = 0.025
 BREAKOUT_HISTORY_LOOKBACK_DAYS = 380
 BREAKOUT_HISTORY_CACHE_FILE = "breakout_history_cache.json"
 
+
+# ---- Trendline Break scan (added, per request) ----
+# Diagonal trendline break — connects the last 2 confirmed swing highs
+# (descending -> resistance line) or last 2 confirmed swing lows
+# (ascending -> support line) and flags the candle where price closes
+# through that line. See strategy.detect_trendline_break.
+#
+# How many candles back to look for swing points.
+TRENDLINE_LOOKBACK_CANDLES = 50
+# A candle counts as a confirmed swing high/low only if it's the
+# highest/lowest point among this many candles on BOTH sides of it
+# (a "fractal" pivot) — higher = fewer, more significant swings.
+TRENDLINE_SWING_STRENGTH = 3
+# Standalone Trendline Break alert dedup — same-symbol/direction
+# re-alerts are suppressed within this cooldown, same idea as
+# config.SAME_DIRECTION_COOLDOWN_MINUTES for the EMA cross alert.
+TRENDLINE_COOLDOWN_MINUTES = 75
+
