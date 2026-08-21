@@ -168,17 +168,18 @@ PRIMARY_LOOKBACK_CANDLES = 6
 # never blocks it.
 INFO_3MIN_LOOKBACK_CANDLES = 5
 
-# ---------- Index-only pure 3-min EMA cross alert ----------
+# ---------- Index-only pure 15-min EMA cross alert ----------
 # INDICES (NIFTY 50, NIFTY BANK, SENSEX) don't use the 75-min flow at
-# all. main.py calls strategy.check_signals() directly on 3-min data
-# (df3) with require_trend_confirmation=False — a plain EMA9/20 cross
-# on the 3-min chart, no trend requirement, no 75-min gate. This is how
-# many trailing CLOSED 3-min candles are re-checked on every run (catch-
-# up window, same idea as PRIMARY_LOOKBACK_CANDLES below but for the
-# index's 3-min alert specifically).
-INDEX_ALERT_LOOKBACK_CANDLES = 8  # 8 x 5-min = 40 min lookback (safety
-# buffer for the dedicated index-only 5-min cron job — covers several
-# missed/delayed runs, not just the exact 5-min gap)
+# all. main.py calls strategy.check_signals() directly on df15
+# (CHANGED from df5/5-min to df15/15-min, per request) with
+# require_trend_confirmation=False — a plain EMA9/20 cross on the
+# 15-min chart, no trend requirement, no 75-min gate. This is how many
+# trailing CLOSED 15-min candles are re-checked on every run (catch-up
+# window, same idea as PRIMARY_LOOKBACK_CANDLES below but for the
+# index's 15-min alert specifically).
+INDEX_ALERT_LOOKBACK_CANDLES = 8  # 8 x 15-min = 120 min lookback
+# (safety buffer for the dedicated index-only cron job — covers
+# several missed/delayed runs, not just the exact interval gap)
 
 # Informational trade-plan fields (computed in strategy.py, currently
 # not shown in the Telegram message — see telegram_notifier.py):
@@ -579,6 +580,12 @@ BREAKOUT_HISTORY_CACHE_FILE = "breakout_history_cache.json"
 
 
 # ---- Trendline Break scan (added, per request) ----
+# Master on/off switch for the standalone Trendline Break Telegram
+# alerts (send_trendline_alert). Set to False to stop these messages
+# entirely without touching main.py / the scan logic — the scan still
+# runs internally (cheap), it just won't send anything to Telegram.
+# Flip back to True any time to re-enable.
+ENABLE_TRENDLINE_ALERTS = False
 # Diagonal trendline break — connects the last 2 confirmed swing highs
 # (descending -> resistance line) or last 2 confirmed swing lows
 # (ascending -> support line) and flags the candle where price closes
