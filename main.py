@@ -27,17 +27,15 @@ and REQUIRE_VOLUME_CONFIRMATION (volume > previous candle). All three
 are mandatory (True) by default.
 
 INDICES (NIFTY 50, NIFTY BANK, SENSEX): completely separate rule, not
-tied to df75 at all, and checked by its OWN dedicated cron trigger
-(SCAN_MODE=index -> run_fo_scan(index_only=True) — see run()), fully
-independent of the 75-min F&O/Nifty500/commodity scan. An index alert
-fires on a PURE EMA9/20 crossover on the 15-min chart (df15) — no
-EMA50 trend requirement, no 75-min involvement. (CHANGED from 5-min to
-15-min, per request — reuses the same df15 already resampled for
-stocks/commodities.)
-strategy.check_signals(df15, ..., require_trend_confirmation=False) is
-called directly on df15, scanning the trailing
-config.INDEX_ALERT_LOOKBACK_CANDLES closed 15-min candles. The
-resulting signal is tagged timeframe="15-min" (telegram_notifier uses
+tied to df75 at all, and checked by its OWN dedicated 5-min cron
+trigger (SCAN_MODE=index -> run_fo_scan(index_only=True) — see run()),
+fully independent of the 75-min F&O/Nifty500/commodity scan. An index
+alert fires on a PURE EMA9/20 crossover on the 5-min chart (df5) — no
+EMA50 trend requirement, no 75-min involvement.
+strategy.check_signals(df5, ..., require_trend_confirmation=False) is
+called directly on df5, scanning the trailing
+config.INDEX_ALERT_LOOKBACK_CANDLES closed 5-min candles. The
+resulting signal is tagged timeframe="5-min" (telegram_notifier uses
 this to label the message correctly) and does NOT get a trend_3min
 context block, since the alert itself already is the short-timeframe
 signal.
@@ -74,11 +72,10 @@ WHEN ALERTS ACTUALLY FIRE:
   config.PRIMARY_LOOKBACK_CANDLES (2) closed 75-min candles (not just
   the newest), so a delayed/skipped run still catches a cross that
   closed while nothing was running.
-- INDICES (15-min): a 15-min candle closes 5 times a day during the
-  session (09:15, 09:30, ... — same cadence as the stock/commodity
-  15-min primary), checked by its own dedicated cron trigger
+- INDICES (5-min): a 5-min candle closes every 5 minutes during the
+  session, checked by its own dedicated 5-min cron trigger
   (SCAN_MODE=index). check_signals() re-checks the last
-  config.INDEX_ALERT_LOOKBACK_CANDLES closed 15-min candles, so a
+  config.INDEX_ALERT_LOOKBACK_CANDLES closed 5-min candles, so a
   delayed/skipped run still catches up. No trend/gate condition beyond
   the plain EMA9/20 cross itself.
 - The workflow still runs every 1-3 minutes; a run simply finds "no new
@@ -1269,15 +1266,13 @@ def build_watchlist(now_ist=None):
 
 def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     """
-    Returns (symbol, df5, df75, df15) — df5 is kept for today's session
-    OHLCV/VWAP aggregation (build_todays_daily_bar) only; the standalone
-    index (NIFTY 50/BANK/SENSEX) EMA9/EMA20 cross alert now runs on
-    df15 instead (CHANGED from 5-min to 15-min, per request). df75 is
-    the primary 75-min signal timeframe for stocks/commodities/cash;
-    df15 also doubles as the informational trend context attached to
-    75-min alerts (get_3min_trend_info). (3-min/df3 was removed
-    2026-08-13 — it had become dead weight, resampled every run for
-    every instrument but no longer read anywhere.)
+    Returns (symbol, df5, df75, df15) — df5 drives the standalone index
+    (NIFTY 50/BANK/SENSEX) EMA9/EMA20 cross alert; df75 is the primary
+    75-min signal timeframe for stocks/commodities/cash; df15 is the
+    informational trend context attached to 75-min alerts
+    (get_3min_trend_info). (3-min/df3 was removed 2026-08-13 — it had
+    become dead weight, resampled every run for every instrument but no
+    longer read anywhere.)
 
     df75 combines cached PRE-TODAY 1-min history (hist_candles, from
     build_hist1min_cache — enough days to warm up EMA9/EMA20) with
@@ -1543,22 +1538,6 @@ def run_fo_scan(now_ist, index_only=False):
 
     for symbol, (df5, df75, df15) in dfs.items():
         try:
-            # De-overlap fix (per request, to guarantee no duplicate
-            # index alerts): NIFTY 50/BANK/SENSEX are fully owned by
-            # the dedicated index-only cron (index_only=True). Without
-            # this skip, the separate "full" (75-min stock/commodity)
-            # cron ALSO evaluates these same 3 symbols every run (since
-            # build_watchlist() always includes them), so two
-            # independently-scheduled runs could both see an
-            # un-alerted candle at nearly the same moment and both fire
-            # before either commits alert_state.json — a real (if rare)
-            # double-send window. Skipping indices here whenever this
-            # is NOT the dedicated index_only run closes that window:
-            # each index candle is now only ever evaluated by ONE cron
-            # trigger, never two.
-            if symbol in index_symbols and not index_only:
-                continue
-
             levels = pivots.get(symbol)
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
@@ -1566,16 +1545,12 @@ def run_fo_scan(now_ist, index_only=False):
 
             # ALERTING SIGNAL. Indices and stocks/commodities now follow
             # completely separate rules:
-            #   - Indices (NIFTY 50, NIFTY BANK, SENSEX): a PURE 15-min
+            #   - Indices (NIFTY 50, NIFTY BANK, SENSEX): a PURE 5-min
             #     EMA9/20 crossover — no EMA50 trend requirement, no
             #     75-min gate at all. check_signals() runs directly on
-            #     df15 with require_trend_confirmation=False. Checked by
-            #     a dedicated cron trigger (index_only=True), fully
+            #     df5 with require_trend_confirmation=False. Checked by
+            #     a dedicated 5-min cron trigger (index_only=True), fully
             #     separate from the 75-min stock/commodity runs.
-            #     (CHANGED from 5-min to 15-min, per request — df15 is
-            #     the same 15-min resample already computed for
-            #     stocks/commodities in _fetch_and_resample_one, so
-            #     this reuses it rather than fetching anything extra.)
             #   - Stocks/commodities: PRIMARY/ALERTING timeframe is
             #     whichever config.PRIMARY_TIMEFRAME currently selects
             #     ("15min" or "75min") — flip that ONE setting to
@@ -1585,27 +1560,27 @@ def run_fo_scan(now_ist, index_only=False):
             #     by config.REQUIRE_TREND_CONFIRMATION /
             #     REQUIRE_STRONG_CANDLE / REQUIRE_VOLUME_CONFIRMATION.
             if symbol in index_symbols:
-                if df15 is None:
+                if df5 is None:
                     continue
                 signals = check_signals(
-                    df15, symbol, r3=r3, s3=s3,
+                    df5, symbol, r3=r3, s3=s3,
                     lookback=config.INDEX_ALERT_LOOKBACK_CANDLES,
                     require_trend_confirmation=False,
                     prev_close=prev_close,
                 )
                 for sig in signals:
-                    sig["timeframe"] = "15-min"
+                    sig["timeframe"] = "5-min"
                 info_df, info_label = None, None
 
                 # Trendline Break (added, per request) — standalone,
                 # does NOT require an EMA cross; checked every run on
-                # the same df15 already used above, on the latest
+                # the same df5 already fetched above, on the latest
                 # closed candle only (see strategy.check_trendline_scan).
-                tl_signal = check_trendline_scan(df15, symbol)
+                tl_signal = check_trendline_scan(df5, symbol)
                 if tl_signal is not None:
                     tl_state_symbol = f"{symbol}::TRENDLINE::{tl_signal['direction']}"
                     if not state.in_cooldown(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"], config.TRENDLINE_COOLDOWN_MINUTES):
-                        tl_signal["chart_link"] = build_chart_link(symbol, "15-min")
+                        tl_signal["chart_link"] = build_chart_link(symbol, "5-min")
                         state.mark_alerted(saved_state, tl_state_symbol, tl_signal["direction"], tl_signal["candle_time"])
                         try:
                             send_trendline_alert(tl_signal)
