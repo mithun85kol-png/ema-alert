@@ -137,7 +137,7 @@ except ImportError:
     # the repo root and this feature resumes automatically.
     corporate_actions = None
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score, check_trendline_scan, get_opening_candle_bias
-from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert
+from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -1252,6 +1252,85 @@ def run_ema_cross_report(now_ist):
     send_ema_cross_report(crosses, now_ist)
 
 
+def build_todays_opening_bias_list(now_ist):
+    """
+    NEW (per request) — the "dala"/consolidated list of every F&O stock
+    whose TODAY's first 15-min candle is Open==Low (bullish) or
+    Open==High (bearish). SCAN_MODE=opening_bias_report entry point
+    (see run_opening_bias_report / run()).
+
+    Deliberately F&O-stocks-only (not indices, not commodities, not the
+    wider Nifty 500 list) — matches "FNO stock" in the request. Reuses
+    the exact same get_opening_candle_bias() used inline on every
+    regular alert, so this list can never disagree with what an
+    individual alert would show for the same symbol.
+
+    Returns (bullish, bearish, no_data) — three lists of symbols,
+    each sorted alphabetically. no_data means today's first 15-min
+    candle hasn't closed yet (before ~09:30 IST) or the fetch failed
+    for that symbol this run — kept separate from "neutral" (a candle
+    that DID close but wasn't a clean Open==Low/Open==High) since only
+    no_data is worth flagging back to you; a real neutral candle is
+    just... not on either list, same as it wouldn't show on an
+    individual alert either.
+    """
+    fo_watch = None if config.USE_FULL_FO_LIST else config.FO_STOCK_WATCHLIST
+    watchlist = instruments.resolve_fo_stock_list(fo_watch)
+
+    dfs, failed_symbols = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
+
+    bullish, bearish, no_data = [], [], []
+    for symbol in watchlist:
+        if symbol not in dfs:
+            no_data.append(symbol)
+            continue
+        _df5, _df75, df15 = dfs[symbol]
+        if df15 is None:
+            no_data.append(symbol)
+            continue
+        bias = get_opening_candle_bias(df15, symbol)
+        if bias == "BULLISH":
+            bullish.append(symbol)
+        elif bias == "BEARISH":
+            bearish.append(symbol)
+        # bias is None (genuinely neutral candle) -> on neither list,
+        # not counted as no_data either.
+
+    return sorted(bullish), sorted(bearish), sorted(no_data)
+
+
+def run_opening_bias_report(now_ist):
+    """
+    NEW (per request) — SCAN_MODE=opening_bias_report entry point.
+    Meant to run shortly after 09:30 IST (once today's first 15-min
+    candle has actually closed) via its own cron trigger in scan.yml.
+    Sends ONE consolidated Telegram message listing every F&O stock
+    with Open==Low and every one with Open==High — always sends
+    something (even an empty-both-lists message), same always-report
+    principle as run_ema_cross_report.
+
+    STARTUP DELAY (per request): the cron trigger itself fires at
+    exactly 09:30:00 IST, but the 09:15-09:30 candle isn't reliably
+    available from Upstox the instant it closes -- there's typically a
+    short broker-side finalization lag. Sleeping 15s here (so the
+    actual fetch happens ~09:30:15) gives that lag room without having
+    to fiddle with cron-job.org's schedule, which only supports
+    minute-level granularity anyway (no ":15" second offset). now_ist
+    is deliberately re-read via _now_ist() AFTER the sleep, so the
+    session-gate check right below and the report's own printed
+    timestamp both reflect the real (post-sleep) clock time, not the
+    stale pre-sleep one passed in from run().
+    """
+    time.sleep(15)
+    now_ist = _now_ist()
+
+    if not _in_stock_session(now_ist):
+        print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — opening-bias report skipping.", flush=True)
+        return
+    bullish, bearish, no_data = build_todays_opening_bias_list(now_ist)
+    send_opening_bias_report(bullish, bearish, no_data, now_ist)
+
+
 def build_watchlist(now_ist=None):
     now_ist = now_ist or _now_ist()
     watchlist = {}
@@ -2281,6 +2360,16 @@ def run():
     # 75-min alert scan instead of the intended lightweight report.
     if mode == "ema_cross_report":
         run_ema_cross_report(now_ist)
+        return
+
+    # SCAN_MODE=opening_bias_report -> NEW (per request) standalone
+    # "F&O Opening 15-min Bias" report — one consolidated list of every
+    # F&O stock whose first 15-min candle today was Open==Low or
+    # Open==High. Meant to run once, shortly after 09:30 IST, via its
+    # own cron trigger (see scan.yml). See run_opening_bias_report /
+    # build_todays_opening_bias_list above.
+    if mode == "opening_bias_report":
+        run_opening_bias_report(now_ist)
         return
 
     # SCAN_MODE=breakout_scan -> the standalone 12-condition daily

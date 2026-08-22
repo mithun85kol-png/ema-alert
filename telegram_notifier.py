@@ -409,6 +409,55 @@ def send_alert(signal):
         print("Telegram send failed:", e)
 
 
+def send_opening_bias_report(bullish, bearish, no_data, now_ist):
+    """
+    NEW (per request) — SCAN_MODE=opening_bias_report. ONE consolidated
+    message listing every F&O stock whose today's first 15-min candle
+    was a clean Open==Low (bullish) or Open==High (bearish). Same
+    always-send principle as send_ema_cross_report: sends something
+    even when both lists are empty, so a scheduled run never looks
+    like it might have silently failed.
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", bullish, bearish)
+        return
+
+    date_str = now_ist.strftime("%Y-%m-%d")
+    time_str = now_ist.strftime("%H:%M")
+
+    lines = [f"📐 <b>F&O Opening 15-min Bias</b> — {date_str} {time_str}\n"]
+
+    if bullish:
+        lines.append(f"🟢 <b>Open = Low</b> ({len(bullish)}):")
+        lines.append(", ".join(bullish))
+        lines.append("")
+
+    if bearish:
+        lines.append(f"🔴 <b>Open = High</b> ({len(bearish)}):")
+        lines.append(", ".join(bearish))
+        lines.append("")
+
+    if not bullish and not bearish:
+        lines.append("No clean Open=Low / Open=High candles today.")
+        lines.append("")
+
+    if no_data:
+        lines.append(f"⚪ No data ({len(no_data)}): {', '.join(no_data)}")
+
+    text = "\n".join(lines).rstrip()
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (opening_bias_report):", e)
+
+
 def send_ema_cross_report(crosses, now_ist):
     """
     RE-ADDED (was missing from this checkout — see chat) — the

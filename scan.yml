@@ -1,0 +1,116 @@
+name: EMA Alert Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Scan mode: full (F&O+cash+commodity, 75-min), index (NIFTY50/BANK/SENSEX only, 5-min), ema_cross_report (EMA50/200 + Delivery% report, run at market open/close), breakout_scan (12-condition Nifty 500 breakout scanner, once/day), or opening_bias_report (F&O Open=Low/Open=High consolidated list, once shortly after 09:30)'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - index
+          - ema_cross_report
+          - breakout_scan
+          - opening_bias_report
+  repository_dispatch:
+    types: [run-scan]
+
+concurrency:
+  group: ema-alert-scan-${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scan
+        env:
+          UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SCAN_MODE: ${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
+        run: python main.py
+
+      - name: Commit updated state files
+        # if: always() — even if "Run scan" above crashed/failed
+        # partway through, whatever main.py managed to save to disk
+        # before that (state.save_state() is called at the end of
+        # run_fo_scan(), which completes before the riskier downstream
+        # steps like corporate actions / Nifty 500 / EMA report) should
+        # still get committed, instead of being silently thrown away.
+        if: always()
+        run: |
+          git config user.name "ema-alert-bot"
+          git config user.email "actions@github.com"
+
+          # Save this run's freshly-computed alert_state.json aside
+          # BEFORE any git operations touch the working tree, so it
+          # survives the merge loop below no matter what git does to
+          # the checked-out file.
+          cp alert_state.json /tmp/local_alert_state.json
+
+          BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+          git add alert_state.json
+          if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
+          if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
+          if [ -f momentum_volume_cache.json ]; then git add momentum_volume_cache.json; fi
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "update alert state [skip ci]"
+
+          for i in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $i) -- merging with the latest remote alert_state.json and retrying..."
+
+            # The "index" (5-min) and "full" (75-min) scans are
+            # separate workflow runs that can genuinely overlap, and
+            # both write alert_state.json. A blind
+            # "git pull --rebase -X theirs" here used to silently
+            # discard whichever side lost the rebase -- forgetting
+            # that side's newly-marked alerts, so the SAME alert would
+            # get re-sent on a later run. Instead: fetch the latest
+            # remote copy and UNION-merge it with our own
+            # just-computed state (see merge_state.py) -- safe because
+            # every value in this file only ever grows (a list of
+            # candle_times already alerted), so a union can never lose
+            # a fact or fabricate a missed alert.
+            git fetch origin "$BRANCH"
+            git show "origin/$BRANCH:alert_state.json" > /tmp/remote_alert_state.json 2>/dev/null || echo '{}' > /tmp/remote_alert_state.json
+            python merge_state.py /tmp/local_alert_state.json /tmp/remote_alert_state.json alert_state.json
+
+            # Move our branch pointer up to the remote tip WITHOUT
+            # touching the working tree (soft reset), so the merged
+            # alert_state.json we just wrote is preserved, then
+            # re-commit just that file on top of the new tip. Other
+            # cache files (pivot/corporate-actions) simply keep this
+            # run's version if there's a conflict -- low-stakes,
+            # unlike alert_state.json.
+            git reset --soft "origin/$BRANCH"
+            git add alert_state.json
+            if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
+            if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
+            if [ -f momentum_volume_cache.json ]; then git add momentum_volume_cache.json; fi
+            if ! git diff --cached --quiet; then
+              git commit -m "update alert state [skip ci]"
+            fi
+            sleep $((RANDOM % 5 + 1))
+          done
+          echo "::warning::Failed to push updated state file after 5 attempts -- next run may re-send an already-fired alert."
+          exit 1
