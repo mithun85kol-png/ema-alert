@@ -158,6 +158,45 @@ def _detect_macd_divergence(df, idx, lookback):
     return {"bullish": bool(bullish), "bearish": bool(bearish)}
 
 
+def _compute_opening_range_breakout(df, idx):
+    """
+    Checklist item "1st 15-min High/Low breakout + candle close beyond
+    it" (added, per request). Finds TODAY's first candle in df (same
+    "first row of today" logic as get_opening_candle_bias, but usable
+    at any idx, not just the latest row -- needed here since this runs
+    inside _evaluate_candle for whichever candle is being scored) and
+    checks whether candle `idx` CLOSED beyond that opening candle's
+    high/low:
+      - close > opening_high -> "BULLISH" (breakout above the opening
+        range, closing outside it -- not just wicking through)
+      - close < opening_low  -> "BEARISH" (breakdown below the opening
+        range)
+      - neither, OR idx IS today's first candle itself (nothing to
+        break out of yet) -> None
+    df is expected to be 15-min candles (df15) -- same timeframe the
+    checklist itself is defined on. Never raises; returns None on any
+    missing/insufficient data rather than blocking the caller.
+    """
+    curr = df.iloc[idx]
+    ts = df["timestamp"]
+    today = curr["timestamp"].date() if hasattr(curr["timestamp"], "date") else None
+    if today is None:
+        return None
+    today_mask = ts.dt.date == today
+    today_positions = [i for i, v in enumerate(today_mask) if v]
+    if not today_positions or today_positions[0] == idx:
+        return None
+    opening_idx = today_positions[0]
+    opening_high = float(df.iloc[opening_idx]["high"])
+    opening_low = float(df.iloc[opening_idx]["low"])
+    close_price = float(curr["close"])
+    if close_price > opening_high:
+        return "BULLISH"
+    if close_price < opening_low:
+        return "BEARISH"
+    return None
+
+
 def _compute_vwap_at(df, idx):
     """
     Cumulative session VWAP up to and including candle `idx`:
@@ -495,6 +534,12 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
     if prev_close:
         day_change_pct = round((close_price - prev_close) / prev_close * 100, 2)
 
+    # Opening range breakout (added, per request) — checklist item
+    # "1st 15-min High/Low breakout + close beyond it". Purely
+    # informational here, like trendline_break below; never blocks the
+    # EMA-cross signal itself.
+    opening_range_breakout = _compute_opening_range_breakout(df, idx)
+
     daily_score = compute_daily_score(curr, prev, vwap, close_price)
 
     # Trendline break (added, per request) — informational only here;
@@ -538,6 +583,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         "macd_divergence": macd_divergence_note,
         "daily_score": daily_score,
         "trendline_break": trendline_break,
+        "opening_range_breakout": opening_range_breakout,
     }
 
 
@@ -1323,6 +1369,94 @@ def check_breakout_scan(history, today_bar, symbol):
     }
 
 
+def compute_intraday_checklist(signal):
+    """
+    "15-Minute Intraday Trade Checklist" (added, per request) — a
+    SEPARATE 0-10 point checklist from compute_trade_score() above,
+    purpose-built for entry timing rather than overall alert quality.
+    Mirrors automatically for BULLISH (BUY setup) vs BEARISH (SELL
+    setup) signals -- same 8 checks, opposite direction each time:
+
+      BUY SETUP (BULLISH)                    SELL SETUP (BEARISH)
+      EMA9 > EMA20            +1             EMA9 < EMA20            +1
+      Price > VWAP            +1             Price < VWAP            +1
+      Crossing vol > prev     +1             Crossing vol > prev     +1
+      Volume > recent avg     +1             Volume > recent avg     +1
+      MACD bullish            +1             MACD bearish            +1
+      RSI > 50                +1             RSI < 50                +1
+      1st 15-min Open=Low     +2             1st 15-min Open=High    +2
+      1st 15-min High breakout+2             1st 15-min Low breakdown+2
+
+    Unlike compute_trade_score, this is NOT rescaled by how many
+    dimensions had data -- every one of the 8 checks always counts
+    (missing/unavailable data just means that check is simply not
+    satisfied, i.e. 0 points for it, same as a real "no"), so the
+    denominator is always a fixed /10 and directly comparable across
+    every alert. This matches the checklist as specified: "how many
+    points are on offer and how many were actually hit", with a hard
+    10-point ceiling.
+
+    Reads only fields the signal already carries (from _evaluate_candle
+    and, for opening_candle_bias, from main.py) -- no extra fetch.
+    Returns {"score": int (0-10), "label": "X/10", "items": [(name,
+    checked_bool, points), ...]} -- "items" is the tickable checklist
+    itself, in the same top-to-bottom order as specified, for
+    telegram_notifier to render as [ ]/[x] lines if desired.
+    """
+    direction = signal["direction"]
+    bullish = direction == "BULLISH"
+
+    ema_fast, ema_slow = signal.get("ema_fast"), signal.get("ema_slow")
+    ema_ok = ema_fast is not None and ema_slow is not None and (
+        ema_fast > ema_slow if bullish else ema_fast < ema_slow
+    )
+
+    close, vwap = signal.get("close"), signal.get("vwap")
+    vwap_ok = close is not None and vwap is not None and (
+        close > vwap if bullish else close < vwap
+    )
+
+    vol_change_pct = signal.get("vol_change_pct")
+    vol_vs_prev_ok = vol_change_pct is not None and vol_change_pct > 0
+
+    volume, vol_avg = signal.get("volume"), signal.get("vol_avg")
+    vol_vs_avg_ok = volume is not None and vol_avg is not None and volume > vol_avg
+
+    macd_line, macd_signal_val = signal.get("macd_line"), signal.get("macd_signal")
+    macd_ok = macd_line is not None and macd_signal_val is not None and (
+        macd_line > macd_signal_val if bullish else macd_line < macd_signal_val
+    )
+
+    rsi = signal.get("rsi")
+    rsi_ok = rsi is not None and (rsi > 50 if bullish else rsi < 50)
+
+    opening_bias = signal.get("opening_candle_bias")
+    opening_bias_ok = opening_bias == ("BULLISH" if bullish else "BEARISH")
+
+    opening_breakout = signal.get("opening_range_breakout")
+    opening_breakout_ok = opening_breakout == ("BULLISH" if bullish else "BEARISH")
+
+    items = [
+        ("EMA9 > EMA20" if bullish else "EMA9 < EMA20", ema_ok, 1),
+        ("Price > VWAP" if bullish else "Price < VWAP", vwap_ok, 1),
+        ("Crossing candle volume > previous candle", vol_vs_prev_ok, 1),
+        ("Volume clearly above recent average", vol_vs_avg_ok, 1),
+        ("MACD bullish (MACD > Signal)" if bullish else "MACD bearish (MACD < Signal)", macd_ok, 1),
+        ("RSI > 50" if bullish else "RSI < 50", rsi_ok, 1),
+        ("1st 15-min candle Open = Low" if bullish else "1st 15-min candle Open = High", opening_bias_ok, 2),
+        ("1st 15-min High breakout, close above High" if bullish
+         else "1st 15-min Low breakdown, close below Low", opening_breakout_ok, 2),
+    ]
+
+    score = sum(points for _, checked, points in items if checked)
+
+    return {
+        "score": score,
+        "label": f"{score}/10",
+        "items": items,
+    }
+
+
 def compute_trade_score(signal):
     """
     "Trade Signal Score" (added, per request) — a single 0-10 number
@@ -1459,15 +1593,25 @@ def compute_trade_score(signal):
             raw_score += 1
 
     if possible == 0:
-        return {"score": 0, "possible": 0, "raw_score": 0, "label": "0/10"}
+        return {"score": 0, "possible": 0, "raw_score": 0, "label": "0/0"}
 
-    # Scale raw_score (out of "possible" dimensions that had data) up
-    # to a common /10 scale, rounded to the nearest whole point.
+    # "score" stays the /10-scaled value -- main.py's MIN_TRADE_SCORE gate
+    # (config.py) is calibrated against this 0-10 scale and must keep
+    # working unchanged regardless of how many dimensions had data.
     scaled = round((raw_score / possible) * 10)
 
+    # "label" (CHANGED, per request) now shows the actual raw achieved
+    # points out of however many dimensions had data THIS run -- e.g.
+    # "10/11" or "12/12" -- instead of the scaled "10/10", so it's clear
+    # at a glance how many of the (up to 11) dimensions were even
+    # available to score, not just the normalized result. "possible"
+    # varies per alert (a stock missing sector mapping / F&O option
+    # chain / a bulk-block deal simply has fewer dimensions that run),
+    # so this is genuinely "X out of Y available this run", not a fixed
+    # denominator.
     return {
         "score": scaled,
         "possible": possible,
         "raw_score": raw_score,
-        "label": f"{scaled}/10",
+        "label": f"{raw_score}/{possible}",
     }

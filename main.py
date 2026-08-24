@@ -136,7 +136,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score, check_trendline_scan, get_opening_candle_bias
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report
 from indicators import calculate_r3_s3
 
@@ -1777,12 +1777,16 @@ def run_fo_scan(now_ist, index_only=False):
                 # how a None/neutral reading is displayed.
                 signal["opening_candle_bias"] = opening_bias
 
-                signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
+                # 15-Minute Intraday Trade Checklist (added, per
+                # request) — separate 0-10 checklist from trade_score
+                # below, purpose-built for entry timing. Needs
+                # opening_candle_bias (just set above) and
+                # opening_range_breakout (already on signal from
+                # strategy._evaluate_candle) — both must be present
+                # before this call.
+                signal["intraday_checklist"] = compute_intraday_checklist(signal)
 
-                # Momentum / Volume Spike — applies to every instrument
-                # (stocks, indices, commodities), not stock-only like
-                # delivery%/bulk-deals/sector below.
-                mv = momentum_volume.get(symbol)
+                signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
                 if mv is not None:
                     signal["momentum"] = signal["close"] > mv["four_week_high_close"]
                     signal["four_week_high_close"] = mv["four_week_high_close"]
@@ -2150,6 +2154,10 @@ def run_nifty500_scan(now_ist):
                 # Always attach (even when None/"neutral") — see
                 # run_fo_scan above / telegram_notifier for display.
                 signal["opening_candle_bias"] = opening_bias
+
+                # 15-Minute Intraday Trade Checklist — see the matching
+                # comment in run_fo_scan above.
+                signal["intraday_checklist"] = compute_intraday_checklist(signal)
 
                 signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
 
