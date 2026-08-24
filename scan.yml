@@ -18,7 +18,19 @@ on:
     types: [run-scan]
 
 concurrency:
-  group: ema-alert-scan-${{ github.event.inputs.mode || github.event.client_payload.mode || 'full' }}
+  # SINGLE group across every mode (was per-mode before). All modes
+  # write the same alert_state.json, so any two runs overlapping --
+  # regardless of which mode triggered them -- can race: run B reads
+  # alert_state.json before run A has committed its "already alerted"
+  # mark, and both send the same alert (this is what caused the
+  # PNBHOUSING alert on 2026-08-24 to go out twice, 22 min apart,
+  # while alert_state.json itself only ever ended up with one entry
+  # for that candle -- the union-merge fixed the STATE after the fact,
+  # but both Telegram sends had already happened). A single shared
+  # group guarantees GitHub queues every run strictly one-after-
+  # another, so a later run's checkout always includes the previous
+  # run's committed state.
+  group: ema-alert-scan
   cancel-in-progress: false
 
 jobs:
@@ -68,6 +80,18 @@ jobs:
           if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
           if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
           if [ -f momentum_volume_cache.json ]; then git add momentum_volume_cache.json; fi
+          # ADDED: these daily caches were computed by main.py but never
+          # committed here, so every run started from a clean checkout
+          # and re-fetched them from scratch -- defeating the "once per
+          # calendar day" caching main.py's code comments describe, and
+          # meaning the OI writing-buildup comparison (oi_buildup_cache/
+          # oi_buildup_stock_cache) never had a real previous snapshot to
+          # compare against, since its own cache reset every run.
+          if [ -f historical_1min_cache.json ]; then git add historical_1min_cache.json; fi
+          if [ -f nifty500_list_cache.json ]; then git add nifty500_list_cache.json; fi
+          if [ -f oi_buildup_cache.json ]; then git add oi_buildup_cache.json; fi
+          if [ -f oi_buildup_stock_cache.json ]; then git add oi_buildup_stock_cache.json; fi
+          if [ -f breakout_history_cache.json ]; then git add breakout_history_cache.json; fi
           if git diff --cached --quiet; then
             exit 0
           fi
@@ -107,6 +131,11 @@ jobs:
             if [ -f pivot_cache.json ]; then git add pivot_cache.json; fi
             if [ -f corporate_actions_cache.json ]; then git add corporate_actions_cache.json; fi
             if [ -f momentum_volume_cache.json ]; then git add momentum_volume_cache.json; fi
+            if [ -f historical_1min_cache.json ]; then git add historical_1min_cache.json; fi
+            if [ -f nifty500_list_cache.json ]; then git add nifty500_list_cache.json; fi
+            if [ -f oi_buildup_cache.json ]; then git add oi_buildup_cache.json; fi
+            if [ -f oi_buildup_stock_cache.json ]; then git add oi_buildup_stock_cache.json; fi
+            if [ -f breakout_history_cache.json ]; then git add breakout_history_cache.json; fi
             if ! git diff --cached --quiet; then
               git commit -m "update alert state [skip ci]"
             fi
