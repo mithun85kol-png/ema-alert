@@ -1372,13 +1372,21 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     "failed to fetch" from "fetched fine, just not enough history yet".
     """
     raw = fetch_1min_candles(instrument_key)
-    if raw is None or len(raw) < 30:
-        # NOTE: previously returned a 4-tuple here while the function's
-        # normal return is 5 values, so this path (harmless — "not
-        # enough data yet") was silently raising a ValueError on
-        # unpack in fetch_all() below and getting miscounted as a
-        # genuine fetch failure. Fixed 2026-08-13 to match the actual
-        # (now 4-value) return shape below.
+    if raw is None:
+        return symbol, None, None, None
+    # BUG FIX (found via opening_bias_report showing mass "No data" at
+    # 09:31 IST, even after the len(raw)<30-without-hist_candles fix
+    # below): this used to be `len(raw) < 30`, which rejected EVERY
+    # symbol whenever today's session was under ~30 minutes old -- at
+    # 09:31, today's raw candles are only ~16 rows (09:15-09:31). But
+    # opening_bias_report calls fetch_all() WITHOUT a hist_cache at
+    # all (it only needs today's very first 15-min candle, not
+    # multi-day EMA warmup), so the "only skip the len check when
+    # hist_candles is available" version still rejected everything for
+    # that caller. A 15-min candle only needs 15 one-min bars, so 15
+    # (not 30, not conditional on hist_candles) is the real minimum --
+    # this now works correctly whether or not hist_candles was passed.
+    if len(raw) < 15:
         return symbol, None, None, None
     df5 = resample_5min(raw)
     df5 = drop_unclosed_candle(df5, now_ist, candle_minutes=5)
