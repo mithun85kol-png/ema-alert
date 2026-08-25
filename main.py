@@ -136,7 +136,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report
 from indicators import calculate_r3_s3
 
@@ -1786,6 +1786,11 @@ def run_fo_scan(now_ist, index_only=False):
                 # before this call.
                 signal["intraday_checklist"] = compute_intraday_checklist(signal)
 
+                # 1st 15-min Buy/Sell volume ESTIMATE (added, per
+                # request) — see strategy.get_opening_candle_buy_sell_estimate
+                # docstring for the approximation used.
+                signal["opening_buy_sell"] = get_opening_candle_buy_sell_estimate(df15, symbol)
+
                 signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
                 if mv is not None:
                     signal["momentum"] = signal["close"] > mv["four_week_high_close"]
@@ -2158,6 +2163,10 @@ def run_nifty500_scan(now_ist):
                 # 15-Minute Intraday Trade Checklist — see the matching
                 # comment in run_fo_scan above.
                 signal["intraday_checklist"] = compute_intraday_checklist(signal)
+
+                # 1st 15-min Buy/Sell volume ESTIMATE — see the
+                # matching comment in run_fo_scan above.
+                signal["opening_buy_sell"] = get_opening_candle_buy_sell_estimate(df15, symbol)
 
                 signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
 

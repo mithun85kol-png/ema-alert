@@ -822,6 +822,48 @@ def get_opening_candle_bias(df, symbol):
     return None
 
 
+def get_opening_candle_buy_sell_estimate(df, symbol):
+    """
+    1st 15-min candle Buy/Sell volume ESTIMATE (added, per request).
+    NOT real order-flow/tick data (Upstox's historical candle API
+    doesn't expose who initiated each trade) -- this is the standard
+    Chaikin-style approximation from the candle's own OHLC + volume:
+
+        buy_volume  = volume * (close - low) / (high - low)
+        sell_volume = volume - buy_volume
+
+    i.e. a close near the candle's HIGH is read as mostly buy-side
+    pressure, a close near the LOW as mostly sell-side. Same
+    "today's first 15-min candle" lookup as get_opening_candle_bias
+    above (expects df15). Returns None if df is empty, today's first
+    candle isn't in df yet, or the candle has zero range (high==low,
+    e.g. a single-tick/illiquid candle) -- division by zero would
+    otherwise make the split meaningless. On success returns a dict:
+    {"buy_volume": int, "sell_volume": int, "buy_pct": float} (buy_pct
+    rounded to 1 decimal, 0-100).
+    """
+    if df is None or df.empty:
+        return None
+    ts = df["timestamp"]
+    today = ts.iloc[-1].date()
+    today_rows = df[ts.dt.date == today]
+    if today_rows.empty:
+        return None
+    first = today_rows.iloc[0]
+    o, h, l, c = float(first["open"]), float(first["high"]), float(first["low"]), float(first["close"])
+    volume = float(first["volume"])
+    candle_range = h - l
+    if candle_range <= 0 or volume <= 0:
+        return None
+    buy_volume = volume * (c - l) / candle_range
+    sell_volume = volume - buy_volume
+    return {
+        "buy_volume": int(round(buy_volume)),
+        "sell_volume": int(round(sell_volume)),
+        "buy_pct": round((buy_volume / volume) * 100, 1),
+    }
+
+
 def get_sector_trend(df):
     """
     Sector-index trend reading (added) — same rule the stock-level

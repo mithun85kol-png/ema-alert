@@ -53,7 +53,10 @@ def send_alert(signal):
     # signal passed strategy.passes_confluence_filter (see main.py —
     # set as signal["confluence_passed"]) even though the underlying
     # numbers are no longer printed.
-    header_tag = " 🎯 High R:R" if signal.get("confluence_passed") else ""
+    # REMOVED (per request) — "🎯 High R:R" was tied to
+    # signal["confluence_passed"], but config.CONFLUENCE_FILTER_ENABLED
+    # is now False so it was showing on every single alert (vestigial).
+    header_tag = ""
     smart_money = signal.get("smart_money")
     if smart_money:
         header_tag += " 🐋 Smart Money"
@@ -380,12 +383,28 @@ def send_alert(signal):
         # today's first 15-min candle isn't in df15 yet.
         opening_bias_line = "⚪ Opening 15-min: Neutral\n"
 
+    # 1st 15-min Buy/Sell volume ESTIMATE (added, per request) — NOT
+    # real order-flow data, see strategy.get_opening_candle_buy_sell_estimate
+    # docstring for the (Chaikin-style) approximation used. Omitted
+    # entirely if unavailable (zero-range candle, no data yet, or an
+    # older signal dict without this field).
+    opening_buy_sell = signal.get("opening_buy_sell")
+    opening_buy_sell_line = ""
+    if opening_buy_sell:
+        opening_buy_sell_line = (
+            f"📐 1st 15-min Buy/Sell (est.): "
+            f"Buy {opening_buy_sell['buy_volume']:,} / "
+            f"Sell {opening_buy_sell['sell_volume']:,} "
+            f"({opening_buy_sell['buy_pct']}% buy)\n"
+        )
+
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{trade_score_line}"
         f"{checklist_block}"
         f"{daily_score_line}"
         f"{opening_bias_line}"
+        f"{opening_buy_sell_line}"
         f"{trendline_line}"
         f"{fno_line}"
         f"{chart_line}"
