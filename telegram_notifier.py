@@ -347,21 +347,13 @@ def send_alert(signal):
             ds_icon = "⚠️"
         daily_score_line = f"{ds_icon} Daily Score: <b>{daily_score['label']}</b>\n"
 
-    # Trendline break (added, per request) — informational only; only
-    # present when a diagonal trendline break happened to coincide
-    # with THIS EMA-cross candle (see strategy.detect_trendline_break,
-    # attached as signal["trendline_break"]). Most EMA-cross alerts
-    # won't have one — omitted entirely when None.
-    trendline = signal.get("trendline_break")
+    # Trendline break line removed from the EMA-cross alert (per
+    # request) — strategy.detect_trendline_break still runs and is
+    # still attached as signal["trendline_break"] (other code may read
+    # it), it's just no longer rendered here. The standalone Trendline
+    # Break alert below (send_trendline_alert) is separately gated off
+    # by config.ENABLE_TRENDLINE_ALERTS in main.py.
     trendline_line = ""
-    if trendline:
-        tl_icon = "📐⬆️" if trendline["direction"] == "BULLISH" else "📐⬇️"
-        line_type_label = "Resistance" if trendline["line_type"] == "RESISTANCE" else "Support"
-        trendline_line = (
-            f"{tl_icon} Trendline Break: {line_type_label} broken "
-            f"{trendline['direction'].lower()} (line @ {trendline['line_value']}, "
-            f"{trendline['candles_in_trend']} candles)\n"
-        )
 
     # Opening 15-min candle bias — see strategy.get_opening_candle_bias
     # / config.OPENING_CANDLE_BIAS_ENABLED. CHANGED (per request):

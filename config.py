@@ -439,6 +439,27 @@ CONFLUENCE_RSI_BULLISH_MAX = 70
 CONFLUENCE_RSI_BEARISH_MIN = 30
 CONFLUENCE_RSI_BEARISH_MAX = 50
 
+# ---------- Alert Quality Gate (added, per request) ----------
+# Only send an EMA-cross alert (F&O/index/commodity scan AND Nifty 500
+# scan, both, all symbol types) if BOTH already-computed scores clear
+# their threshold:
+#   - strategy.compute_daily_score()'s signal["daily_score"]["score"]
+#     (0-8) must be STRICTLY GREATER than QUALITY_GATE_MIN_DAILY_SCORE
+#   - strategy.compute_intraday_checklist()'s
+#     signal["intraday_checklist"]["score"] (0-10) must be STRICTLY
+#     GREATER than QUALITY_GATE_MIN_SETUP_SCORE
+# Both scores already exist on every signal purely as informational
+# lines (see their docstrings — "never blocks or filters an alert");
+# this gate is the one place that actually reads them to decide
+# whether to send. A signal that fails is simply not sent (and not
+# marked alerted, so it's re-checked on the next run, same as the
+# confluence filter above). Set QUALITY_GATE_ENABLED = False to go
+# back to sending every qualifying EMA-cross signal regardless of
+# score.
+QUALITY_GATE_ENABLED = True
+QUALITY_GATE_MIN_DAILY_SCORE = 6   # daily_score.score must be > 6 (i.e. 7 or 8 out of 8)
+QUALITY_GATE_MIN_SETUP_SCORE = 8   # intraday_checklist.score must be > 8 (i.e. 9 or 10 out of 10)
+
 # ---------- "Smart Money Entry" 🐋 tag (added) ----------
 # PURELY INFORMATIONAL — like every other tag on the alert now
 # (Momentum, Volume Spike, EMA50/200, OI Buildup) this never blocks or
