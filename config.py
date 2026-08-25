@@ -113,7 +113,11 @@ PRIMARY_TIMEFRAME = "15min"
 # removed from strategy.py (kept here only so main.py's call doesn't
 # need an unconditional True/False literal baked in).
 REQUIRE_TREND_CONFIRMATION = True
-REQUIRE_VOLUME_CONFIRMATION = True
+# CHANGED (per request): only EMA cross + EMA50 trend agreement should
+# gate an alert now — volume confirmation on the crossing candle is no
+# longer mandatory (still computed/shown on the alert as before, just
+# doesn't block).
+REQUIRE_VOLUME_CONFIRMATION = False
 REQUIRE_STRONG_CANDLE = False
 
 # CHANGED (per request): Volume Spike was purely informational before
@@ -128,7 +132,9 @@ REQUIRE_STRONG_CANDLE = False
 # None, not False), this does NOT block the alert -- only an explicit
 # "No" blocks it, so a data-fetch hiccup never silently swallows a
 # real signal. Set back to False to make it informational-only again.
-REQUIRE_VOLUME_SPIKE = True
+# CHANGED (per request): back to informational-only — only EMA cross +
+# EMA50 trend agreement should gate an alert now, nothing else.
+REQUIRE_VOLUME_SPIKE = False
 
 # Minimum distance between EMA9 and EMA20 at the moment of crossover,
 # as a % of close price. unused by current strategy.py (gap filter
@@ -390,7 +396,10 @@ VWAP_MOMENTUM_MIN_PRICE = 350
 # setup" gate, meant to cut the daily count down to only a handful
 # (roughly 5/day) of higher-quality setups with a comparatively small
 # stop and a bigger target. See strategy.passes_confluence_filter().
-CONFLUENCE_FILTER_ENABLED = True
+# CHANGED (per request): master flag now False too (was True but every
+# sub-check underneath was already False, i.e. already a no-op) — only
+# EMA cross + EMA50 trend agreement should gate an alert now.
+CONFLUENCE_FILTER_ENABLED = False
 
 # Each check below can be toggled independently without touching
 # strategy.py — set back to True later to re-enable a specific check.
@@ -441,7 +450,11 @@ SMART_MONEY_DEAL_LOOKBACK_DAYS = 3
 # strategy.compute_trade_score(signal)["score"] >= this. Set to 9 or
 # 10 for only the strongest setups; lower it (or set to 0) to go back
 # to informational-only (score shown, nothing blocked).
-MIN_TRADE_SCORE = 9
+# CHANGED (per request): gate removed — score is still computed and
+# shown on the alert (the BUY/SELL Setup line — see
+# telegram_notifier.py), it just no longer blocks anything. 0 means
+# "no minimum" (every score, however low, passes).
+MIN_TRADE_SCORE = 0
 
 # Safety floor alongside MIN_TRADE_SCORE: requires at least this many
 # of the 10 dimensions to have actually had data this run before the
