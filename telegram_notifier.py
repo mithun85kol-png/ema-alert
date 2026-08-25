@@ -330,16 +330,6 @@ def send_alert(signal):
         setup_icon = "🟢" if is_bullish else "🔴"
         setup_label = "BUY SETUP" if is_bullish else "SELL SETUP"
         checklist_block = f"{setup_icon} {setup_label}: <b>{checklist['label']}</b>\n"
-        # Tap-to-expand breakdown (added, per request — "emon koro je
-        # tap korle content ase") — Telegram's expandable <blockquote>
-        # (Bot API 7.0+) renders as a single collapsed line that opens
-        # into the full itemized checklist on tap, so the summary line
-        # above stays the only thing visible by default.
-        item_lines = "\n".join(
-            f"{'✅' if checked else '❌'} {name} (+{points})"
-            for name, checked, points in checklist["items"]
-        )
-        checklist_block += f"<blockquote expandable>{item_lines}</blockquote>\n"
 
     # Daily Score (added, per request) — fixed 7-point bullish-quality
     # checklist (Close>VWAP, EMA9>21>50 stack, RSI 50-70 band, Volume
@@ -356,25 +346,6 @@ def send_alert(signal):
         else:
             ds_icon = "⚠️"
         daily_score_line = f"{ds_icon} Daily Score: <b>{daily_score['label']}</b>\n"
-        # Tap-to-expand breakdown (added, per request — same pattern as
-        # the BUY/SELL Setup checklist above): the 8 individual checks
-        # behind the score, hidden inside an expandable <blockquote> so
-        # they don't clutter the message unless the reader taps it.
-        _DAILY_SCORE_LABELS = {
-            "close_above_vwap":      "Close > VWAP",
-            "ema9_above_ema21":      "EMA9 > EMA21",
-            "ema21_above_ema50":     "EMA21 > EMA50",
-            "rsi_above_50":          "RSI(14) > 50",
-            "rsi_below_70":          "RSI(14) < 70",
-            "volume_spike_1_5x":     "Volume > 1.5x avg",
-            "close_above_prev_high": "Close > previous candle High",
-            "macd_bullish":          "MACD bullish (line > signal)",
-        }
-        check_lines = "\n".join(
-            f"{'✅' if checked else '❌'} {_DAILY_SCORE_LABELS.get(key, key)}"
-            for key, checked in daily_score["checks"].items()
-        )
-        daily_score_line += f"<blockquote expandable>{check_lines}</blockquote>\n"
 
     # Trendline break (added, per request) — informational only; only
     # present when a diagonal trendline break happened to coincide
