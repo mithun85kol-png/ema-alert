@@ -308,20 +308,25 @@ def send_alert(signal):
     # it's the first thing read, before any of the individual detail
     # lines below. Icon reflects the score band: 7-10 strong, 5-6
     # decent, 0-4 weak.
-    # Trade Score is shown again (per request — the removal in the
-    # previous edit was a misread; the screenshot the user shared
-    # confirmed Trade Score should stay in the alert alongside the new
-    # BUY/SELL Setup checklist below, not replace it).
+    # Trade Score REPLACED by the simple BUY/SELL Setup line below
+    # (per request — "simple rakho, trade score replace koro buy sell
+    # diye"). trade_score is still computed/attached on the signal
+    # (main.py/strategy.py unchanged) — just not rendered here anymore.
     trade_score = signal.get("trade_score")
     trade_score_line = ""
-    if trade_score:
-        if trade_score["score"] >= 7:
-            score_icon = "⭐"
-        elif trade_score["score"] >= 5:
-            score_icon = "✅"
-        else:
-            score_icon = "⚠️"
-        trade_score_line = f"{score_icon} Trade Score: <b>{trade_score['label']}</b>\n"
+
+    # 15-Minute Intraday Trade Checklist (added, per request) — now
+    # rendered as ONE simple line (setup direction + score), replacing
+    # Trade Score above, instead of the full itemized checkbox block
+    # from the earlier version. See strategy.compute_intraday_checklist
+    # for how the score itself is derived.
+    checklist = signal.get("intraday_checklist")
+    checklist_block = ""
+    if checklist:
+        is_bullish = signal["direction"] == "BULLISH"
+        setup_icon = "🟢" if is_bullish else "🔴"
+        setup_label = "BUY SETUP" if is_bullish else "SELL SETUP"
+        checklist_block = f"{setup_icon} {setup_label}: <b>{checklist['label']}</b>\n"
 
     # Daily Score (added, per request) — fixed 7-point bullish-quality
     # checklist (Close>VWAP, EMA9>21>50 stack, RSI 50-70 band, Volume
@@ -338,26 +343,6 @@ def send_alert(signal):
         else:
             ds_icon = "⚠️"
         daily_score_line = f"{ds_icon} Daily Score: <b>{daily_score['label']}</b>\n"
-
-    # 15-Minute Intraday Trade Checklist (added, per request) — the
-    # fixed-/10, BUY/SELL-setup entry-timing checklist, separate from
-    # Trade Score above (see strategy.compute_intraday_checklist).
-    # Rendered as its own tickable block (✅/⬜ per item, with each
-    # item's point value) right under Daily Score, mirroring the
-    # BUY SETUP / SELL SETUP format exactly as specified. Omitted
-    # entirely if an older signal dict doesn't have it (backward
-    # compatibility, same pattern as trade_score/daily_score above).
-    checklist = signal.get("intraday_checklist")
-    checklist_block = ""
-    if checklist:
-        is_bullish = signal["direction"] == "BULLISH"
-        setup_icon = "🟢" if is_bullish else "🔴"
-        setup_label = "BUY SETUP" if is_bullish else "SELL SETUP"
-        checklist_lines = [f"{setup_icon} <b>{setup_label}</b> — {checklist['label']}"]
-        for name, checked, points in checklist["items"]:
-            box = "✅" if checked else "⬜"
-            checklist_lines.append(f"{box} {name} (+{points})")
-        checklist_block = "\n".join(checklist_lines) + "\n"
 
     # Trendline break (added, per request) — informational only; only
     # present when a diagonal trendline break happened to coincide
@@ -398,8 +383,8 @@ def send_alert(signal):
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
         f"{trade_score_line}"
-        f"{daily_score_line}"
         f"{checklist_block}"
+        f"{daily_score_line}"
         f"{opening_bias_line}"
         f"{trendline_line}"
         f"{fno_line}"
