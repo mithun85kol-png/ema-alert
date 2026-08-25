@@ -1590,26 +1590,86 @@ def compute_intraday_checklist(signal):
     }
 
 
+def compute_near_high_score(signal):
+    """
+    "Near N-month High" (added, per request — "1 to 6 month high show
+    korabe, price jodi high er kache thake to trading score point jog
+    hobe") — checks whether the current close is within
+    config.NEAR_HIGH_THRESHOLD_PCT (5%) of ANY of the 1-6 month highs
+    already computed in main.py's build_momentum_volume_data
+    (signal["multi_month_highs"] = {1: high, 2: high, ..., 6: high},
+    highest daily HIGH over each trailing N-month window). Whichever
+    of the 6 months is numerically closest to today's close is the one
+    reported — a stock can be "near" more than one month's high at
+    once (e.g. if it's been flat for months), only the closest matters.
+
+    Unlike Momentum (signal["momentum"], which only fires when close
+    BREAKS ABOVE the 4-week high), this fires on APPROACH too — being
+    2% below a 6-month high is exactly the kind of "coiling near
+    resistance" setup this is meant to flag, not just actual breakouts.
+
+    Checked regardless of alert direction (BULLISH or BEARISH) — same
+    treatment as Daily Score's checks, which are always bullish-quality
+    framed regardless of the signal's own direction.
+
+    Returns None if signal["multi_month_highs"] isn't present/empty
+    (not enough daily history yet for this symbol — same graceful
+    degradation as every other optional field). Otherwise:
+      {"score": 1 or 0, "possible": 1, "nearest_month": int (1-6),
+       "nearest_high": float, "gap_pct": float}
+    gap_pct is signed: negative means close is below that month's
+    high, positive means close is already above it.
+    """
+    multi_month_highs = signal.get("multi_month_highs")
+    close = signal.get("close")
+    if not multi_month_highs or close is None:
+        return None
+
+    nearest_month, nearest_high, nearest_gap_pct = None, None, None
+    for months, high in multi_month_highs.items():
+        if high <= 0:
+            continue
+        gap_pct = (close - high) / high * 100
+        if nearest_gap_pct is None or abs(gap_pct) < abs(nearest_gap_pct):
+            nearest_month, nearest_high, nearest_gap_pct = months, high, gap_pct
+
+    if nearest_month is None:
+        return None
+
+    is_near = abs(nearest_gap_pct) <= config.NEAR_HIGH_THRESHOLD_PCT
+    return {
+        "score": 1 if is_near else 0,
+        "possible": 1,
+        "nearest_month": nearest_month,
+        "nearest_high": nearest_high,
+        "gap_pct": round(nearest_gap_pct, 2),
+    }
+
+
 def compute_trading_score(signal):
     """
     "Trading Score" (added, per request — "sob miliye ekta trading
     score generate koro") — ONE combined /10 score that rolls up the
-    three separate scores already on the alert, so there's a single
-    number to glance at before deciding whether to take the trade:
+    four separate scores/checks already on the alert, so there's a
+    single number to glance at before deciding whether to take the
+    trade:
 
       - Buy/Sell Score (intraday_checklist — entry timing, fixed /10)
       - Daily Score (bullish-quality checklist, fixed /8)
       - Smart Money (institutional confirmation, variable /possible —
         stocks only, not present on index alerts, and only present at
         all when it scored >= config.SMART_MONEY_MIN_SCORE)
+      - Near N-month High (added, per request — 1 point if close is
+        within config.NEAR_HIGH_THRESHOLD_PCT of any 1-6 month high,
+        see compute_near_high_score)
 
     Each present component is normalized to a common /10 scale, then
     averaged with EQUAL weight across however many components are
-    actually available on this particular signal. Smart Money is
-    simply left out of the average (not counted as 0) when it isn't
-    present, so index alerts (which never have it) and stock alerts
-    where it didn't qualify this run are both still scored fairly on
-    the remaining two components.
+    actually available on this particular signal. A missing component
+    (e.g. Smart Money didn't qualify this run, or multi_month_highs
+    wasn't available yet) is simply left out of the average — not
+    counted as 0 — so alerts with fewer available components are still
+    scored fairly on whatever they do have.
 
     Returns None only if neither the checklist nor daily_score is
     attached yet (shouldn't happen in practice — both are always set
@@ -1620,6 +1680,7 @@ def compute_trading_score(signal):
     checklist = signal.get("intraday_checklist")
     daily_score = signal.get("daily_score")
     smart_money = signal.get("smart_money")
+    near_high = signal.get("near_high")
 
     parts = []
     if checklist is not None:
@@ -1628,6 +1689,8 @@ def compute_trading_score(signal):
         parts.append(daily_score["score"] / daily_score["total"] * 10)
     if smart_money is not None and smart_money.get("possible"):
         parts.append(smart_money["score"] / smart_money["possible"] * 10)
+    if near_high is not None and near_high.get("possible"):
+        parts.append(near_high["score"] / near_high["possible"] * 10)
 
     if not parts:
         return None

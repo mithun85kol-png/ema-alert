@@ -136,7 +136,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, compute_near_high_score
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report
 from indicators import calculate_r3_s3
 
@@ -1844,6 +1844,7 @@ def run_fo_scan(now_ist, index_only=False):
                         signal["ema_cross"] = mv["ema_cross"]
                     if mv.get("multi_month_highs"):
                         signal["multi_month_highs"] = mv["multi_month_highs"]
+                        signal["near_high"] = compute_near_high_score(signal)
 
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
@@ -2225,6 +2226,7 @@ def run_nifty500_scan(now_ist):
                         signal["ema_cross"] = mv["ema_cross"]
                     if mv.get("multi_month_highs"):
                         signal["multi_month_highs"] = mv["multi_month_highs"]
+                        signal["near_high"] = compute_near_high_score(signal)
 
                 signal["is_fno"] = symbol.upper() in fno_underlyings
 

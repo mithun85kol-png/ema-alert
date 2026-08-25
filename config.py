@@ -477,6 +477,15 @@ SMART_MONEY_DELIVERY_THRESHOLD = 50.0
 SMART_MONEY_VWAP_MIN_PCT = 0.3
 SMART_MONEY_DEAL_LOOKBACK_DAYS = 3
 
+# ---------- "Near N-month High" Trading Score component (added, per
+# request) ----------
+# Close counts as "near" a high if it's within this % of ANY of the
+# 1-6 month highs already computed in main.py's build_momentum_volume_data
+# (signal["multi_month_highs"]) — see strategy.compute_near_high_score.
+# Feeds into compute_trading_score as a 4th equally-weighted component,
+# same normalize-to-/10 treatment as checklist/daily_score/smart_money.
+NEAR_HIGH_THRESHOLD_PCT = 5.0
+
 # ---------- Trade Signal Score gate — REMOVED (per request) ----------
 # compute_trade_score() was deleted from strategy.py and main.py no
 # longer calls it; MIN_TRADE_SCORE / MIN_TRADE_SCORE_FACTORS are gone.

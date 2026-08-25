@@ -244,6 +244,19 @@ def send_alert(signal):
         parts = [f"{m}M {multi_month_highs[m]}" for m in sorted(multi_month_highs)]
         multi_month_high_line = "Last High: " + " | ".join(parts) + "\n"
 
+    # Near N-month High (added, per request) — see
+    # strategy.compute_near_high_score; only shown when close is
+    # actually within config.NEAR_HIGH_THRESHOLD_PCT (5%) of the
+    # nearest month's high (score==1) — omitted otherwise, same
+    # "only show when it changes the reader's decision" rule as
+    # Momentum above.
+    near_high = signal.get("near_high")
+    near_high_line = ""
+    if near_high and near_high["score"] == 1:
+        gap = near_high["gap_pct"]
+        gap_note = f"{abs(gap):.1f}% below" if gap < 0 else f"{gap:.1f}% above"
+        near_high_line = f"🎯 Near {near_high['nearest_month']}M high ({gap_note} {near_high['nearest_high']})\n"
+
     # Volume Spike (SHORTENED, per request) — moved to a header icon
     # (📊, see header_tag above) instead of its own line.
 
@@ -463,6 +476,7 @@ def send_alert(signal):
         f"{delivery_line}"
         f"{momentum_line}"
         f"{multi_month_high_line}"
+        f"{near_high_line}"
         f"{ema_cross_line}"
         f"{trend3_block}"
         f"{bulk_block_block}"
