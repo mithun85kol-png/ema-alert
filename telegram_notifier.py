@@ -331,17 +331,49 @@ def send_alert(signal):
     trade_score = signal.get("trade_score")
     trade_score_line = ""
 
+    # Trading Score (added, per request, 2026-08-25 — "sob miliye
+    # ekta trading score generate koro") — ONE combined /10 number
+    # rolling up Buy/Sell Score + Daily Score + Smart Money (when
+    # present). See strategy.compute_trading_score for how it's
+    # derived. Shown at the very top of the scores group, above the
+    # individual Buy/Sell Score, Daily Score and Smart Money lines,
+    # so it's the single number to check first before deciding
+    # whether to take the trade.
+    trading_score = signal.get("trading_score")
+    trading_score_line = ""
+    if trading_score:
+        ts_val = trading_score["score"]
+        if ts_val >= 8:
+            ts_icon = "🔥"
+        elif ts_val >= 6:
+            ts_icon = "✅"
+        elif ts_val >= 4:
+            ts_icon = "⚠️"
+        else:
+            ts_icon = "🚫"
+        trading_score_line = (
+            f"{ts_icon} <b>Trading Score: {trading_score['score']}/10 "
+            f"({trading_score['label']})</b>\n"
+        )
+
     # 15-Minute Intraday Trade Checklist (added, per request) — now
     # rendered as ONE simple line (setup direction + score), replacing
     # Trade Score above, instead of the full itemized checkbox block
     # from the earlier version. See strategy.compute_intraday_checklist
     # for how the score itself is derived.
+    # RENAMED (per request, 2026-08-25 — "buy setup change kore buy
+    # score koro"): "BUY SETUP"/"SELL SETUP" -> "Buy Score"/"Sell
+    # Score". Same underlying strategy.compute_intraday_checklist
+    # /10 value, just relabeled to read as a score alongside Daily
+    # Score / Smart Money / Trading Score, which are all grouped
+    # together near the top of the message now (see `text = (...)`
+    # below).
     checklist = signal.get("intraday_checklist")
     checklist_block = ""
     if checklist:
         is_bullish = signal["direction"] == "BULLISH"
         setup_icon = "🟢" if is_bullish else "🔴"
-        setup_label = "BUY SETUP" if is_bullish else "SELL SETUP"
+        setup_label = "Buy Score" if is_bullish else "Sell Score"
         checklist_block = f"{setup_icon} {setup_label}: <b>{checklist['label']}</b>\n"
 
     # Daily Score (added, per request) — fixed 7-point bullish-quality
@@ -403,15 +435,26 @@ def send_alert(signal):
             f"({opening_buy_sell['buy_pct']}% buy)\n"
         )
 
+    # Message layout (reordered per request, 2026-08-25):
+    #   1. Header line
+    #   2. F&O/Cash flag — moved to the very top, right under the
+    #      header, instead of down near the chart link.
+    #   3. Scores, all grouped together: Trading Score (combined)
+    #      first, then Buy/Sell Score, Daily Score, and Smart Money
+    #      (moved up from its old spot near trend3/bulk-block/sector
+    #      further down) — one place to read every score at a glance.
+    #   4. Everything else, unchanged order.
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
+        f"{fno_line}"
         f"{trade_score_line}"
+        f"{trading_score_line}"
         f"{checklist_block}"
         f"{daily_score_line}"
+        f"{smart_money_block}"
         f"{opening_bias_line}"
         f"{opening_buy_sell_line}"
         f"{trendline_line}"
-        f"{fno_line}"
         f"{chart_line}"
         f"{date_part} {time_part} | Close: {signal['close']}\n"
         f"{day_change_line}"
@@ -422,7 +465,6 @@ def send_alert(signal):
         f"{multi_month_high_line}"
         f"{ema_cross_line}"
         f"{trend3_block}"
-        f"{smart_money_block}"
         f"{bulk_block_block}"
         f"{sector_line}"
         f"{trade_plan_block}"

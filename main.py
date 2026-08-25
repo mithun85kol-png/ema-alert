@@ -136,7 +136,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report
 from indicators import calculate_r3_s3
 
@@ -1940,6 +1940,16 @@ def run_fo_scan(now_ist, index_only=False):
                         continue
                     signal["confluence_passed"] = True
 
+                # Trading Score (added, per request — "sob miliye ekta
+                # trading score generate koro") — ONE combined /10
+                # score rolling up Buy/Sell Score + Daily Score +
+                # Smart Money (when present). Computed last, right
+                # before send, so it reflects every component that
+                # made it onto this signal (index alerts simply won't
+                # have Smart Money in the mix). See
+                # strategy.compute_trading_score.
+                signal["trading_score"] = compute_trading_score(signal)
+
                 # Same-direction cooldown (added, per request) — blocks
                 # only if this exact (symbol, direction) already
                 # alerted within config.SAME_DIRECTION_COOLDOWN_MINUTES,
@@ -2248,6 +2258,10 @@ def run_nifty500_scan(now_ist):
                 if config.CONFLUENCE_FILTER_ENABLED and not passes_confluence_filter(signal):
                     continue
                 signal["confluence_passed"] = True
+
+                # Trading Score — see the matching comment in
+                # run_fo_scan() above.
+                signal["trading_score"] = compute_trading_score(signal)
 
                 # Same-direction cooldown — see the matching comment in
                 # run_fo_scan() above.

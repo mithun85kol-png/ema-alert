@@ -1588,3 +1588,59 @@ def compute_intraday_checklist(signal):
         "label": f"{score}/10",
         "items": items,
     }
+
+
+def compute_trading_score(signal):
+    """
+    "Trading Score" (added, per request — "sob miliye ekta trading
+    score generate koro") — ONE combined /10 score that rolls up the
+    three separate scores already on the alert, so there's a single
+    number to glance at before deciding whether to take the trade:
+
+      - Buy/Sell Score (intraday_checklist — entry timing, fixed /10)
+      - Daily Score (bullish-quality checklist, fixed /8)
+      - Smart Money (institutional confirmation, variable /possible —
+        stocks only, not present on index alerts, and only present at
+        all when it scored >= config.SMART_MONEY_MIN_SCORE)
+
+    Each present component is normalized to a common /10 scale, then
+    averaged with EQUAL weight across however many components are
+    actually available on this particular signal. Smart Money is
+    simply left out of the average (not counted as 0) when it isn't
+    present, so index alerts (which never have it) and stock alerts
+    where it didn't qualify this run are both still scored fairly on
+    the remaining two components.
+
+    Returns None only if neither the checklist nor daily_score is
+    attached yet (shouldn't happen in practice — both are always set
+    on a signal before this is called). Otherwise:
+      {"score": float (0-10, 1 decimal), "label": str}
+    label bands: 8-10 STRONG, 6-7.9 GOOD, 4-5.9 MODERATE, <4 WEAK.
+    """
+    checklist = signal.get("intraday_checklist")
+    daily_score = signal.get("daily_score")
+    smart_money = signal.get("smart_money")
+
+    parts = []
+    if checklist is not None:
+        parts.append(checklist["score"] / 10 * 10)
+    if daily_score is not None and daily_score.get("total"):
+        parts.append(daily_score["score"] / daily_score["total"] * 10)
+    if smart_money is not None and smart_money.get("possible"):
+        parts.append(smart_money["score"] / smart_money["possible"] * 10)
+
+    if not parts:
+        return None
+
+    score = round(sum(parts) / len(parts), 1)
+
+    if score >= 8:
+        label = "STRONG"
+    elif score >= 6:
+        label = "GOOD"
+    elif score >= 4:
+        label = "MODERATE"
+    else:
+        label = "WEAK"
+
+    return {"score": score, "label": label}
