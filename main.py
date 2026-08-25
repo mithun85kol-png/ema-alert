@@ -1052,6 +1052,14 @@ EMA200_PERIOD = 200
 # tighter precision.
 DAILY_HISTORY_LOOKBACK_DAYS = 320
 
+# "Last High" 1-6 month lines (added, per request) — highest DAILY HIGH
+# over the trailing N months, ~21 trading days/month. Purely
+# informational, computed alongside Momentum/Volume Spike/EMA50-200 in
+# build_momentum_volume_data below (same cached daily-history fetch, no
+# extra API calls). A given month is simply omitted if there isn't
+# enough daily history yet for that symbol (e.g. recent listing).
+MONTHLY_HIGH_LOOKBACKS_TRADING_DAYS = {1: 21, 2: 42, 3: 63, 4: 84, 5: 105, 6: 126}
+
 
 def _compute_ema50_200_cross(history):
     """
@@ -1165,11 +1173,23 @@ def build_momentum_volume_data(watchlist):
             # have their own, much shallower requirement.
             ema_cross = _compute_ema50_200_cross(history)
 
+            # "Last High" 1-6 month (added, per request) — highest
+            # DAILY HIGH over the trailing N months (~21 trading
+            # days/month), using the same `history` already fetched
+            # above. A given month key is simply omitted if this
+            # symbol doesn't have that much daily history yet.
+            multi_month_highs = {}
+            for months, days_needed in MONTHLY_HIGH_LOOKBACKS_TRADING_DAYS.items():
+                if len(history) >= days_needed:
+                    window = history[-days_needed:]
+                    multi_month_highs[months] = max(day["high"] for day in window)
+
             return symbol, {
                 "four_week_high_close": four_week_high_close,
                 "prev_day_volume": prev_day_volume,
                 "volume_5day_ago": volume_5day_ago,
                 "ema_cross": ema_cross,
+                "multi_month_highs": multi_month_highs,
             }
 
         with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
@@ -1822,6 +1842,8 @@ def run_fo_scan(now_ist, index_only=False):
                         signal["volume_spike"] = mv["prev_day_volume"] > mv["volume_5day_ago"]
                     if mv.get("ema_cross") is not None:
                         signal["ema_cross"] = mv["ema_cross"]
+                    if mv.get("multi_month_highs"):
+                        signal["multi_month_highs"] = mv["multi_month_highs"]
 
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
@@ -2191,6 +2213,8 @@ def run_nifty500_scan(now_ist):
                         signal["volume_spike"] = mv["prev_day_volume"] > mv["volume_5day_ago"]
                     if mv.get("ema_cross") is not None:
                         signal["ema_cross"] = mv["ema_cross"]
+                    if mv.get("multi_month_highs"):
+                        signal["multi_month_highs"] = mv["multi_month_highs"]
 
                 signal["is_fno"] = symbol.upper() in fno_underlyings
 

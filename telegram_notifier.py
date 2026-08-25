@@ -233,6 +233,17 @@ def send_alert(signal):
     else:
         momentum_line = ""
 
+    # "Last High" 1-6 month (added, per request) — highest daily HIGH
+    # over the trailing N months, see main.py's build_momentum_volume_data
+    # (MONTHLY_HIGH_LOOKBACKS_TRADING_DAYS). One compact line, months
+    # separated by " | " — a month is simply skipped if there wasn't
+    # enough daily history yet to compute it for this symbol.
+    multi_month_highs = signal.get("multi_month_highs")
+    multi_month_high_line = ""
+    if multi_month_highs:
+        parts = [f"{m}M {multi_month_highs[m]}" for m in sorted(multi_month_highs)]
+        multi_month_high_line = "Last High: " + " | ".join(parts) + "\n"
+
     # Volume Spike (SHORTENED, per request) — moved to a header icon
     # (📊, see header_tag above) instead of its own line.
 
@@ -257,12 +268,14 @@ def send_alert(signal):
 
     # "Smart Money Entry" 🐋 (added) — informational only, see
     # strategy.compute_smart_money_signal / config.SMART_MONEY_*.
-    # Lists exactly which of the (up to 9) dimensions matched, so it's
-    # clear why the tag showed up rather than just that it did.
+    # SHORTENED (per request, 2026-08-25 — "smart money te oto detail
+    # dorkar nei just score set kore dao, jate alert choto hoy"):
+    # score only now, the itemized reasons list is dropped from the
+    # message (strategy.compute_smart_money_signal still computes and
+    # attaches "reasons" on the signal dict, just not rendered here).
     smart_money_block = ""
     if smart_money:
-        reasons_str = "; ".join(smart_money["reasons"])
-        smart_money_block = f"🐋 Smart Money ({smart_money['score']}/{smart_money['possible']}): {reasons_str}\n"
+        smart_money_block = f"🐋 Smart Money: {smart_money['score']}/{smart_money['possible']}\n"
 
     # Bulk/Block deals (added) — informational only, stocks only (see
     # main.py / bulk_block_data.py). Shows each large-trade entry NSE
@@ -406,6 +419,7 @@ def send_alert(signal):
         f"Volume: {volume_str}{vol_note}\n"
         f"{delivery_line}"
         f"{momentum_line}"
+        f"{multi_month_high_line}"
         f"{ema_cross_line}"
         f"{trend3_block}"
         f"{smart_money_block}"
