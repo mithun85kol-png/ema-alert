@@ -117,6 +117,43 @@ def _min_required_len(lookback, ema_slow=None):
     return max(ema_slow, config.RSI_PERIOD, config.VOLUME_AVG_PERIOD, config.MACD_SLOW, 50) + lookback + 1
 
 
+def _detect_macd_cross_recent(df, idx, lookback):
+    """
+    "MACD cross must be within [the lookback]" (added, per request) —
+    a genuine MACD LINE crossing its SIGNAL line (sign of
+    macd_line - macd_signal flipping) somewhere in the trailing
+    `lookback` candles ending at idx. This is DIFFERENT from
+    _detect_macd_divergence above (that's price vs MACD divergence,
+    unrelated) and different from a plain "macd_line > macd_signal"
+    level check (that's just today's current bias regardless of how
+    long ago it crossed, or whether it even crossed at all this
+    session). Reuses config.MACD_DIVERGENCE_LOOKBACK_CANDLES as the
+    window (same "how far back is still recent enough" number already
+    used for MACD elsewhere), rather than introducing a second lookback
+    constant for a very similar idea.
+    Returns "BULLISH" if the LATEST sign-flip in the window was
+    macd_line crossing UP through macd_signal, "BEARISH" if the latest
+    flip was crossing DOWN, or None if there was no flip in the window
+    (or not enough data) -- caller compares this against the signal's
+    direction, same pattern as opening_range_breakout.
+    """
+    window_start = max(0, idx - lookback + 1)
+    window = df.iloc[window_start: idx + 1]
+    if len(window) < 2 or "macd_line" not in window or "macd_signal" not in window:
+        return None
+    diff = window["macd_line"] - window["macd_signal"]
+    if diff.isna().any():
+        return None
+    sign = diff.gt(0)
+    flips = sign.ne(sign.shift(1))
+    flips.iloc[0] = False  # first row has nothing to compare against
+    flip_positions = flips[flips].index
+    if len(flip_positions) == 0:
+        return None
+    latest_flip = flip_positions[-1]
+    return "BULLISH" if sign.loc[latest_flip] else "BEARISH"
+
+
 def _detect_macd_divergence(df, idx, lookback):
     """
     Simple half-window divergence check: splits the trailing `lookback`
@@ -365,10 +402,11 @@ def compute_daily_score(curr, prev, vwap, close_price):
     "Daily Score" (added, per request) — a fixed 8-point bullish-quality
     checklist (was 7; MACD added per follow-up request), independent of
     whatever direction the EMA cross itself fired in and independent of
-    the scan's own EMA_FAST/EMA_SLOW pair. Unlike compute_trade_score()
-    (which scales /10 over only the dimensions that had data), every one
-    of these 8 checks always has data by the time _evaluate_candle calls
-    this, so it's a plain count out of a fixed 8 — no scaling.
+    the scan's own EMA_FAST/EMA_SLOW pair. Unlike a variable-denominator
+    score (which would scale /N over only the dimensions that had data),
+    every one of these 8 checks always has data by the time
+    _evaluate_candle calls this, so it's a plain count out of a fixed
+    8 — no scaling.
 
     The 8 checks:
       1. Close > VWAP
@@ -383,7 +421,8 @@ def compute_daily_score(curr, prev, vwap, close_price):
          computed every run via add_macd, same 3-min df, no extra
          fetch). Bullish-crossover framing, same as every other check
          here — not compared against the alert's own direction (that's
-         what compute_trade_score's MACD dimension is for).
+         what the intraday checklist's / recent-cross MACD checks are
+         for elsewhere).
 
     Purely informational — never blocks or filters an alert. Any check
     whose input is missing (e.g. VWAP is None on the very first candle
@@ -420,7 +459,8 @@ def compute_daily_score(curr, prev, vwap, close_price):
 
 
 def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None,
-                      ema_fast_period=None, ema_slow_period=None, require_volume_increase=False):
+                      ema_fast_period=None, ema_slow_period=None, require_volume_increase=False,
+                      require_macd_cross=False, require_rsi_confirmation=False):
     ema_fast_period = ema_fast_period if ema_fast_period is not None else config.EMA_FAST
     ema_slow_period = ema_slow_period if ema_slow_period is not None else config.EMA_SLOW
 
@@ -465,6 +505,19 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
     if require_volume_increase and prev_vol and curr_vol <= prev_vol:
         return None
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
+
+    # RSI condition — MANDATORY when require_rsi_confirmation=True
+    # (added, per request): RSI(14) > 50 for a BULLISH cross, < 50 for
+    # a BEARISH cross, or the signal is rejected outright. If rsi_val
+    # is unavailable (not enough history yet), the alert still fires
+    # rather than being blocked on missing data — same
+    # missing-data-never-blocks philosophy as require_volume_increase
+    # above.
+    if require_rsi_confirmation and rsi_val is not None:
+        if bullish and rsi_val <= 50:
+            return None
+        if not bullish and rsi_val >= 50:
+            return None
 
     cross_pattern = detect_candle_pattern(curr)
     prev_pattern = detect_candle_pattern(prev)
@@ -526,6 +579,25 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
     elif macd_div["bearish"]:
         macd_divergence_note = "Bearish Divergence (price higher high, MACD lower high)"
 
+    # MACD cross recency (added, per request) — used to REQUIRE the
+    # MACD condition (Trade Score dimension #11 and the checklist's
+    # "MACD bullish/bearish" item) to be a genuinely recent crossover,
+    # not just today's current level. See _detect_macd_cross_recent.
+    macd_cross_recent = _detect_macd_cross_recent(df, idx, config.MACD_DIVERGENCE_LOOKBACK_CANDLES)
+
+    # MACD condition — MANDATORY when require_macd_cross=True (added,
+    # per request): the LATEST MACD line/signal crossover within the
+    # lookback window must match this candle's direction (macd_cross_
+    # recent == direction), or the signal is rejected outright. UNLIKE
+    # require_rsi_confirmation/require_volume_increase above, a None
+    # here (no recent MACD crossover at all in the window) DOES block
+    # when this is required -- "no recent cross" genuinely fails a
+    # "must have a recent cross" requirement, it isn't missing/
+    # unusable data the way an unavailable RSI reading is.
+    if require_macd_cross and macd_cross_recent != direction:
+        return None
+
+
     # Day change % — purely informational, vs previous trading day's
     # close (same prev-day close already fetched for R3/S3). None if
     # prev_close wasn't available (e.g. pivot fetch failed for this
@@ -581,6 +653,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         "macd_signal": round(float(curr["macd_signal"]), 2),
         "macd_hist": round(float(curr["macd_hist"]), 2),
         "macd_divergence": macd_divergence_note,
+        "macd_cross_recent": macd_cross_recent,
         "daily_score": daily_score,
         "trendline_break": trendline_break,
         "opening_range_breakout": opening_range_breakout,
@@ -588,7 +661,8 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
 
 
 def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True, prev_close=None,
-                   ema_fast=None, ema_slow=None, require_volume_increase=False, require_strong_candle=False):
+                   ema_fast=None, ema_slow=None, require_volume_increase=False, require_strong_candle=False,
+                   require_macd_cross=False, require_rsi_confirmation=False):
     """
     Scans the last `lookback` closed candles (default:
     config.CROSS_LOOKBACK_CANDLES) for EMA crossovers — not just the
@@ -619,6 +693,16 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     filter"). Kept as a parameter rather than removed so main.py can
     keep passing it without a signature error; has no effect either
     way right now.
+
+    require_macd_cross=True (added, per request) makes a RECENT MACD
+    line/signal crossover (within config.MACD_DIVERGENCE_LOOKBACK_
+    CANDLES, matching this candle's direction) MANDATORY — see
+    _detect_macd_cross_recent. Unlike a plain "MACD > Signal" level
+    check, this requires an actual crossover to have happened
+    recently, not just the current bias.
+
+    require_rsi_confirmation=True (added, per request) makes RSI(14)
+    > 50 (bullish) / < 50 (bearish) MANDATORY.
 
     Returns a list of signal dicts, oldest candle first. Empty list if
     nothing qualifies. Caller is responsible for de-duping against
@@ -660,6 +744,8 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
             ema_fast_period=ema_fast,
             ema_slow_period=ema_slow,
             require_volume_increase=require_volume_increase,
+            require_macd_cross=require_macd_cross,
+            require_rsi_confirmation=require_rsi_confirmation,
         )
         if sig is not None:
             signals.append(sig)
@@ -1414,8 +1500,11 @@ def check_breakout_scan(history, today_bar, symbol):
 def compute_intraday_checklist(signal):
     """
     "15-Minute Intraday Trade Checklist" (added, per request) — a
-    SEPARATE 0-10 point checklist from compute_trade_score() above,
-    purpose-built for entry timing rather than overall alert quality.
+    fixed 0-10 point checklist, purpose-built for entry timing rather
+    than overall alert quality (Trade Score, the earlier variable-
+    denominator /10 rollup this once sat alongside, was removed per a
+    later request — this checklist is the only score left on the
+    alert).
     Mirrors automatically for BULLISH (BUY setup) vs BEARISH (SELL
     setup) signals -- same 8 checks, opposite direction each time:
 
@@ -1429,7 +1518,7 @@ def compute_intraday_checklist(signal):
       1st 15-min Open=Low     +2             1st 15-min Open=High    +2
       1st 15-min High breakout+2             1st 15-min Low breakdown+2
 
-    Unlike compute_trade_score, this is NOT rescaled by how many
+    This is NOT rescaled by how many
     dimensions had data -- every one of the 8 checks always counts
     (missing/unavailable data just means that check is simply not
     satisfied, i.e. 0 points for it, same as a real "no"), so the
@@ -1464,10 +1553,12 @@ def compute_intraday_checklist(signal):
     volume, vol_avg = signal.get("volume"), signal.get("vol_avg")
     vol_vs_avg_ok = volume is not None and vol_avg is not None and volume > vol_avg
 
-    macd_line, macd_signal_val = signal.get("macd_line"), signal.get("macd_signal")
-    macd_ok = macd_line is not None and macd_signal_val is not None and (
-        macd_line > macd_signal_val if bullish else macd_line < macd_signal_val
-    )
+    # CHANGED (per request): must be a genuinely RECENT MACD line/
+    # signal crossover within config.MACD_DIVERGENCE_LOOKBACK_CANDLES,
+    # not just today's current MACD level — see
+    # strategy._detect_macd_cross_recent.
+    macd_cross_recent = signal.get("macd_cross_recent")
+    macd_ok = macd_cross_recent == ("BULLISH" if bullish else "BEARISH")
 
     rsi = signal.get("rsi")
     rsi_ok = rsi is not None and (rsi > 50 if bullish else rsi < 50)
@@ -1483,7 +1574,7 @@ def compute_intraday_checklist(signal):
         ("Price > VWAP" if bullish else "Price < VWAP", vwap_ok, 1),
         ("Crossing candle volume > previous candle", vol_vs_prev_ok, 1),
         ("Volume clearly above recent average", vol_vs_avg_ok, 1),
-        ("MACD bullish (MACD > Signal)" if bullish else "MACD bearish (MACD < Signal)", macd_ok, 1),
+        ("MACD bullish cross (recent)" if bullish else "MACD bearish cross (recent)", macd_ok, 1),
         ("RSI > 50" if bullish else "RSI < 50", rsi_ok, 1),
         ("1st 15-min candle Open = Low" if bullish else "1st 15-min candle Open = High", opening_bias_ok, 2),
         ("1st 15-min High breakout, close above High" if bullish
@@ -1496,164 +1587,4 @@ def compute_intraday_checklist(signal):
         "score": score,
         "label": f"{score}/10",
         "items": items,
-    }
-
-
-def compute_trade_score(signal):
-    """
-    "Trade Signal Score" (added, per request) — a single 0-10 number
-    that rolls up every already-computed quality signal on this alert
-    into one headline number, so the reader doesn't have to mentally
-    combine Confluence/Smart Money/Sector/EMA50-200/OI/VWAP/Momentum/
-    Volume-Spike/Bulk-Block/other-timeframe-agreement themselves.
-    PURELY INFORMATIONAL — like everything else this touches, it never
-    blocks or filters an alert; it's computed AFTER all filtering
-    (confluence, volume-spike gate, etc.) has already decided the
-    alert is going out.
-
-    10 independent 1-point dimensions, built entirely from fields the
-    signal already carries by the time this is called (see main.py —
-    no new fetch, no extra API call):
-      1.  Confluence "High R:R" filter passed (signal["confluence_passed"])
-      2.  Volume Spike (signal["volume_spike"] is True)
-      3.  Momentum — close above the trailing 4-week high
-      4.  EMA50/200 (daily) bias agrees with the signal direction
-      5.  Sector index trend agrees with the signal direction
-      6.  OI buildup bias agrees with the signal direction (F&O only)
-      7.  VWAP cushion in the signal's favor (>= config.SMART_MONEY_VWAP_MIN_PCT)
-      8.  Same-direction Bulk/Block deal within the recent lookback window
-      9.  Crossing candle's volume beat the previous candle (vol_change_pct > 0)
-      10. The OTHER (informational) timeframe's own EMA bias agrees
-          with the signal direction (signal["trend_3min"]["bias"])
-      11. MACD bias (line vs signal) agrees with the signal direction
-          (added, per follow-up request)
-
-    Each dimension only counts toward "possible" if its underlying
-    data was actually available this run (same graceful-skip pattern
-    as compute_smart_money_signal) — a stock with, say, no sector
-    mapping or no F&O option chain isn't unfairly penalized for a
-    dimension that was never computable for it. The final score is
-    scaled from whatever "possible" was up to a common /10 scale, so
-    a stock scored on 7 available dimensions and one scored on 10 are
-    still comparable.
-
-    Returns {"score": int (0-10), "possible": int, "raw_score": int,
-    "label": str} — never None; if literally nothing was available
-    (shouldn't happen in practice, since direction/close always are),
-    returns a 0/10.
-    """
-    direction = signal["direction"]
-    raw_score = 0
-    possible = 0
-
-    # ---- 1. Confluence "High R:R" filter ----
-    if signal.get("confluence_passed") is not None:
-        possible += 1
-        if signal.get("confluence_passed"):
-            raw_score += 1
-
-    # ---- 2. Volume Spike ----
-    volume_spike = signal.get("volume_spike")
-    if volume_spike is not None:
-        possible += 1
-        if volume_spike:
-            raw_score += 1
-
-    # ---- 3. Momentum (4-week high) ----
-    momentum = signal.get("momentum")
-    if momentum is not None:
-        possible += 1
-        if momentum:
-            raw_score += 1
-
-    # ---- 4. EMA50/200 (daily) bias ----
-    ema_cross = signal.get("ema_cross")
-    if ema_cross:
-        possible += 1
-        if ema_cross.get("bias") == direction:
-            raw_score += 1
-
-    # ---- 5. Sector trend agreement ----
-    sector_trend = signal.get("sector_trend")
-    if sector_trend:
-        possible += 1
-        stock_trend_as_sector = "UPTREND" if direction == "BULLISH" else "DOWNTREND"
-        if sector_trend == stock_trend_as_sector:
-            raw_score += 1
-
-    # ---- 6. OI buildup direction ----
-    oi_buildup = signal.get("oi_buildup")
-    if oi_buildup:
-        possible += 1
-        if oi_buildup.get("bias") == direction:
-            raw_score += 1
-
-    # ---- 7. VWAP cushion ----
-    vwap = signal.get("vwap")
-    close = signal.get("close")
-    if vwap and close:
-        possible += 1
-        gap_pct = (close - vwap) / vwap * 100
-        if direction == "BULLISH" and gap_pct >= config.SMART_MONEY_VWAP_MIN_PCT:
-            raw_score += 1
-        elif direction == "BEARISH" and gap_pct <= -config.SMART_MONEY_VWAP_MIN_PCT:
-            raw_score += 1
-
-    # ---- 8. same-direction Bulk/Block deal, recent ----
-    deal = signal.get("last_bulk_block_deal")
-    if deal and deal.get("date") and signal.get("candle_time"):
-        possible += 1
-        expected_side = "BUY" if direction == "BULLISH" else "SELL"
-        if (deal.get("buy_sell") or "").upper() == expected_side:
-            deal_dt = _parse_deal_date(deal["date"])
-            candle_dt = _parse_candle_time(signal["candle_time"])
-            if deal_dt is not None and candle_dt is not None:
-                if 0 <= (candle_dt.date() - deal_dt.date()).days <= config.SMART_MONEY_DEAL_LOOKBACK_DAYS:
-                    raw_score += 1
-
-    # ---- 9. volume beat previous candle ----
-    vol_change_pct = signal.get("vol_change_pct")
-    if vol_change_pct is not None:
-        possible += 1
-        if vol_change_pct > 0:
-            raw_score += 1
-
-    # ---- 10. other-timeframe EMA bias agreement ----
-    trend3 = signal.get("trend_3min")
-    if trend3 and trend3.get("bias"):
-        possible += 1
-        if trend3["bias"] == direction:
-            raw_score += 1
-
-    # ---- 11. MACD bias agreement (added) ----
-    macd_line = signal.get("macd_line")
-    macd_signal_val = signal.get("macd_signal")
-    if macd_line is not None and macd_signal_val is not None:
-        possible += 1
-        macd_bias = "BULLISH" if macd_line > macd_signal_val else "BEARISH"
-        if macd_bias == direction:
-            raw_score += 1
-
-    if possible == 0:
-        return {"score": 0, "possible": 0, "raw_score": 0, "label": "0/0"}
-
-    # "score" stays the /10-scaled value -- main.py's MIN_TRADE_SCORE gate
-    # (config.py) is calibrated against this 0-10 scale and must keep
-    # working unchanged regardless of how many dimensions had data.
-    scaled = round((raw_score / possible) * 10)
-
-    # "label" (CHANGED, per request) now shows the actual raw achieved
-    # points out of however many dimensions had data THIS run -- e.g.
-    # "10/11" or "12/12" -- instead of the scaled "10/10", so it's clear
-    # at a glance how many of the (up to 11) dimensions were even
-    # available to score, not just the normalized result. "possible"
-    # varies per alert (a stock missing sector mapping / F&O option
-    # chain / a bulk-block deal simply has fewer dimensions that run),
-    # so this is genuinely "X out of Y available this run", not a fixed
-    # denominator.
-    return {
-        "score": scaled,
-        "possible": possible,
-        "raw_score": raw_score,
-        "label": f"{raw_score}/{possible}",
     }

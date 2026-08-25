@@ -120,6 +120,21 @@ REQUIRE_TREND_CONFIRMATION = True
 REQUIRE_VOLUME_CONFIRMATION = False
 REQUIRE_STRONG_CANDLE = False
 
+# ADDED (per request): two more mandatory gating conditions on top of
+# EMA cross + EMA50 trend above — see strategy._evaluate_candle /
+# strategy.check_signals (require_macd_cross / require_rsi_confirmation
+# params).
+#   REQUIRE_MACD_CROSS: a RECENT MACD line/signal crossover (within
+#   MACD_DIVERGENCE_LOOKBACK_CANDLES below) matching the EMA cross's
+#   direction must exist, or the alert is rejected.
+#   REQUIRE_RSI_CONFIRMATION: RSI(14) > 50 for a bullish cross, < 50
+#   for a bearish cross, or the alert is rejected.
+# Both apply to every scan (indices, F&O stocks/commodities, Nifty
+# 500) — unlike REQUIRE_TREND_CONFIRMATION/REQUIRE_VOLUME_CONFIRMATION
+# above, these two are NOT skipped for indices.
+REQUIRE_MACD_CROSS = True
+REQUIRE_RSI_CONFIRMATION = True
+
 # CHANGED (per request): Volume Spike was purely informational before
 # (shown on every alert, never blocked anything). Now it's a BLOCKING
 # condition on the F&O stocks/commodities and Nifty 500 stock alerts
@@ -441,32 +456,12 @@ SMART_MONEY_DELIVERY_THRESHOLD = 50.0
 SMART_MONEY_VWAP_MIN_PCT = 0.3
 SMART_MONEY_DEAL_LOOKBACK_DAYS = 3
 
-# ---------- Trade Signal Score gate (added, per request) ----------
-# Applies ONLY to F&O stocks/commodities and Nifty 500 stock alerts
-# (never to indices — same precedent as the confluence filter and
-# Volume Spike gate above: index signals have far fewer of the 10
-# dimensions available, so a /10 score there isn't comparable to a
-# stock's). A qualifying EMA cross is only actually sent if
-# strategy.compute_trade_score(signal)["score"] >= this. Set to 9 or
-# 10 for only the strongest setups; lower it (or set to 0) to go back
-# to informational-only (score shown, nothing blocked).
-# CHANGED (per request): gate removed — score is still computed and
-# shown on the alert (the BUY/SELL Setup line — see
-# telegram_notifier.py), it just no longer blocks anything. 0 means
-# "no minimum" (every score, however low, passes).
-MIN_TRADE_SCORE = 0
-
-# Safety floor alongside MIN_TRADE_SCORE: requires at least this many
-# of the 10 dimensions to have actually had data this run before the
-# score gate applies at all. Without this, a symbol with e.g. only 2
-# dimensions available (say, no sector map, no F&O option chain, no
-# bulk/block data) could trivially score a "10/10" by passing just
-# those 2 -- which isn't the same strength of signal as a 9-or-10 out
-# of a full 10. If fewer than this many dimensions were available,
-# the score gate is skipped (signal passes through on its other
-# merits) rather than unfairly blocking a symbol that simply has less
-# data plumbed in for it.
-MIN_TRADE_SCORE_FACTORS = 6
+# ---------- Trade Signal Score gate — REMOVED (per request) ----------
+# compute_trade_score() was deleted from strategy.py and main.py no
+# longer calls it; MIN_TRADE_SCORE / MIN_TRADE_SCORE_FACTORS are gone.
+# The 15-Minute Intraday Trade Checklist (BUY/SELL Setup line on the
+# alert) is the only score left — see config.OPENING_CANDLE_* below
+# and strategy.compute_intraday_checklist.
 
 # ---------- Same-direction alert cooldown (added, per request) ----------
 # Applies ONLY to F&O stocks/commodities and Nifty 500 stock alerts

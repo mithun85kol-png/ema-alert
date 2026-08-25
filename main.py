@@ -136,7 +136,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, compute_trade_score, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report
 from indicators import calculate_r3_s3
 
@@ -1679,6 +1679,8 @@ def run_fo_scan(now_ist, index_only=False):
                     lookback=config.INDEX_ALERT_LOOKBACK_CANDLES,
                     require_trend_confirmation=False,
                     prev_close=prev_close,
+                    require_macd_cross=config.REQUIRE_MACD_CROSS,
+                    require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
                 )
                 for sig in signals:
                     sig["timeframe"] = "15-min"
@@ -1720,6 +1722,8 @@ def run_fo_scan(now_ist, index_only=False):
                     ema_slow=primary_ema_slow,
                     require_volume_increase=config.REQUIRE_VOLUME_CONFIRMATION,
                     require_strong_candle=config.REQUIRE_STRONG_CANDLE,
+                    require_macd_cross=config.REQUIRE_MACD_CROSS,
+                    require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
                 )
                 for sig in signals:
                     sig["timeframe"] = primary_label
@@ -1778,8 +1782,7 @@ def run_fo_scan(now_ist, index_only=False):
                 signal["opening_candle_bias"] = opening_bias
 
                 # 15-Minute Intraday Trade Checklist (added, per
-                # request) — separate 0-10 checklist from trade_score
-                # below, purpose-built for entry timing. Needs
+                # request) — purpose-built for entry timing. Needs
                 # opening_candle_bias (just set above) and
                 # opening_range_breakout (already on signal from
                 # strategy._evaluate_candle) — both must be present
@@ -1858,13 +1861,6 @@ def run_fo_scan(now_ist, index_only=False):
                         if oi["buildup"]:
                             signal["oi_buildup"] = oi["buildup"]
 
-                    # Trade Signal Score — indices have far fewer
-                    # dimensions available (no sector/delivery/bulk-
-                    # block/confluence), but whatever IS available
-                    # (volume vs previous candle, OI buildup, other-
-                    # timeframe agreement) still rolls up into the
-                    # same /10 scale.
-                    signal["trade_score"] = compute_trade_score(signal)
                 else:
                     # "Smart Money Entry" 🐋 (added) — purely
                     # informational, like everything else on this
@@ -1901,23 +1897,6 @@ def run_fo_scan(now_ist, index_only=False):
                     if config.CONFLUENCE_FILTER_ENABLED and not passes_confluence_filter(signal):
                         continue
                     signal["confluence_passed"] = True
-
-                # Trade Signal Score (added, per request) — rolls up
-                # every quality signal already attached above into one
-                # 0-10 number. Computed for both indices and stocks
-                # (whatever dimensions are available for each — see
-                # strategy.compute_trade_score), right before sending,
-                # since every relevant field is attached by this point.
-                signal["trade_score"] = compute_trade_score(signal)
-
-                # Trade Score gate (added, per request) — only blocks
-                # if enough dimensions had data (MIN_TRADE_SCORE_FACTORS
-                # floor) AND the resulting score is still below the
-                # threshold. See config.MIN_TRADE_SCORE /
-                # MIN_TRADE_SCORE_FACTORS.
-                ts = signal["trade_score"]
-                if ts["possible"] >= config.MIN_TRADE_SCORE_FACTORS and ts["score"] < config.MIN_TRADE_SCORE:
-                    continue
 
                 # Same-direction cooldown (added, per request) — blocks
                 # only if this exact (symbol, direction) already
@@ -2094,6 +2073,8 @@ def run_nifty500_scan(now_ist):
                 ema_slow=primary_ema_slow,
                 require_volume_increase=config.REQUIRE_VOLUME_CONFIRMATION,
                 require_strong_candle=config.REQUIRE_STRONG_CANDLE,
+                require_macd_cross=config.REQUIRE_MACD_CROSS,
+                require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
             )
             for sig in signals:
                 sig["timeframe"] = primary_label
@@ -2213,15 +2194,8 @@ def run_nifty500_scan(now_ist):
                     continue
                 signal["confluence_passed"] = True
 
-                # Trade Signal Score — see the matching comment in
+                # Same-direction cooldown — see the matching comment in
                 # run_fo_scan() above.
-                signal["trade_score"] = compute_trade_score(signal)
-
-                # Trade Score gate + same-direction cooldown — see the
-                # matching comments in run_fo_scan() above.
-                ts = signal["trade_score"]
-                if ts["possible"] >= config.MIN_TRADE_SCORE_FACTORS and ts["score"] < config.MIN_TRADE_SCORE:
-                    continue
                 if state.in_cooldown(saved_state, state_symbol, signal["direction"], signal["candle_time"], config.SAME_DIRECTION_COOLDOWN_MINUTES):
                     continue
 
