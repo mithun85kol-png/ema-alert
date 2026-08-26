@@ -1809,6 +1809,14 @@ def run_fo_scan(now_ist, index_only=False):
                 if config.DAILY_SCORE_REPORT_ENABLED and symbol.upper() in fno_underlyings:
                     ds_hit = compute_daily_score_scan(primary_df, symbol)
                     if ds_hit is not None and ds_hit["score"] >= config.DAILY_SCORE_REPORT_MIN_SCORE:
+                        # Chart link (added, per request) — same
+                        # TradingView 15-min deep link every other
+                        # alert type already gets (see build_chart_link
+                        # above / send_alert / send_breakout_alert /
+                        # send_trendline_alert), just wired in here too
+                        # so each row in the Daily Score report is
+                        # tappable.
+                        ds_hit["chart_link"] = build_chart_link(symbol)
                         daily_score_report_hits.append(ds_hit)
 
             if not signals:

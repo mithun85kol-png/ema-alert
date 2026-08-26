@@ -787,7 +787,13 @@ def send_daily_score_report(hits, now_ist):
 
     lines = [f"🏆 <b>Perfect Daily Score — F&O</b> ({date_str} {time_str})\n"]
     for i, h in enumerate(hits, start=1):
-        lines.append(f"{i}. <b>{h['symbol']}</b> — {h['label']} — Close: {h['close']}")
+        # Chart link (added, per request) — same TradingView 15-min
+        # deep link every other alert type already shows, appended
+        # after the symbol name as a tappable "Chart" link. Omitted
+        # gracefully if an older hits dict doesn't have it set.
+        chart_link = h.get("chart_link")
+        chart_part = f" — <a href=\"{chart_link}\">Chart</a>" if chart_link else ""
+        lines.append(f"{i}. <b>{h['symbol']}</b>{chart_part} — {h['label']} — Close: {h['close']}")
 
     text = "\n".join(lines)
 
