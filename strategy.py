@@ -458,6 +458,64 @@ def compute_daily_score(curr, prev, vwap, close_price):
     }
 
 
+def compute_daily_score_scan(df, symbol):
+    """
+    Standalone Daily Score check (added, per request — "ami alada ekta
+    alert chai sob FNO STOCKER DAILY SCORE... ekta combined report/list
+    — sob F&O stock er Daily Score ekshathe ekta message-e, 8/8 hole")
+    — computes Daily Score for the LATEST closed candle only,
+    completely independent of whether an EMA cross happened on it.
+    Used by main.py to build the combined "Perfect Daily Score" F&O
+    report (all qualifying stocks listed together in ONE message,
+    rather than send_alert's per-symbol EMA-cross alert).
+
+    Reuses the SAME primary_df each symbol's EMA-cross check already
+    has in memory this run — no extra fetch. Adds the ds_ema9/ds_ema21/
+    ema_trend/rsi/vol_avg columns needed by compute_daily_score if
+    they aren't already on df (they usually already are, since
+    check_signals/_evaluate_candle computed them moments earlier on
+    this same df — the `in df.columns` guards make this a no-op then).
+
+    Returns None if df doesn't have enough history for EMA50 to be
+    meaningful yet. Otherwise:
+      {"symbol", "score", "total", "label", "close", "candle_time"}
+    — same daily_score fields, just flattened with symbol/close/time
+    for easy sorting/listing in the report.
+    """
+    if df is None or len(df) < 55:
+        return None
+
+    if "ds_ema9" not in df.columns:
+        df = add_ema(df, 9, "ds_ema9")
+    if "ds_ema21" not in df.columns:
+        df = add_ema(df, 21, "ds_ema21")
+    if "ema_trend" not in df.columns:
+        df = add_ema50(df)
+    if "rsi" not in df.columns:
+        df = add_rsi(df, config.RSI_PERIOD)
+    if "vol_avg" not in df.columns:
+        df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
+    if "macd_line" not in df.columns or "macd_signal" not in df.columns:
+        df = add_macd(df, config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL)
+
+    idx = len(df) - 1
+    curr = df.iloc[idx]
+    prev = df.iloc[idx - 1]
+    vwap = _compute_vwap_at(df, idx)
+    close_price = float(curr["close"])
+
+    daily_score = compute_daily_score(curr, prev, vwap, close_price)
+
+    return {
+        "symbol": symbol,
+        "score": daily_score["score"],
+        "total": daily_score["total"],
+        "label": daily_score["label"],
+        "close": close_price,
+        "candle_time": curr["timestamp"],
+    }
+
+
 def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None,
                       ema_fast_period=None, ema_slow_period=None, require_volume_increase=False,
                       require_macd_cross=False, require_rsi_confirmation=False):

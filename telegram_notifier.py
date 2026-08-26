@@ -759,3 +759,46 @@ def send_trendline_alert(signal):
         r.raise_for_status()
     except Exception as e:
         print("Telegram send failed (trendline break):", e)
+
+
+def send_daily_score_report(hits, now_ist):
+    """
+    "Perfect Daily Score" F&O report (added, per request — "sob F&O
+    stock er Daily Score ekshathe ekta message-e, 8/8 hole") — ONE
+    combined message listing every F&O stock whose Daily Score is
+    currently at/above config.DAILY_SCORE_REPORT_MIN_SCORE, instead of
+    a separate message per stock. See main.py's run_fo_scan (collects
+    `hits` via strategy.compute_daily_score_scan) for exactly when
+    this gets called — only when the qualifying set has changed since
+    last sent, so a stock sitting at 8/8 for hours doesn't repeat this
+    every scan cycle.
+
+    `hits` is a list of dicts from compute_daily_score_scan, already
+    sorted by main.py (highest score, then closest-to-perfect first).
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", hits)
+        return
+    if not hits:
+        return
+
+    date_str = now_ist.strftime("%Y-%m-%d")
+    time_str = now_ist.strftime("%H:%M")
+
+    lines = [f"🏆 <b>Perfect Daily Score — F&O</b> ({date_str} {time_str})\n"]
+    for i, h in enumerate(hits, start=1):
+        lines.append(f"{i}. <b>{h['symbol']}</b> — {h['label']} — Close: {h['close']}")
+
+    text = "\n".join(lines)
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (daily score report):", e)

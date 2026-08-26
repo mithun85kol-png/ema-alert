@@ -136,8 +136,8 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, compute_near_high_score
-from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, compute_near_high_score, compute_daily_score_scan
+from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report, send_daily_score_report
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -1110,6 +1110,28 @@ def save_momentum_volume_cache(cache):
         json.dump(cache, f, indent=2)
 
 
+def load_daily_score_report_state():
+    """
+    Dedup state for send_daily_score_report (added, per request) —
+    just the set of symbols included in the LAST message actually
+    sent, plus that message's date. Resets automatically each new
+    calendar day (a stale yesterday's list would be misleading).
+    """
+    try:
+        with open(config.DAILY_SCORE_REPORT_STATE_FILE, "r") as f:
+            data = json.load(f)
+        if data.get("date") != _now_ist().date().isoformat():
+            return {"date": _now_ist().date().isoformat(), "last_sent_symbols": []}
+        return data
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"date": _now_ist().date().isoformat(), "last_sent_symbols": []}
+
+
+def save_daily_score_report_state(symbols):
+    with open(config.DAILY_SCORE_REPORT_STATE_FILE, "w") as f:
+        json.dump({"date": _now_ist().date().isoformat(), "last_sent_symbols": sorted(symbols)}, f, indent=2)
+
+
 def build_momentum_volume_data(watchlist):
     """
     Returns {symbol: {"four_week_high_close": ..., "prev_day_volume":
@@ -1609,6 +1631,7 @@ def run_fo_scan(now_ist, index_only=False):
 
     saved_state = state.load_state()
     alerts_sent = 0
+    daily_score_report_hits = []
 
     # Used to set the "F&O: Yes/No" flag on stock signals only — indices
     # (NIFTY 50, SENSEX...) and commodities (GOLD, SILVER...) aren't
@@ -1772,6 +1795,21 @@ def run_fo_scan(now_ist, index_only=False):
                                 alerts_sent += 1
                             except Exception as e:
                                 print(f"send_trendline_alert failed for {symbol}: {e}")
+
+                # "Perfect Daily Score" F&O report (added, per request)
+                # — checked on EVERY F&O stock's latest closed
+                # primary_df candle, completely independent of
+                # `signals` above (an EMA cross is NOT required).
+                # Reuses primary_df already in memory — no extra
+                # fetch. See strategy.compute_daily_score_scan and
+                # telegram_notifier.send_daily_score_report. The
+                # actual send (with change-detection dedup) happens
+                # once after this whole per-symbol loop finishes, not
+                # here — this just collects candidates.
+                if config.DAILY_SCORE_REPORT_ENABLED and symbol.upper() in fno_underlyings:
+                    ds_hit = compute_daily_score_scan(primary_df, symbol)
+                    if ds_hit is not None and ds_hit["score"] >= config.DAILY_SCORE_REPORT_MIN_SCORE:
+                        daily_score_report_hits.append(ds_hit)
 
             if not signals:
                 continue
@@ -2022,6 +2060,23 @@ def run_fo_scan(now_ist, index_only=False):
                 f"  {g['symbol']}: EMA9={g['ema_fast']} EMA20={g['ema_slow']} "
                 f"gap={g['gap_pct']}%  {g['leaning']}"
             )
+
+    # "Perfect Daily Score" F&O report (added, per request) — send only
+    # if the SET of qualifying symbols has changed since the last
+    # message actually sent today (see load_daily_score_report_state),
+    # so a stock holding 8/8 across many candles in a row doesn't
+    # repeat this every 15-minute scan cycle. Sorted highest score
+    # first, then alphabetically, for a stable/readable list.
+    if config.DAILY_SCORE_REPORT_ENABLED and daily_score_report_hits:
+        daily_score_report_hits.sort(key=lambda h: (-h["score"], h["symbol"]))
+        current_symbols = {h["symbol"] for h in daily_score_report_hits}
+        ds_report_state = load_daily_score_report_state()
+        if current_symbols != set(ds_report_state.get("last_sent_symbols", [])):
+            try:
+                send_daily_score_report(daily_score_report_hits, now_ist)
+                save_daily_score_report_state(current_symbols)
+            except Exception as e:
+                print(f"send_daily_score_report failed: {e}")
 
     state.save_state(saved_state)
     if failed_symbols:

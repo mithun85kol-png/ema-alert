@@ -484,6 +484,20 @@ SMART_MONEY_DEAL_LOOKBACK_DAYS = 3
 # (signal["multi_month_highs"]) — see strategy.compute_near_high_score.
 # Feeds into compute_trading_score as a 4th equally-weighted component,
 # same normalize-to-/10 treatment as checklist/daily_score/smart_money.
+# ---------- "Perfect Daily Score" F&O report (added, per request)
+# ----------
+# ONE combined Telegram message listing every F&O stock whose Daily
+# Score (see strategy.compute_daily_score_scan) is currently at/above
+# this threshold on its latest closed primary-timeframe candle —
+# completely independent of whether that candle also had an EMA
+# cross. Checked every scan run, but only actually SENT when the set
+# of qualifying symbols has changed since the last time it was sent
+# (see main.py's daily_score_report_state.json) — so a stock sitting
+# at 8/8 for hours doesn't repeat the same message every 15 minutes.
+DAILY_SCORE_REPORT_ENABLED = True
+DAILY_SCORE_REPORT_MIN_SCORE = 8   # out of 8 — score must be >= this
+DAILY_SCORE_REPORT_STATE_FILE = "daily_score_report_state.json"
+
 NEAR_HIGH_THRESHOLD_PCT = 5.0
 
 # ---------- Trade Signal Score gate — REMOVED (per request) ----------
