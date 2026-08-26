@@ -506,11 +506,48 @@ def compute_daily_score_scan(df, symbol):
 
     daily_score = compute_daily_score(curr, prev, vwap, close_price)
 
+    # Buy Score (added, per request — "daily score r sathe khali buy
+    # score ta o add kore dao") — reuses the same 8-point
+    # compute_intraday_checklist strategy.compute_intraday_checklist
+    # every EMA-cross alert already shows, direction fixed to BULLISH
+    # since Daily Score itself is a bullish-quality-only checklist (see
+    # docstring above). Built from a pseudo-signal populated with
+    # whatever's cheaply available on this SAME primary_df already in
+    # memory (EMA9/21, VWAP, volume vs previous candle, volume vs its
+    # average, a recent MACD cross, RSI) -- no extra fetch. The two
+    # opening-candle checks (opening_candle_bias / opening_range_
+    # breakout) need a separate 15-min fetch that only happens for
+    # symbols with an actual EMA-cross signal this run, so they're left
+    # out here; compute_intraday_checklist already treats a missing
+    # field as "check not satisfied" (0 points), same as a real no, so
+    # this just naturally scores out of 10 with those two unavailable.
+    vol_change_pct = None
+    if prev["volume"]:
+        vol_change_pct = (float(curr["volume"]) - float(prev["volume"])) / float(prev["volume"]) * 100
+
+    macd_cross_recent = _detect_macd_cross_recent(df, idx, config.MACD_DIVERGENCE_LOOKBACK_CANDLES)
+
+    buy_signal = {
+        "direction": "BULLISH",
+        "ema_fast": float(curr["ds_ema9"]),
+        "ema_slow": float(curr["ds_ema21"]),
+        "close": close_price,
+        "vwap": vwap,
+        "vol_change_pct": vol_change_pct,
+        "volume": float(curr["volume"]),
+        "vol_avg": float(curr["vol_avg"]) if pd.notna(curr.get("vol_avg")) else None,
+        "macd_cross_recent": macd_cross_recent,
+        "rsi": float(curr["rsi"]) if pd.notna(curr.get("rsi")) else None,
+    }
+    buy_score = compute_intraday_checklist(buy_signal)
+
     return {
         "symbol": symbol,
         "score": daily_score["score"],
         "total": daily_score["total"],
         "label": daily_score["label"],
+        "buy_score": buy_score["score"],
+        "buy_score_label": buy_score["label"],
         "close": close_price,
         "candle_time": curr["timestamp"],
     }
