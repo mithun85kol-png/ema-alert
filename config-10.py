@@ -439,74 +439,41 @@ CONFLUENCE_RSI_BULLISH_MAX = 70
 CONFLUENCE_RSI_BEARISH_MIN = 30
 CONFLUENCE_RSI_BEARISH_MAX = 50
 
-# ---------- Alert Gate (LOOSENED, per request, 2026-08-28) ----------
-# OR-of-7 gate: the alert sends if ANY ONE of these 7 independent
+# ---------- Alert Gate (REPLACED, per request, 2026-08-27) ----------
+# CHANGED from a single AND-only gate (Daily>6 AND Setup>8) to an
+# OR-of-6 gate: the alert sends if ANY ONE of these 6 independent
 # conditions is true (not all of them). See strategy.passes_alert_gate
 # for the exact implementation — this only lists the thresholds.
 #   1. Daily Score > QUALITY_GATE_MIN_DAILY_SCORE        (i.e. 7 or 8/8)
 #   2. Buy/Sell Score > QUALITY_GATE_MIN_SETUP_SCORE      (i.e. 9 or 10/10)
 #   3. Trading Score > QUALITY_GATE_MIN_TRADING_SCORE     (combined /10)
-#   4. Smart Money score >= SMART_MONEY_MIN_SCORE (NEW case, per
-#      request — "single score strong hole" now also covers Smart
-#      Money on its own, not just via a Bulk/Block deal in case 6.
-#      Stocks only — index alerts never have a smart_money field)
-#   5. Daily>6 AND Buy/Sell>8 AND Trading> current threshold together
-#      (kept as its own named case per request, even though in
-#      practice cases 1-3 above already fire individually before this
-#      combined case could ever be the ONLY one true — it's here for
-#      completeness/logging)
-#   6. A same-direction Bulk/Block deal within
+#   4. Daily>6 AND Buy/Sell>8 AND Trading>7 together (kept as its own
+#      named case per request, even though in practice cases 1-3 above
+#      already fire individually before this combined case could ever
+#      be the ONLY one true — it's here for completeness/logging)
+#   5. A same-direction Bulk/Block deal within
 #      SMART_MONEY_DEAL_LOOKBACK_DAYS days (same rule as the Smart
 #      Money score's own bulk-deal check)
-#   7. Volume Spike % > ALERT_GATE_VOLUME_SPIKE_PCT — this is a NEW
+#   6. Volume Spike % > ALERT_GATE_VOLUME_SPIKE_PCT — this is a NEW
 #      numeric field (signal["volume_spike_pct"]), not the old True/
 #      False volume_spike flag: (yesterday's volume - volume 5
 #      trading days ago) / (volume 5 trading days ago) * 100.
-#
-# 2026-08-28: LOOSENED per request — Trading Score threshold dropped
-# 7 -> 6, Volume Spike threshold dropped 500% -> 100%, and Smart Money
-# added as its own standalone case (previously only counted toward
-# the gate indirectly via a Bulk/Block deal in case 6). Daily Score
-# and Buy/Sell Score thresholds unchanged.
 #
 # Because a Bulk/Block deal can now, by itself, trigger an alert, the
 # per-symbol Bulk/Block fetch (and the smart_money/trading_score
 # computation that depends on it) now happens for every candidate
 # signal reaching this point, not only ones that already cleared a
 # cheap early gate — slightly more API calls per run than before, but
-# necessary so cases 4/6 can actually be evaluated before the gate
-# decision. A signal that fails all 7 is simply not sent (and not
+# necessary so case 5 can actually be evaluated before the gate
+# decision. A signal that fails all 6 is simply not sent (and not
 # marked alerted, so it's re-checked next run). Set
 # QUALITY_GATE_ENABLED = False to go back to sending every qualifying
 # EMA-cross signal regardless of score.
 QUALITY_GATE_ENABLED = True
 QUALITY_GATE_MIN_DAILY_SCORE = 6      # case 1: daily_score.score must be > 6 (7 or 8/8)
 QUALITY_GATE_MIN_SETUP_SCORE = 8      # case 2: intraday_checklist.score must be > 8 (9 or 10/10)
-QUALITY_GATE_MIN_TRADING_SCORE = 6    # case 3: trading_score.score must be > 6 (LOOSENED from 7)
-ALERT_GATE_VOLUME_SPIKE_PCT = 100     # case 7: volume_spike_pct must be > 100 (LOOSENED from 500)
-
-# ---------- "Near N-month High" Trading Score component (added, per
-# request) ----------
-# Close counts as "near" a high if it's within this % of ANY of the
-# 1-6 month highs already computed in main.py's build_momentum_volume_data
-# (signal["multi_month_highs"]) — see strategy.compute_near_high_score.
-# Feeds into compute_trading_score as a 4th equally-weighted component,
-# same normalize-to-/10 treatment as checklist/daily_score/smart_money.
-# ---------- "Perfect Daily Score" F&O report (added, per request)
-# ----------
-# ONE combined Telegram message listing every F&O stock whose Daily
-# Score (see strategy.compute_daily_score_scan) is currently at/above
-# this threshold on its latest closed primary-timeframe candle —
-# completely independent of whether that candle also had an EMA
-# cross. Checked every scan run, but only actually SENT when the set
-# of qualifying symbols has changed since the last time it was sent
-# (see main.py's daily_score_report_state.json) — so a stock sitting
-# at 8/8 for hours doesn't repeat the same message every 15 minutes.
-DAILY_SCORE_REPORT_ENABLED = True
-DAILY_SCORE_REPORT_MIN_SCORE = 8   # out of 8 — score must be >= this
-DAILY_SCORE_REPORT_STATE_FILE = "daily_score_report_state.json"
-
-NEAR_HIGH_THRESHOLD_PCT = 5.0
+QUALITY_GATE_MIN_TRADING_SCORE = 7    # case 3: trading_score.score must be > 7
+ALERT_GATE_VOLUME_SPIKE_PCT = 500     # case 6: volume_spike_pct must be > 500 (i.e. 6x+)
 
 # ---------- "Smart Money Entry" 🐋 tag (added) ----------
 # PURELY INFORMATIONAL — like every other tag on the alert now

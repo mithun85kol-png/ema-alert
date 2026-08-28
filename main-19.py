@@ -136,8 +136,8 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan
-from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report, send_daily_score_report
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate
+from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_trendline_alert, send_opening_bias_report
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -1110,28 +1110,6 @@ def save_momentum_volume_cache(cache):
         json.dump(cache, f, indent=2)
 
 
-def load_daily_score_report_state():
-    """
-    Dedup state for send_daily_score_report (added, per request) —
-    just the set of symbols included in the LAST message actually
-    sent, plus that message's date. Resets automatically each new
-    calendar day (a stale yesterday's list would be misleading).
-    """
-    try:
-        with open(config.DAILY_SCORE_REPORT_STATE_FILE, "r") as f:
-            data = json.load(f)
-        if data.get("date") != _now_ist().date().isoformat():
-            return {"date": _now_ist().date().isoformat(), "last_sent_symbols": []}
-        return data
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {"date": _now_ist().date().isoformat(), "last_sent_symbols": []}
-
-
-def save_daily_score_report_state(symbols):
-    with open(config.DAILY_SCORE_REPORT_STATE_FILE, "w") as f:
-        json.dump({"date": _now_ist().date().isoformat(), "last_sent_symbols": sorted(symbols)}, f, indent=2)
-
-
 def build_momentum_volume_data(watchlist):
     """
     Returns {symbol: {"four_week_high_close": ..., "prev_day_volume":
@@ -1631,7 +1609,6 @@ def run_fo_scan(now_ist, index_only=False):
 
     saved_state = state.load_state()
     alerts_sent = 0
-    daily_score_report_hits = []
 
     # Used to set the "F&O: Yes/No" flag on stock signals only — indices
     # (NIFTY 50, SENSEX...) and commodities (GOLD, SILVER...) aren't
@@ -1796,30 +1773,6 @@ def run_fo_scan(now_ist, index_only=False):
                             except Exception as e:
                                 print(f"send_trendline_alert failed for {symbol}: {e}")
 
-                # "Perfect Daily Score" F&O report (added, per request)
-                # — checked on EVERY F&O stock's latest closed
-                # primary_df candle, completely independent of
-                # `signals` above (an EMA cross is NOT required).
-                # Reuses primary_df already in memory — no extra
-                # fetch. See strategy.compute_daily_score_scan and
-                # telegram_notifier.send_daily_score_report. The
-                # actual send (with change-detection dedup) happens
-                # once after this whole per-symbol loop finishes, not
-                # here — this just collects candidates.
-                if config.DAILY_SCORE_REPORT_ENABLED and symbol.upper() in fno_underlyings:
-                    ds_hit = compute_daily_score_scan(primary_df, symbol)
-                    if ds_hit is not None and ds_hit["score"] >= config.DAILY_SCORE_REPORT_MIN_SCORE:
-                        # Chart link (added, per request) — same
-                        # TradingView 15-min deep link every other
-                        # alert type already gets (see build_chart_link
-                        # above / send_alert / send_breakout_alert /
-                        # send_trendline_alert), just wired in here too
-                        # so each row in the Daily Score report is
-                        # tappable.
-                        ds_hit["chart_link"] = build_chart_link(symbol)
-                        ds_hit["is_fno"] = True
-                        daily_score_report_hits.append(ds_hit)
-
             if not signals:
                 continue
 
@@ -1896,7 +1849,6 @@ def run_fo_scan(now_ist, index_only=False):
                         signal["ema_cross"] = mv["ema_cross"]
                     if mv.get("multi_month_highs"):
                         signal["multi_month_highs"] = mv["multi_month_highs"]
-                        signal["near_high"] = compute_near_high_score(signal)
 
                 # 15-Minute Intraday Trade Checklist (added, per
                 # request) — purpose-built for entry timing. Needs
@@ -2100,15 +2052,11 @@ def run_fo_scan(now_ist, index_only=False):
                 f"gap={g['gap_pct']}%  {g['leaning']}"
             )
 
-    # "Perfect Daily Score" F&O report (added, per request) — combined
-    # FNO+CASH send happens once in run(), after run_nifty500_scan also
-    # finishes below — see run() for the actual sort/dedup/send logic.
-    # This function only collects its (F&O-tagged) share.
     state.save_state(saved_state)
     if failed_symbols:
         print(f"{len(failed_symbols)} instrument(s) failed to fetch this run: {failed_symbols}")
     print(f"Done. {alerts_sent} alert(s) sent.")
-    return alerts_sent, failed_symbols, len(watchlist), daily_score_report_hits
+    return alerts_sent, failed_symbols, len(watchlist)
 
 
 # ---------------------------------------------------------------------
@@ -2138,7 +2086,7 @@ def run_nifty500_scan(now_ist):
     watchlist = build_nifty500_watchlist(now_ist)
     if not watchlist:
         print("Nifty 500 scan: empty watchlist (outside session or list unavailable) — skipping.")
-        return 0, [], 0, []
+        return 0, [], 0
 
     print(f"Scanning {len(watchlist)} Nifty 500 cash stocks (EMA{config.NIFTY500_EMA_FAST}/{config.NIFTY500_EMA_SLOW})...")
 
@@ -2151,7 +2099,6 @@ def run_nifty500_scan(now_ist):
     delivery_map = delivery_data.get_delivery_data(now_ist.date())
     saved_state = state.load_state()
     alerts_sent = 0
-    daily_score_report_hits = []
 
     fno_underlyings = instruments.get_fno_underlyings()
     hist_cache = build_hist1min_cache(watchlist)
@@ -2247,22 +2194,6 @@ def run_nifty500_scan(now_ist):
                         except Exception as e:
                             print(f"send_trendline_alert failed for {symbol}: {e}")
 
-            # "Perfect Daily Score" report (added, per request) — CASH
-            # side. Every symbol reaching this loop body is guaranteed
-            # NOT in fno_underlyings (see the skip at the top of this
-            # loop), so every hit collected here is a genuine cash-only
-            # stock — tagged accordingly below, no dedup needed against
-            # run_fo_scan's F&O-tagged hits. See the matching comment
-            # in run_fo_scan above for the full mechanism (this just
-            # collects; the combined FNO+CASH send happens once, after
-            # both scans finish, in run()).
-            if config.DAILY_SCORE_REPORT_ENABLED:
-                ds_hit = compute_daily_score_scan(primary_df, symbol)
-                if ds_hit is not None and ds_hit["score"] >= config.DAILY_SCORE_REPORT_MIN_SCORE:
-                    ds_hit["chart_link"] = build_chart_link(symbol)
-                    ds_hit["is_fno"] = False
-                    daily_score_report_hits.append(ds_hit)
-
             if not signals:
                 continue
 
@@ -2316,7 +2247,6 @@ def run_nifty500_scan(now_ist):
                         signal["ema_cross"] = mv["ema_cross"]
                     if mv.get("multi_month_highs"):
                         signal["multi_month_highs"] = mv["multi_month_highs"]
-                        signal["near_high"] = compute_near_high_score(signal)
 
                 # 15-Minute Intraday Trade Checklist — see the matching
                 # comment in run_fo_scan above.
@@ -2394,7 +2324,7 @@ def run_nifty500_scan(now_ist):
     if failed_symbols:
         print(f"{len(failed_symbols)} Nifty 500 instrument(s) failed to fetch this run: {failed_symbols}")
     print(f"Nifty 500 scan done. {alerts_sent} alert(s) sent.")
-    return alerts_sent, failed_symbols, len(watchlist), daily_score_report_hits
+    return alerts_sent, failed_symbols, len(watchlist)
 
 
 def build_todays_daily_bar(df5, today_date_str):
@@ -2560,7 +2490,7 @@ def run():
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)
         return
 
-    _, fo_failed, fo_total, fo_ds_hits = run_fo_scan(now_ist)
+    _, fo_failed, fo_total = run_fo_scan(now_ist)
 
     # ---- Corporate-action alerts (Dividend/Bonus/Buyback/Order Win) ----
     # Same watchlist, same Telegram channel as the EMA alerts. Cheap to
@@ -2574,36 +2504,12 @@ def run():
             print(f"Corporate-action check failed this run (non-blocking): {e}", flush=True)
 
     # ---- Nifty 500 cash-stock scan (same conditions, EMA9/21) ----
-    n500_failed, n500_total, n500_ds_hits = [], 0, []
+    n500_failed, n500_total = [], 0
     if _in_stock_session(now_ist):
         try:
-            _, n500_failed, n500_total, n500_ds_hits = run_nifty500_scan(now_ist)
+            _, n500_failed, n500_total = run_nifty500_scan(now_ist)
         except Exception as e:
             print(f"Nifty 500 scan failed this run (non-blocking): {e}", flush=True)
-
-    # "Perfect Daily Score" report (FNO+CASH combined, per request,
-    # 2026-08-28) — moved here from inside run_fo_scan so it can cover
-    # BOTH scans' hits in ONE message: F&O stocks (tagged "FNO",
-    # collected by run_fo_scan above) plus pure cash-only Nifty 500
-    # stocks (tagged "CASH", collected by run_nifty500_scan above — that
-    # scan already skips anything in fno_underlyings, so there's no
-    # overlap/double-count between the two lists). Sent only if the SET
-    # of qualifying symbols has changed since the last message actually
-    # sent today (see load_daily_score_report_state), so a stock
-    # holding 8/8 across many candles in a row doesn't repeat this
-    # every scan cycle. Sorted highest score first, then FNO before
-    # CASH, then alphabetically.
-    daily_score_report_hits = fo_ds_hits + n500_ds_hits
-    if config.DAILY_SCORE_REPORT_ENABLED and daily_score_report_hits:
-        daily_score_report_hits.sort(key=lambda h: (-h["score"], not h["is_fno"], h["symbol"]))
-        current_symbols = {h["symbol"] for h in daily_score_report_hits}
-        ds_report_state = load_daily_score_report_state()
-        if current_symbols != set(ds_report_state.get("last_sent_symbols", [])):
-            try:
-                send_daily_score_report(daily_score_report_hits, now_ist)
-                save_daily_score_report_state(current_symbols)
-            except Exception as e:
-                print(f"send_daily_score_report failed: {e}")
 
     # ---- Fetch-failure visibility: one summary alert if enough
     # instruments failed to fetch this run ----

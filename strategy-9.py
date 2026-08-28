@@ -458,101 +458,6 @@ def compute_daily_score(curr, prev, vwap, close_price):
     }
 
 
-def compute_daily_score_scan(df, symbol):
-    """
-    Standalone Daily Score check (added, per request — "ami alada ekta
-    alert chai sob FNO STOCKER DAILY SCORE... ekta combined report/list
-    — sob F&O stock er Daily Score ekshathe ekta message-e, 8/8 hole")
-    — computes Daily Score for the LATEST closed candle only,
-    completely independent of whether an EMA cross happened on it.
-    Used by main.py to build the combined "Perfect Daily Score" F&O
-    report (all qualifying stocks listed together in ONE message,
-    rather than send_alert's per-symbol EMA-cross alert).
-
-    Reuses the SAME primary_df each symbol's EMA-cross check already
-    has in memory this run — no extra fetch. Adds the ds_ema9/ds_ema21/
-    ema_trend/rsi/vol_avg columns needed by compute_daily_score if
-    they aren't already on df (they usually already are, since
-    check_signals/_evaluate_candle computed them moments earlier on
-    this same df — the `in df.columns` guards make this a no-op then).
-
-    Returns None if df doesn't have enough history for EMA50 to be
-    meaningful yet. Otherwise:
-      {"symbol", "score", "total", "label", "close", "candle_time"}
-    — same daily_score fields, just flattened with symbol/close/time
-    for easy sorting/listing in the report.
-    """
-    if df is None or len(df) < 55:
-        return None
-
-    if "ds_ema9" not in df.columns:
-        df = add_ema(df, 9, "ds_ema9")
-    if "ds_ema21" not in df.columns:
-        df = add_ema(df, 21, "ds_ema21")
-    if "ema_trend" not in df.columns:
-        df = add_ema50(df)
-    if "rsi" not in df.columns:
-        df = add_rsi(df, config.RSI_PERIOD)
-    if "vol_avg" not in df.columns:
-        df = add_volume_avg(df, config.VOLUME_AVG_PERIOD)
-    if "macd_line" not in df.columns or "macd_signal" not in df.columns:
-        df = add_macd(df, config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL)
-
-    idx = len(df) - 1
-    curr = df.iloc[idx]
-    prev = df.iloc[idx - 1]
-    vwap = _compute_vwap_at(df, idx)
-    close_price = float(curr["close"])
-
-    daily_score = compute_daily_score(curr, prev, vwap, close_price)
-
-    # Buy Score (added, per request — "daily score r sathe khali buy
-    # score ta o add kore dao") — reuses the same 8-point
-    # compute_intraday_checklist strategy.compute_intraday_checklist
-    # every EMA-cross alert already shows, direction fixed to BULLISH
-    # since Daily Score itself is a bullish-quality-only checklist (see
-    # docstring above). Built from a pseudo-signal populated with
-    # whatever's cheaply available on this SAME primary_df already in
-    # memory (EMA9/21, VWAP, volume vs previous candle, volume vs its
-    # average, a recent MACD cross, RSI) -- no extra fetch. The two
-    # opening-candle checks (opening_candle_bias / opening_range_
-    # breakout) need a separate 15-min fetch that only happens for
-    # symbols with an actual EMA-cross signal this run, so they're left
-    # out here; compute_intraday_checklist already treats a missing
-    # field as "check not satisfied" (0 points), same as a real no, so
-    # this just naturally scores out of 10 with those two unavailable.
-    vol_change_pct = None
-    if prev["volume"]:
-        vol_change_pct = (float(curr["volume"]) - float(prev["volume"])) / float(prev["volume"]) * 100
-
-    macd_cross_recent = _detect_macd_cross_recent(df, idx, config.MACD_DIVERGENCE_LOOKBACK_CANDLES)
-
-    buy_signal = {
-        "direction": "BULLISH",
-        "ema_fast": float(curr["ds_ema9"]),
-        "ema_slow": float(curr["ds_ema21"]),
-        "close": close_price,
-        "vwap": vwap,
-        "vol_change_pct": vol_change_pct,
-        "volume": float(curr["volume"]),
-        "vol_avg": float(curr["vol_avg"]) if pd.notna(curr.get("vol_avg")) else None,
-        "macd_cross_recent": macd_cross_recent,
-        "rsi": float(curr["rsi"]) if pd.notna(curr.get("rsi")) else None,
-    }
-    buy_score = compute_intraday_checklist(buy_signal)
-
-    return {
-        "symbol": symbol,
-        "score": daily_score["score"],
-        "total": daily_score["total"],
-        "label": daily_score["label"],
-        "buy_score": buy_score["score"],
-        "buy_score_label": buy_score["label"],
-        "close": close_price,
-        "candle_time": curr["timestamp"],
-    }
-
-
 def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None,
                       ema_fast_period=None, ema_slow_period=None, require_volume_increase=False,
                       require_macd_cross=False, require_rsi_confirmation=False):
@@ -1718,86 +1623,26 @@ def compute_intraday_checklist(signal):
 
 
 
-def compute_near_high_score(signal):
-    """
-    "Near N-month High" (added, per request — "1 to 6 month high show
-    korabe, price jodi high er kache thake to trading score point jog
-    hobe") — checks whether the current close is within
-    config.NEAR_HIGH_THRESHOLD_PCT (5%) of ANY of the 1-6 month highs
-    already computed in main.py's build_momentum_volume_data
-    (signal["multi_month_highs"] = {1: high, 2: high, ..., 6: high},
-    highest daily HIGH over each trailing N-month window). Whichever
-    of the 6 months is numerically closest to today's close is the one
-    reported — a stock can be "near" more than one month's high at
-    once (e.g. if it's been flat for months), only the closest matters.
-
-    Unlike Momentum (signal["momentum"], which only fires when close
-    BREAKS ABOVE the 4-week high), this fires on APPROACH too — being
-    2% below a 6-month high is exactly the kind of "coiling near
-    resistance" setup this is meant to flag, not just actual breakouts.
-
-    Checked regardless of alert direction (BULLISH or BEARISH) — same
-    treatment as Daily Score's checks, which are always bullish-quality
-    framed regardless of the signal's own direction.
-
-    Returns None if signal["multi_month_highs"] isn't present/empty
-    (not enough daily history yet for this symbol — same graceful
-    degradation as every other optional field). Otherwise:
-      {"score": 1 or 0, "possible": 1, "nearest_month": int (1-6),
-       "nearest_high": float, "gap_pct": float}
-    gap_pct is signed: negative means close is below that month's
-    high, positive means close is already above it.
-    """
-    multi_month_highs = signal.get("multi_month_highs")
-    close = signal.get("close")
-    if not multi_month_highs or close is None:
-        return None
-
-    nearest_month, nearest_high, nearest_gap_pct = None, None, None
-    for months, high in multi_month_highs.items():
-        if high <= 0:
-            continue
-        gap_pct = (close - high) / high * 100
-        if nearest_gap_pct is None or abs(gap_pct) < abs(nearest_gap_pct):
-            nearest_month, nearest_high, nearest_gap_pct = months, high, gap_pct
-
-    if nearest_month is None:
-        return None
-
-    is_near = abs(nearest_gap_pct) <= config.NEAR_HIGH_THRESHOLD_PCT
-    return {
-        "score": 1 if is_near else 0,
-        "possible": 1,
-        "nearest_month": nearest_month,
-        "nearest_high": nearest_high,
-        "gap_pct": round(nearest_gap_pct, 2),
-    }
-
-
 def compute_trading_score(signal):
     """
     "Trading Score" (added, per request — "sob miliye ekta trading
     score generate koro") — ONE combined /10 score that rolls up the
-    four separate scores/checks already on the alert, so there's a
-    single number to glance at before deciding whether to take the
-    trade:
+    three separate scores already on the alert, so there's a single
+    number to glance at before deciding whether to take the trade:
 
       - Buy/Sell Score (intraday_checklist — entry timing, fixed /10)
       - Daily Score (bullish-quality checklist, fixed /8)
       - Smart Money (institutional confirmation, variable /possible —
         stocks only, not present on index alerts, and only present at
         all when it scored >= config.SMART_MONEY_MIN_SCORE)
-      - Near N-month High (added, per request — 1 point if close is
-        within config.NEAR_HIGH_THRESHOLD_PCT of any 1-6 month high,
-        see compute_near_high_score)
 
     Each present component is normalized to a common /10 scale, then
     averaged with EQUAL weight across however many components are
-    actually available on this particular signal. A missing component
-    (e.g. Smart Money didn't qualify this run, or multi_month_highs
-    wasn't available yet) is simply left out of the average — not
-    counted as 0 — so alerts with fewer available components are still
-    scored fairly on whatever they do have.
+    actually available on this particular signal. Smart Money is
+    simply left out of the average (not counted as 0) when it isn't
+    present, so index alerts (which never have it) and stock alerts
+    where it didn't qualify this run are both still scored fairly on
+    the remaining two components.
 
     Returns None only if neither the checklist nor daily_score is
     attached yet (shouldn't happen in practice — both are always set
@@ -1808,7 +1653,6 @@ def compute_trading_score(signal):
     checklist = signal.get("intraday_checklist")
     daily_score = signal.get("daily_score")
     smart_money = signal.get("smart_money")
-    near_high = signal.get("near_high")
 
     parts = []
     if checklist is not None:
@@ -1817,8 +1661,6 @@ def compute_trading_score(signal):
         parts.append(daily_score["score"] / daily_score["total"] * 10)
     if smart_money is not None and smart_money.get("possible"):
         parts.append(smart_money["score"] / smart_money["possible"] * 10)
-    if near_high is not None and near_high.get("possible"):
-        parts.append(near_high["score"] / near_high["possible"] * 10)
 
     if not parts:
         return None
@@ -1839,29 +1681,24 @@ def compute_trading_score(signal):
 
 def passes_alert_gate(signal):
     """
-    Alert Gate (LOOSENED, per request, 2026-08-28) — OR-of-7 gate.
-    Sends the alert if ANY ONE of these 7 independent conditions is
+    Alert Gate (REPLACED, per request, 2026-08-27) — OR-of-6 gate.
+    Sends the alert if ANY ONE of these 6 independent conditions is
     true (see config.py's matching comment for the thresholds):
 
       1. Daily Score > config.QUALITY_GATE_MIN_DAILY_SCORE
       2. Buy/Sell Score > config.QUALITY_GATE_MIN_SETUP_SCORE
       3. Trading Score > config.QUALITY_GATE_MIN_TRADING_SCORE
-      4. Smart Money score >= config.SMART_MONEY_MIN_SCORE (NEW, per
-         request — any single score being "strong" now includes
-         Smart Money on its own, stocks only)
-      5. Daily>6 AND Buy/Sell>8 AND Trading>current threshold together
-         (a named "combined" case, kept separate for logging even
-         though it's logically already covered by 1/2/3 firing
-         individually)
-      6. A same-direction Bulk/Block deal within
+      4. Daily>6 AND Buy/Sell>8 AND Trading>7 together (a named
+         "combined" case, kept separate for logging even though it's
+         logically already covered by 1/2/3 firing individually)
+      5. A same-direction Bulk/Block deal within
          config.SMART_MONEY_DEAL_LOOKBACK_DAYS days — same rule as
          the Smart Money score's own bulk-deal check
-      7. signal["volume_spike_pct"] > config.ALERT_GATE_VOLUME_SPIKE_PCT
+      6. signal["volume_spike_pct"] > config.ALERT_GATE_VOLUME_SPIKE_PCT
 
     Requires daily_score, intraday_checklist, trading_score, and
-    (for case 7) volume_spike_pct to already be attached to the
-    signal, (for case 4) smart_money if computed, and (for case 6)
-    last_bulk_block_deal if a deal exists.
+    (for case 6) volume_spike_pct to already be attached to the
+    signal, and (for case 5) last_bulk_block_deal if a deal exists.
 
     Returns (passed: bool, reasons: list[str]) — reasons lists every
     case that matched (a signal can trigger more than one at once),
@@ -1883,13 +1720,6 @@ def passes_alert_gate(signal):
     trading_ok = trading is not None and trading["score"] > config.QUALITY_GATE_MIN_TRADING_SCORE
     if trading_ok:
         reasons.append(f"Trading Score {trading['score']}/10")
-
-    # ---- Smart Money score on its own (NEW case, per request) ----
-    smart_money = signal.get("smart_money")
-    smart_money_ok = smart_money is not None and smart_money.get("possible") and \
-        smart_money["score"] >= config.SMART_MONEY_MIN_SCORE
-    if smart_money_ok:
-        reasons.append(f"Smart Money {smart_money['score']}/{smart_money['possible']}")
 
     combined_ok = daily_ok and setup_ok and trading_ok
     if combined_ok:
@@ -1915,5 +1745,5 @@ def passes_alert_gate(signal):
     if vs_ok:
         reasons.append(f"Volume Spike +{vs_pct:.0f}%")
 
-    passed = daily_ok or setup_ok or trading_ok or smart_money_ok or combined_ok or bulk_ok or vs_ok
+    passed = daily_ok or setup_ok or trading_ok or combined_ok or bulk_ok or vs_ok
     return passed, reasons
