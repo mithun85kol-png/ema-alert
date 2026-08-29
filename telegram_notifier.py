@@ -719,6 +719,121 @@ def send_breakout_alert(signal):
         print("Telegram send failed (breakout scan):", e)
 
 
+def send_consolidation_breakout_alert(signal):
+    """
+    SUPERSEDED (per request — "je single alert ache ota summary kore
+    dao") by send_consolidation_breakout_summary below, which batches
+    every stock from one scan run into ONE message instead of one
+    message per stock. Kept here unused (rather than deleted) in case
+    anything else still wants a single-signal send.
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", signal)
+        return
+
+    symbol = signal["symbol"]
+    direction = signal["direction"]
+    arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
+    break_label = "above" if direction == "BULLISH" else "below"
+
+    chart_link = signal.get("chart_link")
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+
+    text = (
+        f"{arrow} <b>{symbol}</b> — Consolidation Breakout ({direction})\n"
+        f"{chart_line}"
+        f"Date: {signal['date']}\n"
+        f"Close: {signal['close']} — broke {break_label} the {signal['lookback_days']}-day range\n"
+        f"Range: {signal['range_low']} – {signal['range_high']} ({signal['range_pct']}% of close)\n"
+        f"Volume: {signal['volume']:,} ({signal['volume_multiple']}x the {signal['lookback_days']}-day avg of {signal['avg_volume']:,})\n"
+        f"Turnover: ₹{signal['turnover_cr']:,.1f} Cr\n"
+    ).rstrip()
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (consolidation breakout):", e)
+
+
+def send_consolidation_breakout_summary(signals, now_ist):
+    """
+    Consolidation Breakout — SUMMARY (added, per request — "je single
+    alert ache ota summary kore dao jate eksonge onek stock ase").
+    Batches every stock that broke out this run into ONE message,
+    grouped by direction (Bullish first, then Bearish, numbered
+    within each group), same overall shape as send_daily_score_report
+    above — instead of send_consolidation_breakout_alert's one-message
+    -per-stock.
+
+    Used by BOTH the once/day standalone scan
+    (main.run_consolidation_breakout_scan) and the live intraday
+    variant inside run_fo_scan / run_nifty500_scan — `signals` is
+    whatever that caller collected during its own run (already in the
+    exact dict shape strategy.check_consolidation_breakout_scan /
+    check_consolidation_breakout_live return, each with "chart_link"
+    added by the caller).
+
+    Sends nothing if `signals` is empty (unlike send_opening_bias_report
+    /send_ema_cross_report's "always send something" — a scan run with
+    zero breakouts is the overwhelmingly common case for this alert,
+    so a message every single cycle would be pure noise).
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", signals)
+        return
+    if not signals:
+        return
+
+    date_str = now_ist.strftime("%Y-%m-%d")
+    time_str = now_ist.strftime("%H:%M")
+
+    bullish = [s for s in signals if s["direction"] == "BULLISH"]
+    bearish = [s for s in signals if s["direction"] == "BEARISH"]
+
+    lines = [f"🎯 <b>Consolidation Breakout</b> — {date_str} {time_str}\n"]
+
+    def _format_group(group, icon, break_label):
+        for i, s in enumerate(group, start=1):
+            chart_link = s.get("chart_link")
+            symbol_part = f"<a href=\"{chart_link}\">{s['symbol']}</a>" if chart_link else s["symbol"]
+            lines.append(
+                f"{i}. <b>{symbol_part}</b> — Close {s['close']}, broke {break_label} "
+                f"{s['range_low']}–{s['range_high']} ({s['range_pct']}% range), "
+                f"Vol {s['volume_multiple']}x avg"
+            )
+
+    if bullish:
+        lines.append(f"🟢⬆️ <b>Bullish</b> ({len(bullish)}):")
+        _format_group(bullish, "🟢⬆️", "above")
+        lines.append("")
+
+    if bearish:
+        lines.append(f"🔴⬇️ <b>Bearish</b> ({len(bearish)}):")
+        _format_group(bearish, "🔴⬇️", "below")
+        lines.append("")
+
+    text = "\n".join(lines).rstrip()
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (consolidation breakout summary):", e)
+
+
 def send_trendline_alert(signal):
     """
     Standalone Trendline Break alert (added, per request) — sent by
