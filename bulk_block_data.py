@@ -231,14 +231,16 @@ def _prune_alert_state(state, now_ist):
 
 def check_and_alert(now_ist):
     """
-    Standalone Bulk/Block Deal alert (added, per request) — fires once
-    per NEW deal that shows up in NSE's bulk.csv/block.csv archive
-    snapshot, market-wide (every symbol, not just the F&O/Nifty 500
-    watchlist — same universe as the NSE Bulk Deals page itself).
-    Meant to be called every run alongside corporate_actions.check_and
-    _alert(), same non-blocking try/except pattern in main.run(): a
-    failure here (bad CSV, network hiccup) must never take down the
-    main EMA-cross scan.
+    Standalone Bulk/Block Deal alert (added, per request) — market-wide
+    (every symbol, not just the F&O/Nifty 500 watchlist — same universe
+    as the NSE Bulk Deals page itself). Sends ONE combined Telegram
+    message per run covering every NEW deal that showed up in NSE's
+    bulk.csv/block.csv archive snapshot since the last run (CHANGED,
+    2026-08-30, per request — was one message per deal; see
+    telegram_notifier.send_bulk_deal_summary). Meant to be called every
+    run alongside corporate_actions.check_and_alert(), same
+    non-blocking try/except pattern in main.run(): a failure here (bad
+    CSV, network hiccup) must never take down the main EMA-cross scan.
 
     Dedup is against a persisted state file (config.
     BULK_DEAL_ALERT_STATE_FILE), NOT the in-memory alert_state.json
@@ -255,7 +257,7 @@ def check_and_alert(now_ist):
     # doesn't import bulk_block_data, so this is safe, just kept local
     # so this module can still be imported standalone/tested without
     # needing the Telegram env vars set).
-    from telegram_notifier import send_bulk_deal_alert
+    from telegram_notifier import send_bulk_deal_summary
 
     deals = get_all_recent_deals()
     if not deals:
@@ -276,17 +278,21 @@ def check_and_alert(now_ist):
     # chronological order rather than reversed.
     new_deals.sort(key=lambda d: _parse_bd_date(d.get("date") or ""))
 
-    for deal in new_deals:
-        deal_id = _deal_id(deal)
-        try:
-            send_bulk_deal_alert(deal)
-        except Exception as e:
-            print(f"send_bulk_deal_alert failed for {deal.get('symbol')}: {e}", flush=True)
-            # Not marked seen on a send failure — will retry next run,
-            # same "never silently eat a real signal" principle as the
-            # rest of this bot (see state.in_cooldown's docstring).
-            continue
-        seen[deal_id] = deal.get("date")
+    # ONE combined message (CHANGED, per request, 2026-08-30 — "erokom
+    # na, ekta message e ei sob stock cover koro") — was previously one
+    # Telegram message PER new deal (send_bulk_deal_alert, looped);
+    # every new deal found this run now goes out together in a single
+    # message instead (see telegram_notifier.send_bulk_deal_summary).
+    # Marked seen only after a successful send, same "never silently
+    # eat a real signal" principle as before — if the send fails,
+    # NONE of this batch is marked seen, so the whole batch is simply
+    # retried (and re-sent) next run rather than partially lost.
+    try:
+        send_bulk_deal_summary(new_deals, now_ist)
+        for deal in new_deals:
+            seen[_deal_id(deal)] = deal.get("date")
+    except Exception as e:
+        print(f"send_bulk_deal_summary failed: {e}", flush=True)
 
     _prune_alert_state(state, now_ist)
     _save_alert_state(state)
