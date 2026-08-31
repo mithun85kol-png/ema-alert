@@ -471,18 +471,11 @@ def send_alert(signal):
     #      (moved up from its old spot near trend3/bulk-block/sector
     #      further down) — one place to read every score at a glance.
     #   4. Everything else, unchanged order.
-    # Message layout — SHORTENED (per request, 2026-08-30 — "message
-    # gulo lomba asche, aro length choto koro"). Visible-by-default part
-    # trimmed down to just the "read this in 2 seconds" essentials
-    # (header, F&O flag, Trading Score, chart link, close/date, day
-    # change) — everything else (checklist scores, VWAP, volume,
-    # delivery%, momentum, multi-month highs, EMA50/200, 75-min trend,
-    # bulk/block, sector, RSI/PCR/OI) is unchanged data-wise, just moved
-    # inside a Telegram "expandable blockquote" (<blockquote expandable>,
-    # HTML parse mode — same feature used for the Bulk/Block Deal
-    # summary) so it's collapsed/tappable instead of always taking up
-    # screen space. Nothing removed, only collapsed.
-    details_block = (
+    text = (
+        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
+        f"{fno_line}"
+        f"{trade_score_line}"
+        f"{trading_score_line}"
         f"{gate_reasons_line}"
         f"{checklist_block}"
         f"{daily_score_line}"
@@ -490,6 +483,9 @@ def send_alert(signal):
         f"{opening_bias_line}"
         f"{opening_buy_sell_line}"
         f"{trendline_line}"
+        f"{chart_line}"
+        f"{date_part} {time_part} | Close: {signal['close']}\n"
+        f"{day_change_line}"
         f"{vwap_line}"
         f"Volume: {volume_str}{vol_note}\n"
         f"{delivery_line}"
@@ -504,17 +500,6 @@ def send_alert(signal):
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"{pcr_line}"
         f"{oi_buildup_line}"
-    ).rstrip()
-
-    text = (
-        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
-        f"{fno_line}"
-        f"{trade_score_line}"
-        f"{trading_score_line}"
-        f"{chart_line}"
-        f"{date_part} {time_part} | Close: {signal['close']}\n"
-        f"{day_change_line}"
-        f"<blockquote expandable>{details_block}</blockquote>"
     ).rstrip()
 
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
