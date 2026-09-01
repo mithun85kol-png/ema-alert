@@ -99,3 +99,81 @@ def get_delivery_data(today_ist_date, lookback_days=6):
 
     print("Delivery data: no bhavcopy found in lookback window, skipping.")
     return {}
+
+
+DELIVERY_AVG_CACHE_FILE = "delivery_avg_cache.json"
+DELIVERY_AVG_TRADING_DAYS = 20  # ~1 calendar month of trading days
+
+
+def _load_avg_cache():
+    if os.path.exists(DELIVERY_AVG_CACHE_FILE):
+        try:
+            with open(DELIVERY_AVG_CACHE_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _save_avg_cache(cache):
+    with open(DELIVERY_AVG_CACHE_FILE, "w") as f:
+        json.dump(cache, f)
+
+
+def get_delivery_avg_1m(today_ist_date, calendar_lookback_days=45):
+    """
+    ADDED (per request, 2026-09-01 — "delivery ota last one month
+    average theke koto besi kore dite parbe?") — returns
+    {symbol: avg_delivery_pct}, averaged over the last
+    DELIVERY_AVG_TRADING_DAYS (~1 month) trading days' bhavcopy,
+    strictly before today_ist_date. Meant to be shown alongside the
+    existing single-day get_delivery_data() so an alert can show
+    "today's delivery % is X% higher than its own 1-month average" —
+    NOT a market-wide average, a PER-SYMBOL trailing average.
+
+    Walks back day-by-day (skipping weekends/holidays/blocked days
+    automatically, same as get_delivery_data) up to
+    calendar_lookback_days calendar days, collecting bhavcopy data
+    until DELIVERY_AVG_TRADING_DAYS valid trading days are gathered,
+    then averages each symbol's delivery % across however many of
+    those days that symbol actually appeared in (a symbol newly
+    listed mid-window still gets an average, just over fewer days).
+
+    Cached per calendar day in delivery_avg_cache.json — this does up
+    to ~20 bhavcopy downloads, so it's deliberately built AT MOST ONCE
+    PER DAY, not once per run (this bot runs every 15 min).
+
+    Returns {} (never raises) if nothing could be built. A symbol
+    simply won't appear in the returned map if it had no data across
+    the whole window — callers should treat a missing symbol as "no
+    1-month average available", not an error.
+    """
+    cache = _load_avg_cache()
+    today_str = today_ist_date.isoformat()
+    if cache.get("as_of") == today_str and cache.get("data"):
+        return cache["data"]
+
+    sums = {}
+    counts = {}
+    collected = 0
+    for back in range(1, calendar_lookback_days + 1):
+        if collected >= DELIVERY_AVG_TRADING_DAYS:
+            break
+        candidate = today_ist_date - timedelta(days=back)
+        data = _fetch_bhavcopy_for_date(candidate)
+        if not data:
+            continue
+        collected += 1
+        for symbol, pct in data.items():
+            sums[symbol] = sums.get(symbol, 0.0) + pct
+            counts[symbol] = counts.get(symbol, 0) + 1
+
+    avg = {symbol: sums[symbol] / counts[symbol] for symbol in sums}
+
+    if avg:
+        cache = {"as_of": today_str, "data": avg}
+        _save_avg_cache(cache)
+        return avg
+
+    print("Delivery 1M average: could not build any average this run, skipping.")
+    return {}
