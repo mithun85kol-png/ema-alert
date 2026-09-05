@@ -104,51 +104,59 @@ STRONG_CANDLE_BODY_RATIO = 0.30  # unused by current strategy.py (strong-candle 
 # else needs to change.
 PRIMARY_TIMEFRAME = "15min"
 
-# Three independently toggleable gating conditions on the primary-
-# timeframe crossing candle (see strategy.check_signals /
-# strategy._evaluate_candle). All three True/mandatory matches the
-# strategy.py docstring's current design: a plain EMA cross that
-# agrees with the EMA50 trend AND has rising volume on the crossing
-# candle. REQUIRE_STRONG_CANDLE is False because that filter was
-# removed from strategy.py (kept here only so main.py's call doesn't
-# need an unconditional True/False literal baked in).
-REQUIRE_TREND_CONFIRMATION = True
-# CHANGED (per request): only EMA cross + EMA50 trend agreement should
-# gate an alert now — volume confirmation on the crossing candle is no
-# longer mandatory (still computed/shown on the alert as before, just
-# doesn't block).
-REQUIRE_VOLUME_CONFIRMATION = False
+# FULL GATING REWRITE (per request, 2026-09-05 — "ei sob change kore
+# ekta alert chai"). The main EMA-cross alert (stocks/F&O/commodities/
+# Nifty 500 — indices too, same flags) now fires ONLY when ALL SIX of
+# these hold on the crossing candle — see strategy.check_signals /
+# strategy._evaluate_candle:
+#   1. MACD LINE crosses its SIGNAL LINE on the exact candle (CHANGED,
+#      2026-09-05, per request — "Ema cross charo, Macd cross final
+#      koro": the trigger is no longer an EMA9/EMA20 cross; EMA9/EMA20
+#      is now purely informational). Always mandatory, not a flag —
+#      checked on the 15-min timeframe (PRIMARY_TIMEFRAME).
+#   2. REQUIRE_MACD_DIVERGENCE — OFF by default now (per request,
+#      2026-09-05 — "divergence sorao khali cross rakho"). When True,
+#      also requires a bullish price/MACD divergence for a
+#      BULLISH cross, bearish divergence for a BEARISH cross (see
+#      strategy._detect_macd_divergence). A SEPARATE MACD-based check
+#      from the cross trigger in #1 — cross = momentum direction just
+#      flipped; divergence = price/momentum disagreement building up.
+#   3. REQUIRE_VOLUME_1M_SUPPORT — previous COMPLETED trading day's
+#      total volume must exceed this symbol's trailing 1-month average
+#      daily volume (see main.py's build_momentum_volume_data /
+#      signal["volume_avg_1m"] vs signal["prev_day_volume"]). Applied
+#      as a post-filter in main.py (needs daily history, not available
+#      inside strategy.py's intraday check_signals()).
+#   4. REQUIRE_VWAP_CONFIRMATION — close must sit on the side of VWAP
+#      that agrees with the cross direction (above VWAP for BULLISH,
+#      below for BEARISH).
+#   5. REQUIRE_VOLUME_CONFIRMATION — crossing candle's volume must be
+#      strictly higher than the previous candle's.
+#   6. REQUIRE_RSI_CONFIRMATION — RSI(14) > 50 for a bullish cross,
+#      < 50 for a bearish cross.
+# REQUIRE_TREND_CONFIRMATION (EMA50 trend agreement) is OFF — no
+# longer in the mandatory list; EMA50/200 status is shown as
+# informational context on the alert instead (see main.py/
+# telegram_notifier.py's "EMA50/200" line). REQUIRE_MACD_CROSS (a
+# trailing-WINDOW "was there a recent MACD cross" check, DIFFERENT
+# from the exact-candle trigger in #1 above) is OFF — kept only in
+# case a wider recent-cross window is ever wanted in addition to the
+# exact-candle trigger. REQUIRE_STRONG_CANDLE stays off (see
+# strategy.py — that
+# filter was removed from _evaluate_candle entirely; kept here only so
+# main.py's call doesn't need an unconditional literal baked in).
+REQUIRE_TREND_CONFIRMATION = False
+REQUIRE_VOLUME_CONFIRMATION = True
 REQUIRE_STRONG_CANDLE = False
-
-# ADDED (per request): two more mandatory gating conditions on top of
-# EMA cross + EMA50 trend above — see strategy._evaluate_candle /
-# strategy.check_signals (require_macd_cross / require_rsi_confirmation
-# params).
-#   REQUIRE_MACD_CROSS: a RECENT MACD line/signal crossover (within
-#   MACD_DIVERGENCE_LOOKBACK_CANDLES below) matching the EMA cross's
-#   direction must exist, or the alert is rejected.
-#   REQUIRE_RSI_CONFIRMATION: RSI(14) > 50 for a bullish cross, < 50
-#   for a bearish cross, or the alert is rejected.
-# Both apply to every scan (indices, F&O stocks/commodities, Nifty
-# 500) — unlike REQUIRE_TREND_CONFIRMATION/REQUIRE_VOLUME_CONFIRMATION
-# above, these two are NOT skipped for indices.
-REQUIRE_MACD_CROSS = True
+REQUIRE_MACD_CROSS = False
+REQUIRE_MACD_DIVERGENCE = False  # CHANGED (per request, 2026-09-05 — "divergence sorao khali cross rakho"): divergence removed from the mandatory list. Only the MACD cross trigger (#1 above) plus conditions #3-6 gate the alert now. Still computed/shown on the alert as informational (macd_divergence note) — just doesn't block. Flip back to True to require it again.
 REQUIRE_RSI_CONFIRMATION = True
+REQUIRE_VWAP_CONFIRMATION = True
+REQUIRE_VOLUME_1M_SUPPORT = True
 
-# CHANGED (per request): Volume Spike was purely informational before
-# (shown on every alert, never blocked anything). Now it's a BLOCKING
-# condition on the F&O stocks/commodities and Nifty 500 stock alerts
-# (never applied to indices -- same precedent as the confluence filter
-# below, which also skips indices): the crossing signal is only sent
-# if yesterday's completed daily volume also exceeded the volume from
-# 5 trading days before that (see main.py's build_momentum_volume_data
-# / signal["volume_spike"]). If the daily-history fetch for this
-# symbol failed or didn't have enough days yet today (volume_spike is
-# None, not False), this does NOT block the alert -- only an explicit
-# "No" blocks it, so a data-fetch hiccup never silently swallows a
-# real signal. Set back to False to make it informational-only again.
-# CHANGED (per request): back to informational-only — only EMA cross +
-# EMA50 trend agreement should gate an alert now, nothing else.
+# Volume Spike (a DIFFERENT check — prev day's volume vs 5 trading
+# days ago, not the 1-month average above) stays informational-only,
+# unchanged from before.
 REQUIRE_VOLUME_SPIKE = False
 
 # Minimum distance between EMA9 and EMA20 at the moment of crossover,
@@ -462,7 +470,7 @@ CONFLUENCE_RSI_BEARISH_MAX = 50
 # it's re-checked next run). Set QUALITY_GATE_ENABLED = False to go
 # back to sending every qualifying EMA-cross signal regardless of
 # score.
-QUALITY_GATE_ENABLED = True
+QUALITY_GATE_ENABLED = False  # CHANGED (per request, 2026-09-05 — "khali informative thakuk"): Trading Score no longer blocks the alert — MACD cross + the 5 REQUIRE_* conditions above are the only gate now. Trading Score/Daily Score/Buy-Sell Score/Smart Money are all purely informational (still shown on the alert). Set back to True to re-enable the >= QUALITY_GATE_MIN_TRADING_SCORE gate.
 QUALITY_GATE_MIN_TRADING_SCORE = 8    # CHANGED (per request, 2026-09-01 — "trading score alert >8 kore dao") — was 9; now 8, so 8.0+ fires an alert.
 
 # ---------- "Near N-month High" Trading Score component (added, per

@@ -535,6 +535,7 @@ def send_alert(signal):
         f"{opening_buy_sell_line}"
         f"{trendline_line}"
         f"{vwap_line}"
+        f"{macd_block}"
         f"{momentum_line}"
         f"{multi_month_high_line}"
         f"{near_high_line}"
@@ -554,7 +555,7 @@ def send_alert(signal):
     )
 
     text = (
-        f"{arrow} <b>{signal['symbol']}</b> — EMA {direction} crossover ({timeframe_label}){header_tag}\n"
+        f"{arrow} <b>{signal['symbol']}</b> — {direction} Market Alert ({timeframe_label}){header_tag}\n"
         f"{fno_line}"
         f"{trade_score_line}"
         f"{trading_score_line}"

@@ -2045,6 +2045,8 @@ def run_fo_scan(now_ist, index_only=False):
                     prev_close=prev_close,
                     require_macd_cross=config.REQUIRE_MACD_CROSS,
                     require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
+                    require_vwap_confirmation=config.REQUIRE_VWAP_CONFIRMATION,
+                    require_macd_divergence=config.REQUIRE_MACD_DIVERGENCE,
                 )
                 for sig in signals:
                     sig["timeframe"] = "15-min"
@@ -2092,6 +2094,8 @@ def run_fo_scan(now_ist, index_only=False):
                     require_strong_candle=config.REQUIRE_STRONG_CANDLE,
                     require_macd_cross=config.REQUIRE_MACD_CROSS,
                     require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
+                    require_vwap_confirmation=config.REQUIRE_VWAP_CONFIRMATION,
+                    require_macd_divergence=config.REQUIRE_MACD_DIVERGENCE,
                 )
                 for sig in signals:
                     sig["timeframe"] = primary_label
@@ -2231,6 +2235,20 @@ def run_fo_scan(now_ist, index_only=False):
                     if mv.get("multi_month_highs"):
                         signal["multi_month_highs"] = mv["multi_month_highs"]
                         signal["near_high"] = compute_near_high_score(signal)
+
+                # Volume Support gate (ADDED, per request, 2026-09-05)
+                # — MANDATORY: the previous COMPLETED trading day's
+                # total volume (signal["prev_day_volume"]) must exceed
+                # this symbol's trailing 1-month average daily volume
+                # (signal["volume_avg_1m"]), or the signal is rejected
+                # outright. Not marked alerted on failure, so it's
+                # re-checked next run within the lookback window.
+                # Missing daily data (volume_avg_1m never set above)
+                # never blocks — same missing-data-never-blocks rule
+                # used everywhere else in this file.
+                if config.REQUIRE_VOLUME_1M_SUPPORT and signal.get("volume_avg_1m") and signal.get("prev_day_volume") is not None:
+                    if signal["prev_day_volume"] <= signal["volume_avg_1m"]:
+                        continue
 
                 # 15-Minute Intraday Trade Checklist (added, per
                 # request) — purpose-built for entry timing. Needs
@@ -2594,6 +2612,8 @@ def run_nifty500_scan(now_ist):
                 require_strong_candle=config.REQUIRE_STRONG_CANDLE,
                 require_macd_cross=config.REQUIRE_MACD_CROSS,
                 require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
+                require_vwap_confirmation=config.REQUIRE_VWAP_CONFIRMATION,
+                require_macd_divergence=config.REQUIRE_MACD_DIVERGENCE,
             )
             for sig in signals:
                 sig["timeframe"] = primary_label
@@ -2704,6 +2724,12 @@ def run_nifty500_scan(now_ist):
                     if mv.get("multi_month_highs"):
                         signal["multi_month_highs"] = mv["multi_month_highs"]
                         signal["near_high"] = compute_near_high_score(signal)
+
+                # Volume Support gate — see the matching comment in
+                # run_fo_scan above (config.REQUIRE_VOLUME_1M_SUPPORT).
+                if config.REQUIRE_VOLUME_1M_SUPPORT and signal.get("volume_avg_1m") and signal.get("prev_day_volume") is not None:
+                    if signal["prev_day_volume"] <= signal["volume_avg_1m"]:
+                        continue
 
                 # 15-Minute Intraday Trade Checklist — see the matching
                 # comment in run_fo_scan above.

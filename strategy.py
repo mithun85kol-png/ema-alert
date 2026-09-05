@@ -1,100 +1,30 @@
 
 """
-EMA9/EMA20 line crossover with trend confirmation: a signal fires for
-a given closed candle only when ALL of these hold on that candle —
-  1. EMA9 crosses EMA20 (matching the visual cross point on the chart)
-     — a plain crossover, nothing more. There is no longer a strong-
-     candle filter or a minimum EMA-gap filter; any qualifying cross
-     is eligible as soon as it happens.
-  2. The cross direction agrees with the broader trend (EMA50) — a
-     bullish cross only fires if the stock is in an uptrend, and a
-     bearish cross only fires if the stock is in a downtrend.
-     This condition is MANDATORY for stocks and commodities. It does
-     NOT apply to indices at all — indices don't use check_signals()
-     on 75-min data anymore; see below.
+CHANGED (2026-09-05, per request — "Ema cross charo, Macd cross final
+koro"): the trigger condition is no longer an EMA9/EMA20 crossover.
+A signal now fires for a given closed candle only when a genuine
+MACD LINE crosses its SIGNAL LINE on THAT exact candle (bullish =
+crossing up, bearish = crossing down), checked on the 15-min
+timeframe (config.PRIMARY_TIMEFRAME). EMA9/EMA20 is no longer a
+gating condition at all — its values are still computed and shown on
+the alert purely as informational context (see "ema_fast"/"ema_slow"
+in the signal dict and the trend3_block on the other timeframe).
 
-INDICES (NIFTY 50, NIFTY BANK, SENSEX) are NOT evaluated by
-check_signals() on 75-min data. main.py instead calls check_signals()
-directly on 5-min data (df5) with require_trend_confirmation=False, so
-an index alert is a PURE EMA9/EMA20 crossover on the 5-min chart — no
-EMA50 trend requirement, no 75-min involvement at all. RSI/volume/
-VWAP/MACD/pivot context fields are still computed the same way (since
-_evaluate_candle is timeframe-agnostic — see the NOTE below), just on
-5-min bars for indices instead of 75-min bars.
-Fires for stocks, indices, and commodities alike via the same
-check_signals()/_evaluate_candle() code path — only the timeframe
-passed in and the require_trend_confirmation flag differ per
-instrument type (set by main.py).
-
-RSI, candle patterns, VWAP position, and Camarilla R3/S3 pivot
-proximity are attached to the signal as informational fields only.
-They are shown in the alert message but never block it from firing.
-Volume (vol_change_pct) is ALSO now informational only (no longer a
-gating condition) — the crossing candle's volume vs the previous
-candle's is shown in the message, but a signal fires whether volume
-rose or not. If the previous candle's volume is 0/unavailable,
-vol_change_pct is simply None on the signal/message.
-
-IMPORTANT — catch-up window:
-check_signals() scans the last config.CROSS_LOOKBACK_CANDLES closed
-candles (not just the single latest one) and returns a signal for
-EVERY qualifying candle in that window. This means: if a scheduled run
-is skipped or delayed (so more than one 3-min candle closed since the
-last run), any cross that happened on an "in-between" candle is still
-caught and alerted on the next run, instead of silently disappearing
-because it's no longer the "latest" candle. main.py's dedup is keyed
-on (symbol, direction, candle_time), so a candle already alerted is
-never re-sent even though it's re-checked on every later run.
-
-NOTE (timeframe — FLIPPED): check_signals() itself is timeframe-agnostic
-— it just evaluates whatever OHLCV df it's handed. main.py now passes
-in df75 (1-min data, historical + today, resampled to 75-min candles)
-for STOCKS/COMMODITIES — 75-min is their PRIMARY/ALERTING timeframe.
-Every gating condition above (EMA9/20 cross, EMA50 trend agreement) is
-evaluated on 75-min bars for them; RSI/volume/VWAP/MACD/pivot context
-is also computed on 75-min bars but is informational only. This means
-a stock/commodity alert fires right when a 75-min candle closes with a
-qualifying cross.
-For INDICES, main.py instead passes df5 (5-min candles) into the exact
-same check_signals(), with require_trend_confirmation=False — so an
-index alert fires right when a 5-min candle closes with a qualifying
-EMA9/20 cross, and all the RSI/volume/VWAP/MACD/pivot context on that
-alert is computed on 5-min bars too (still informational only).
-
-get_3min_trend_info() below is a separate, filter-free helper that
-reports EMA9/20 bias (and how close price is to the next cross) on
-3-min candles. It is only used as supporting context UNDERNEATH a
-STOCK/COMMODITY 75-min alert (main.py attaches it as
-signal["trend_3min"]); it is not used for indices, since an index
-alert already IS the 3-min signal.
-3-min candles. It is USED by main.py: every 75-min alert has a 3-min
-context block attached via signal["trend_3min"], purely so you can see
-at a glance what the shorter-term 3-min picture is doing right now. It
-never gates or blocks the 75-min alert; it is informational only.
-
-Sector index trend (added): get_sector_trend() below reports whether a
-stock's sector index (e.g. NIFTY BANK for HDFCBANK, NIFTY IT for TCS —
-see config.STOCK_SECTOR_MAP) is currently in an UPTREND or DOWNTREND
-(close vs EMA50, same rule as a stock's own trend). main.py computes
-this once per sector index per run and attaches it to every matching
-stock's alert as signal["sector_index"] / signal["sector_trend"].
-Purely informational — never blocks a stock's alert, and stocks with
-no sector mapping simply don't get this line.
-
-VWAP (added): computed cumulatively from the start of the current
-session's df (Upstox intraday endpoint only returns the current
-trading day, so no extra day-boundary handling is needed). Purely
-informational — never blocks a signal. Attached inline inside
-_evaluate_candle since it needs the same df/idx already in scope, no
-separate API call or extra fetch required.
-
-MACD Divergence (added): standard MACD(12,26,9) is computed on the
-same 3-min df already in scope (indicators.add_macd) — no extra fetch.
-_detect_macd_divergence() checks the trailing
-config.MACD_DIVERGENCE_LOOKBACK_CANDLES window for a bullish or
-bearish divergence between price and the MACD line. Purely
-informational — raw MACD values and any divergence note are attached
-to the signal but never block it from firing.
+On top of the MACD-cross trigger, ALL of these still hold before an
+alert fires — see config.py's REQUIRE_* flags:
+  - REQUIRE_MACD_DIVERGENCE: a price-vs-MACD divergence in the
+    matching direction (see _detect_macd_divergence) — a SEPARATE
+    check from the cross above, both MACD-based but measuring
+    different things.
+  - REQUIRE_VOLUME_1M_SUPPORT: previous day's volume > this symbol's
+    trailing 1-month average daily volume (applied in main.py).
+  - REQUIRE_VWAP_CONFIRMATION: close on the side of VWAP matching the
+    direction.
+  - REQUIRE_VOLUME_CONFIRMATION: crossing candle's volume > previous
+    candle's.
+  - REQUIRE_RSI_CONFIRMATION: RSI(14) > 50 bullish / < 50 bearish.
+  - REQUIRE_TREND_CONFIRMATION (EMA50 trend agreement): OFF by
+    default now — informational only unless re-enabled.
 """
 
 import datetime as _dt
@@ -555,16 +485,33 @@ def compute_daily_score_scan(df, symbol):
 
 def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, prev_close=None,
                       ema_fast_period=None, ema_slow_period=None, require_volume_increase=False,
-                      require_macd_cross=False, require_rsi_confirmation=False):
+                      require_macd_cross=False, require_rsi_confirmation=False,
+                      require_vwap_confirmation=False, require_macd_divergence=False):
     ema_fast_period = ema_fast_period if ema_fast_period is not None else config.EMA_FAST
     ema_slow_period = ema_slow_period if ema_slow_period is not None else config.EMA_SLOW
 
     curr = df.iloc[idx]
     prev = df.iloc[idx - 1]
 
-    # Condition 1: true EMA9/EMA20 line crossover on this candle.
-    bullish_cross = prev["ema_fast"] <= prev["ema_slow"] and curr["ema_fast"] > curr["ema_slow"]
-    bearish_cross = prev["ema_fast"] >= prev["ema_slow"] and curr["ema_fast"] < curr["ema_slow"]
+    # Condition 1 (CHANGED, per request, 2026-09-05 — "Ema cross charo,
+    # Macd cross final koro" — EMA9/20 cross removed as the trigger;
+    # a signal now fires on a genuine MACD LINE crossing its SIGNAL
+    # LINE on THIS candle instead, checked on whichever timeframe is
+    # passed in (15-min, since config.PRIMARY_TIMEFRAME="15min"). This
+    # is a plain, exact crossover on the current candle — different
+    # from _detect_macd_cross_recent below (that scans a trailing
+    # window for the MOST RECENT flip, used only for the informational
+    # "last cross" timestamp now, not as the trigger) and different
+    # from _detect_macd_divergence (price-vs-MACD divergence, a
+    # separate condition — see require_macd_divergence further down).
+    # EMA9/20 itself is no longer a gating condition at all; its
+    # values are still computed/attached to the signal purely as
+    # informational context (see "ema_fast"/"ema_slow" in the returned
+    # dict, and the trend3_block on the other timeframe).
+    prev_macd_diff = prev["macd_line"] - prev["macd_signal"]
+    curr_macd_diff = curr["macd_line"] - curr["macd_signal"]
+    bullish_cross = prev_macd_diff <= 0 and curr_macd_diff > 0
+    bearish_cross = prev_macd_diff >= 0 and curr_macd_diff < 0
 
     if not (bullish_cross or bearish_cross):
         return None
@@ -663,6 +610,19 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         position = "Above VWAP" if close_price >= vwap else "Below VWAP"
         vwap_note = f"{position} ({vwap_diff_pct:+.2f}%)"
 
+    # VWAP direction condition — MANDATORY when require_vwap_confirmation
+    # =True (added, per request): close must sit on the side of VWAP
+    # that agrees with the cross direction — at/above VWAP for a
+    # BULLISH cross, at/below VWAP for a BEARISH cross — or the signal
+    # is rejected outright. Missing/unusable VWAP (vwap is None/0)
+    # never blocks — same missing-data-never-blocks rule used
+    # elsewhere (RSI, volume).
+    if require_vwap_confirmation and vwap is not None and vwap > 0:
+        if bullish and close_price < vwap:
+            return None
+        if not bullish and close_price > vwap:
+            return None
+
     # MACD — informational only. macd_line/signal/hist are shown as raw
     # values; macd_divergence flags a bullish/bearish divergence within
     # the trailing config.MACD_DIVERGENCE_LOOKBACK_CANDLES window, if
@@ -673,6 +633,19 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         macd_divergence_note = "Bullish Divergence (price lower low, MACD higher low)"
     elif macd_div["bearish"]:
         macd_divergence_note = "Bearish Divergence (price higher high, MACD lower high)"
+
+    # MACD divergence condition — MANDATORY when require_macd_divergence
+    # =True (added, per request): a bullish price/MACD divergence must
+    # be present for a BULLISH cross, a bearish divergence for a
+    # BEARISH cross, or the signal is rejected outright. This is
+    # DIFFERENT from require_macd_cross below (that's a genuine
+    # MACD-line/signal-line crossover; this is price-vs-MACD
+    # divergence — see _detect_macd_divergence).
+    if require_macd_divergence:
+        if bullish and not macd_div["bullish"]:
+            return None
+        if not bullish and not macd_div["bearish"]:
+            return None
 
     # MACD cross recency (added, per request) — used to REQUIRE the
     # MACD condition (Trade Score dimension #11 and the checklist's
@@ -757,29 +730,30 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
 
 def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True, prev_close=None,
                    ema_fast=None, ema_slow=None, require_volume_increase=False, require_strong_candle=False,
-                   require_macd_cross=False, require_rsi_confirmation=False):
+                   require_macd_cross=False, require_rsi_confirmation=False,
+                   require_vwap_confirmation=False, require_macd_divergence=False):
     """
     Scans the last `lookback` closed candles (default:
-    config.CROSS_LOOKBACK_CANDLES) for EMA crossovers — not just the
-    single latest candle — so a run that was skipped/delayed still
+    config.CROSS_LOOKBACK_CANDLES) for a genuine MACD line/signal-line
+    crossover on that exact candle (CHANGED, 2026-09-05 — the trigger
+    is no longer an EMA9/20 crossover, see _evaluate_candle) — not just
+    the single latest candle — so a run that was skipped/delayed still
     catches up on any cross it would otherwise have missed.
 
-    ema_fast/ema_slow: the EMA periods to use for the crossover +
-    labeling (defaults to config.EMA_FAST/EMA_SLOW, i.e. 9/20 — the F&O
-    scan's periods). Pass config.NIFTY500_EMA_FAST/EMA_SLOW (9/21) for
-    the Nifty 500 cash-stock scan. EMA50 trend-agreement, RSI, MACD etc.
-    are unaffected — only the crossover pair itself changes.
+    ema_fast/ema_slow: no longer used for the trigger itself (that's
+    MACD-based now); kept only to label the informational EMA9/EMA20
+    values attached to each signal (defaults to config.EMA_FAST/
+    EMA_SLOW, i.e. 9/20 — the F&O scan's periods; pass
+    config.NIFTY500_EMA_FAST/EMA_SLOW, 9/21, for the Nifty 500
+    cash-stock scan).
 
-    require_trend_confirmation=False disables condition 4 (EMA50 trend
-    agreement) — used for indices, where every qualifying crossover
-    should alert regardless of the broader trend. Leave True (default)
-    for stocks/commodities.
+    require_trend_confirmation=False disables the EMA50 trend-
+    agreement check — informational-only by default now
+    (config.REQUIRE_TREND_CONFIRMATION), for every scan.
 
     require_volume_increase=True makes the crossing candle's volume >
     previous candle's volume a MANDATORY condition (signal rejected
-    otherwise) — used for the 75-min stock/F&O/cash/commodity alerts
-    (see main.py). Leave False (default) for indices, where volume
-    stays informational-only.
+    otherwise).
 
     require_strong_candle: accepted for call-site compatibility with
     main.py (config.REQUIRE_STRONG_CANDLE), but currently a no-op —
@@ -789,12 +763,21 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     keep passing it without a signature error; has no effect either
     way right now.
 
-    require_macd_cross=True (added, per request) makes a RECENT MACD
-    line/signal crossover (within config.MACD_DIVERGENCE_LOOKBACK_
-    CANDLES, matching this candle's direction) MANDATORY — see
-    _detect_macd_cross_recent. Unlike a plain "MACD > Signal" level
-    check, this requires an actual crossover to have happened
-    recently, not just the current bias.
+    require_macd_cross=True makes a RECENT MACD line/signal crossover
+    ALSO required within a trailing lookback window matching this
+    candle's direction (see _detect_macd_cross_recent) — this is now
+    largely redundant with the exact-candle trigger above and is OFF
+    by default; kept available in case a wider "recent cross" window
+    (rather than the exact candle) is ever wanted again.
+
+    require_macd_divergence=True (added, per request) makes a
+    price-vs-MACD divergence in the matching direction MANDATORY —
+    see _detect_macd_divergence. A SEPARATE MACD-based condition from
+    the cross trigger above (cross = momentum direction changed right
+    now; divergence = price/momentum disagreement building up).
+
+    require_vwap_confirmation=True (added, per request) makes close
+    trading on the side of VWAP that matches the direction MANDATORY.
 
     require_rsi_confirmation=True (added, per request) makes RSI(14)
     > 50 (bullish) / < 50 (bearish) MANDATORY.
@@ -841,6 +824,8 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
             require_volume_increase=require_volume_increase,
             require_macd_cross=require_macd_cross,
             require_rsi_confirmation=require_rsi_confirmation,
+            require_vwap_confirmation=require_vwap_confirmation,
+            require_macd_divergence=require_macd_divergence,
         )
         if sig is not None:
             signals.append(sig)
