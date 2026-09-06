@@ -327,6 +327,100 @@ def check_trendline_scan(df, symbol, lookback=None, strength=None):
     }
 
 
+def detect_liquidity_sweep(df, idx, swing_lookback=10, prev_day_high=None, prev_day_low=None):
+    """
+    Liquidity Sweep detector (added, per request, 2026-09-05) — checks
+    ONE candle (idx) for a swept-and-reversed level: the candle's
+    high/low pierces a level where resting stop-loss/breakout orders
+    sit, but the candle CLOSES back on the other side of it — the
+    breakout failed and price likely reverses. Two kinds of level are
+    checked independently, and BOTH may fire on the same candle:
+
+      - Rolling swing high/low on THIS timeframe: the max high / min
+        low of the `swing_lookback` candles immediately BEFORE idx
+        (idx itself excluded).
+      - Previous day's high/low: fixed levels passed in from
+        main.py's build_pivot_levels (fetch_prev_day_ohlc) — None if
+        unavailable, in which case that check is simply skipped
+        (missing data never fires a false signal).
+
+    Returns a list of 0-2 dicts: {"direction", "levels_swept"} — a
+    BEARISH entry if a high was swept, a BULLISH entry if a low was
+    swept (both can appear together if this candle swept a high on
+    one basis and a low on the other, or the same side on both bases
+    collapses into one entry with two level strings).
+    """
+    if idx < swing_lookback:
+        return []
+    curr = df.iloc[idx]
+    window = df.iloc[idx - swing_lookback: idx]
+    if window.empty:
+        return []
+
+    swing_high = window["high"].max()
+    swing_low = window["low"].min()
+
+    bear_levels = []
+    bull_levels = []
+
+    if curr["high"] > swing_high and curr["close"] < swing_high:
+        bear_levels.append(f"{swing_lookback}-candle swing high ({round(float(swing_high), 2)})")
+    if curr["low"] < swing_low and curr["close"] > swing_low:
+        bull_levels.append(f"{swing_lookback}-candle swing low ({round(float(swing_low), 2)})")
+
+    if prev_day_high is not None and prev_day_high > 0:
+        if curr["high"] > prev_day_high and curr["close"] < prev_day_high:
+            bear_levels.append(f"Previous day high ({round(float(prev_day_high), 2)})")
+    if prev_day_low is not None and prev_day_low > 0:
+        if curr["low"] < prev_day_low and curr["close"] > prev_day_low:
+            bull_levels.append(f"Previous day low ({round(float(prev_day_low), 2)})")
+
+    out = []
+    if bear_levels:
+        out.append({"direction": "BEARISH", "levels_swept": bear_levels})
+    if bull_levels:
+        out.append({"direction": "BULLISH", "levels_swept": bull_levels})
+    return out
+
+
+def check_liquidity_sweep_scan(df, symbol, swing_lookback=None, prev_day_high=None, prev_day_low=None):
+    """
+    Standalone Liquidity Sweep scan entry point (added, per request) —
+    completely separate from the MACD-cross alert above (check_signals)
+    and from the Trendline Break scan; checks ONLY the latest closed
+    candle (same "no catch-up window" reasoning as
+    check_trendline_scan — main.py calls this every scan cycle on the
+    freshly fetched df, so there's no gap to catch up on).
+
+    Returns a list of 0-2 signal dicts ready for
+    telegram_notifier.send_liquidity_sweep_alert.
+    """
+    if swing_lookback is None:
+        swing_lookback = config.LIQUIDITY_SWEEP_SWING_LOOKBACK
+    if len(df) < swing_lookback + 2:
+        return []
+
+    idx = len(df) - 1
+    matches = detect_liquidity_sweep(df, idx, swing_lookback, prev_day_high, prev_day_low)
+    if not matches:
+        return []
+
+    curr = df.iloc[idx]
+    candle_time = df["timestamp"].iloc[idx]
+    signals = []
+    for m in matches:
+        signals.append({
+            "symbol": symbol,
+            "direction": m["direction"],
+            "levels_swept": m["levels_swept"],
+            "high": round(float(curr["high"]), 2),
+            "low": round(float(curr["low"]), 2),
+            "close": round(float(curr["close"]), 2),
+            "candle_time": candle_time,
+        })
+    return signals
+
+
 def compute_daily_score(curr, prev, vwap, close_price):
     """
     "Daily Score" (added, per request) — a fixed 8-point bullish-quality

@@ -136,8 +136,8 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan
-from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan
+from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -959,7 +959,11 @@ def build_pivot_levels(watchlist):
             if ohlc is None:
                 return symbol, None
             r3, s3 = calculate_r3_s3(ohlc["high"], ohlc["low"], ohlc["close"])
-            return symbol, {"r3": r3, "s3": s3, "prev_close": ohlc["close"]}
+            # "high"/"low" added (per request, 2026-09-05) so the
+            # Liquidity Sweep scan can check the previous day's
+            # high/low without a second daily-OHLC fetch — see
+            # strategy.check_liquidity_sweep_scan / main.py's callers.
+            return symbol, {"r3": r3, "s3": s3, "prev_close": ohlc["close"], "high": ohlc["high"], "low": ohlc["low"]}
 
         with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
             futures = {
@@ -2014,6 +2018,10 @@ def run_fo_scan(now_ist, index_only=False):
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
+            # prev_day_high/prev_day_low (added, per request, 2026-09-05)
+            # — feeds the Liquidity Sweep scan below.
+            prev_day_high = levels.get("high") if levels else None
+            prev_day_low = levels.get("low") if levels else None
 
             # ALERTING SIGNAL. Indices and stocks/commodities now follow
             # completely separate rules:
@@ -2071,6 +2079,31 @@ def run_fo_scan(now_ist, index_only=False):
                                 alerts_sent += 1
                             except Exception as e:
                                 print(f"send_trendline_alert failed for {symbol}: {e}")
+
+                # Liquidity Sweep (added, per request, 2026-09-05) —
+                # standalone, does NOT require a MACD cross; checked
+                # every run on the same df15 already used above, on
+                # the latest closed candle only (see
+                # strategy.check_liquidity_sweep_scan). Checks BOTH
+                # a rolling 15-min swing high/low AND the previous
+                # day's high/low (pivots.get, may be missing — that's
+                # fine, the prev-day check just skips itself then).
+                if config.ENABLE_LIQUIDITY_SWEEP_ALERTS:
+                    ls_signals = check_liquidity_sweep_scan(
+                        df15, symbol,
+                        prev_day_high=prev_day_high,
+                        prev_day_low=prev_day_low,
+                    )
+                    for ls_signal in ls_signals:
+                        ls_state_symbol = f"{symbol}::SWEEP::{ls_signal['direction']}"
+                        if not state.in_cooldown(saved_state, ls_state_symbol, ls_signal["direction"], ls_signal["candle_time"], config.LIQUIDITY_SWEEP_COOLDOWN_MINUTES):
+                            ls_signal["chart_link"] = build_chart_link(symbol, "15-min")
+                            state.mark_alerted(saved_state, ls_state_symbol, ls_signal["direction"], ls_signal["candle_time"])
+                            try:
+                                send_liquidity_sweep_alert(ls_signal)
+                                alerts_sent += 1
+                            except Exception as e:
+                                print(f"send_liquidity_sweep_alert failed for {symbol}: {e}")
             else:
                 if config.PRIMARY_TIMEFRAME == "15min":
                     primary_df, primary_label = df15, "15-min"
@@ -2120,6 +2153,26 @@ def run_fo_scan(now_ist, index_only=False):
                                 alerts_sent += 1
                             except Exception as e:
                                 print(f"send_trendline_alert failed for {symbol}: {e}")
+
+                # Liquidity Sweep — see the matching comment in the
+                # index branch above. Checked on primary_df (whichever
+                # timeframe config.PRIMARY_TIMEFRAME currently selects).
+                if config.ENABLE_LIQUIDITY_SWEEP_ALERTS:
+                    ls_signals = check_liquidity_sweep_scan(
+                        primary_df, symbol,
+                        prev_day_high=prev_day_high,
+                        prev_day_low=prev_day_low,
+                    )
+                    for ls_signal in ls_signals:
+                        ls_state_symbol = f"{symbol}::SWEEP::{ls_signal['direction']}"
+                        if not state.in_cooldown(saved_state, ls_state_symbol, ls_signal["direction"], ls_signal["candle_time"], config.LIQUIDITY_SWEEP_COOLDOWN_MINUTES):
+                            ls_signal["chart_link"] = build_chart_link(symbol, primary_label)
+                            state.mark_alerted(saved_state, ls_state_symbol, ls_signal["direction"], ls_signal["candle_time"])
+                            try:
+                                send_liquidity_sweep_alert(ls_signal)
+                                alerts_sent += 1
+                            except Exception as e:
+                                print(f"send_liquidity_sweep_alert failed for {symbol}: {e}")
 
                 # "Perfect Daily Score" F&O report (added, per request)
                 # — checked on EVERY F&O stock's latest closed
@@ -2583,6 +2636,10 @@ def run_nifty500_scan(now_ist):
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
+            # prev_day_high/prev_day_low (added, per request, 2026-09-05)
+            # — feeds the Liquidity Sweep scan below.
+            prev_day_high = levels.get("high") if levels else None
+            prev_day_low = levels.get("low") if levels else None
 
             # PRIMARY/ALERTING timeframe here follows config.PRIMARY_TIMEFRAME
             # too, same as run_fo_scan above — only the EMA pair differs
@@ -2650,6 +2707,27 @@ def run_nifty500_scan(now_ist):
                             alerts_sent += 1
                         except Exception as e:
                             print(f"send_trendline_alert failed for {symbol}: {e}")
+
+            # Liquidity Sweep — see the matching comment in run_fo_scan
+            # above. Safe from double-firing with run_fo_scan's own
+            # sweep check since F&O symbols are skipped entirely at
+            # the top of this loop.
+            if config.ENABLE_LIQUIDITY_SWEEP_ALERTS:
+                ls_signals = check_liquidity_sweep_scan(
+                    primary_df, symbol,
+                    prev_day_high=prev_day_high,
+                    prev_day_low=prev_day_low,
+                )
+                for ls_signal in ls_signals:
+                    ls_state_symbol = f"{symbol}::SWEEP::{ls_signal['direction']}"
+                    if not state.in_cooldown(saved_state, ls_state_symbol, ls_signal["direction"], ls_signal["candle_time"], config.LIQUIDITY_SWEEP_COOLDOWN_MINUTES):
+                        ls_signal["chart_link"] = build_chart_link(symbol, primary_label)
+                        state.mark_alerted(saved_state, ls_state_symbol, ls_signal["direction"], ls_signal["candle_time"])
+                        try:
+                            send_liquidity_sweep_alert(ls_signal)
+                            alerts_sent += 1
+                        except Exception as e:
+                            print(f"send_liquidity_sweep_alert failed for {symbol}: {e}")
 
             # "Perfect Daily Score" report (added, per request) — CASH
             # side. Every symbol reaching this loop body is guaranteed

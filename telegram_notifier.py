@@ -1000,6 +1000,55 @@ def send_trendline_alert(signal):
         print("Telegram send failed (trendline break):", e)
 
 
+def send_liquidity_sweep_alert(signal):
+    """
+    Standalone Liquidity Sweep alert (added, per request, 2026-09-05)
+    — sent whenever strategy.check_liquidity_sweep_scan finds a swept-
+    and-reversed level on the LATEST closed candle, completely
+    independent of the MACD-cross alert (send_alert above) and the
+    Trendline Break alert — no MACD cross or trendline break needs to
+    have happened. Runs in the same scan cycle (same fetch, same
+    cadence) as the other alerts, just checked and sent separately.
+    """
+    if not getattr(config, "ENABLE_LIQUIDITY_SWEEP_ALERTS", True):
+        return
+
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", signal)
+        return
+
+    direction = signal["direction"]
+    arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
+    side_label = "Low swept" if direction == "BULLISH" else "High swept"
+
+    candle_time = signal["candle_time"]
+    date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
+
+    chart_link = signal.get("chart_link")
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+
+    levels_line = "\n".join(f"• {lvl}" for lvl in signal["levels_swept"])
+
+    text = (
+        f"{arrow} <b>{signal['symbol']}</b> — Liquidity Sweep ({side_label}, {direction})\n"
+        f"{chart_line}"
+        f"{date_part} {time_part} | Close: {signal['close']} (H: {signal['high']} / L: {signal['low']})\n"
+        f"Level(s) swept:\n{levels_line}\n"
+    ).rstrip()
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (liquidity sweep):", e)
+
+
 def send_daily_score_report(hits, now_ist):
     """
     "Perfect Daily Score" report (added, per request — "sob F&O stock

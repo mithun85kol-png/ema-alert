@@ -723,6 +723,21 @@ TRENDLINE_SWING_STRENGTH = 3
 # config.SAME_DIRECTION_COOLDOWN_MINUTES for the EMA cross alert.
 TRENDLINE_COOLDOWN_MINUTES = 75
 
+# ---------- Liquidity Sweep alert (ADDED, per request, 2026-09-05) —
+# a SEPARATE, standalone alert (own message, own dedup key) from the
+# main MACD-cross alert above. Fires when a candle's high/low pierces
+# a resting-liquidity level (a recent swing high/low, and/or the
+# previous day's high/low — where stop-losses and breakout orders
+# tend to sit) but the candle CLOSES back on the other side of it —
+# the breakout failed and price likely reverses. See
+# strategy.detect_liquidity_sweep / strategy.check_liquidity_sweep_scan.
+# Checks BOTH bases every run (either or both may fire on the same
+# candle) — see main.py's build_pivot_levels for where the previous
+# day's high/low comes from.
+ENABLE_LIQUIDITY_SWEEP_ALERTS = True
+LIQUIDITY_SWEEP_SWING_LOOKBACK = 10    # candles used for the rolling swing high/low, on whichever timeframe is being scanned
+LIQUIDITY_SWEEP_COOLDOWN_MINUTES = 75  # same-symbol/direction cooldown — same idea as TRENDLINE_COOLDOWN_MINUTES above
+
 # ---------- Top Gainers/Losers — 1st 1-min candle (ADDED, per request,
 # 2026-08-31 — "arek ta alert dao top gainer looser in 1st 1 minit") ----------
 # Standalone report, own SCAN_MODE=top_movers_1min (see main.py's
