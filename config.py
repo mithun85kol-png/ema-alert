@@ -734,7 +734,7 @@ TRENDLINE_COOLDOWN_MINUTES = 75
 # Checks BOTH bases every run (either or both may fire on the same
 # candle) — see main.py's build_pivot_levels for where the previous
 # day's high/low comes from.
-ENABLE_LIQUIDITY_SWEEP_ALERTS = True
+ENABLE_LIQUIDITY_SWEEP_ALERTS = False  # CHANGED (per request, 2026-09-07 — "Liquidity sweep alert stop koro"): stopped. The scan itself still costs nothing extra to leave wired in main.py; this flag alone silences it. Flip back to True to re-enable.
 LIQUIDITY_SWEEP_SWING_LOOKBACK = 10    # candles used for the rolling swing high/low, on whichever timeframe is being scanned
 LIQUIDITY_SWEEP_COOLDOWN_MINUTES = 75  # same-symbol/direction cooldown — same idea as TRENDLINE_COOLDOWN_MINUTES above
 
