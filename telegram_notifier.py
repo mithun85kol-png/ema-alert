@@ -1060,51 +1060,6 @@ def send_liquidity_sweep_alert(signal):
         print("Telegram send failed (liquidity sweep):", e)
 
 
-def send_ma_envelope_alert(signal):
-    """
-    Standalone Moving Average Envelope alert (added, per request,
-    2026-09-09) — sent whenever strategy.check_ma_envelope finds
-    today's session high/low touching or breaking the +/-pct% band
-    around the daily EMA200, completely independent of the MACD-cross,
-    Trendline Break, and Liquidity Sweep alerts.
-    """
-    if not getattr(config, "ENABLE_MA_ENVELOPE_ALERTS", True):
-        return
-
-    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
-        print("Telegram not configured, skipping send:", signal)
-        return
-
-    direction = signal["direction"]
-    arrow = "🔴⬇️" if direction == "BEARISH" else "🟢⬆️"
-    side_label = "Upper band" if direction == "BEARISH" else "Lower band"
-
-    candle_time = signal["candle_time"]
-    date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
-
-    chart_link = signal.get("chart_link")
-    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
-
-    text = (
-        f"{arrow} <b>{signal['symbol']}</b> — MA Envelope {side_label} touched ({direction})\n"
-        f"{chart_line}"
-        f"{date_part} {time_part} | Close: {signal['close']} (H: {signal['high']} / L: {signal['low']})\n"
-        f"EMA200 (daily): {signal['ema200']} | Band (±{signal['pct']}%): {signal['band']}\n"
-    ).rstrip()
-
-    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
-    try:
-        r = requests.post(url, data={
-            "chat_id": config.TELEGRAM_CHAT_ID,
-            "text": text,
-            "parse_mode": "HTML",
-            "disable_web_page_preview": True,
-        }, timeout=15)
-        r.raise_for_status()
-    except Exception as e:
-        print("Telegram send failed (MA envelope):", e)
-
-
 def send_daily_score_report(hits, now_ist):
     """
     "Perfect Daily Score" report (added, per request — "sob F&O stock
