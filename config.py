@@ -679,8 +679,8 @@ BREAKOUT_HISTORY_CACHE_FILE = "breakout_history_cache.json"
 CONSOLIDATION_LOOKBACK_DAYS = 10               # trading days checked for a tight range
 CONSOLIDATION_MAX_RANGE_PCT = 5.0              # max (high-low)/avg_close % to count as "consolidating"
 CONSOLIDATION_BREAKOUT_MIN_VOLUME_MULTIPLE = 1.5   # breakout volume must be >= this x the window's avg daily volume
-CONSOLIDATION_BREAKOUT_LIVE_ENABLED = True     # live intraday check inside run_fo_scan/run_nifty500_scan
-CONSOLIDATION_BREAKOUT_SCAN_ENABLED = True     # standalone once/day EOD scan (SCAN_MODE=consolidation_breakout_scan)
+CONSOLIDATION_BREAKOUT_LIVE_ENABLED = False    # CHANGED (per request, 2026-09-08 — "Consolidation breakout alert stop koro"): live intraday check stopped. Flip back to True to re-enable.
+CONSOLIDATION_BREAKOUT_SCAN_ENABLED = False    # CHANGED (per request, 2026-09-08): standalone once/day EOD scan also stopped, same request.
 
 
 # ---------- Opening 15-min candle bias (added, per request) ----------
@@ -737,6 +737,20 @@ TRENDLINE_COOLDOWN_MINUTES = 75
 ENABLE_LIQUIDITY_SWEEP_ALERTS = False  # CHANGED (per request, 2026-09-07 — "Liquidity sweep alert stop koro"): stopped. The scan itself still costs nothing extra to leave wired in main.py; this flag alone silences it. Flip back to True to re-enable.
 LIQUIDITY_SWEEP_SWING_LOOKBACK = 10    # candles used for the rolling swing high/low, on whichever timeframe is being scanned
 LIQUIDITY_SWEEP_COOLDOWN_MINUTES = 75  # same-symbol/direction cooldown — same idea as TRENDLINE_COOLDOWN_MINUTES above
+
+# ---------- Moving Average Envelope alert (ADDED, per request,
+# 2026-09-09 — "Ei strategy develop kore alert hobe?") — matches a
+# TradingView "Env 200 14 close" style indicator: EMA(200) computed on
+# DAILY closes, with a fixed +/-MA_ENVELOPE_PCT% band around it. A
+# SEPARATE, standalone alert (own message, own dedup key) — fires when
+# TODAY's session high/low touches or breaks the outer band. Reuses
+# the daily EMA200 value already computed for the EMA50/200 cross
+# feature (main.py's _compute_ema50_200_cross via
+# build_momentum_volume_data) — no extra daily-history fetch needed.
+# See strategy.check_ma_envelope.
+ENABLE_MA_ENVELOPE_ALERTS = True
+MA_ENVELOPE_PCT = 14.0               # matches the "Env 200 14 close" indicator shown (period is EMA200, reused from the existing feature above)
+MA_ENVELOPE_COOLDOWN_MINUTES = 1440  # once/day per symbol/direction — this is a daily-chart signal, no need to re-alert every scan cycle while price stays outside the band
 
 # ---------- Top Gainers/Losers — 1st 1-min candle (ADDED, per request,
 # 2026-08-31 — "arek ta alert dao top gainer looser in 1st 1 minit") ----------
