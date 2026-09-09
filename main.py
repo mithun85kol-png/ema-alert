@@ -136,8 +136,8 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan
-from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan
+from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -2104,6 +2104,27 @@ def run_fo_scan(now_ist, index_only=False):
                                 alerts_sent += 1
                             except Exception as e:
                                 print(f"send_liquidity_sweep_alert failed for {symbol}: {e}")
+
+                # Moving Average Envelope (added, per request,
+                # 2026-09-09) — standalone, does NOT require a MACD
+                # cross; reuses the daily EMA200 already computed for
+                # the EMA50/200 cross feature (momentum_volume dict,
+                # built once for the whole watchlist above) — no extra
+                # daily-history fetch. See strategy.check_ma_envelope.
+                if config.ENABLE_MA_ENVELOPE_ALERTS:
+                    mv_env = momentum_volume.get(symbol)
+                    ema200_val = mv_env["ema_cross"]["ema200"] if mv_env and mv_env.get("ema_cross") else None
+                    env_signal = check_ma_envelope(df15, symbol, ema200_val)
+                    if env_signal is not None:
+                        env_state_symbol = f"{symbol}::MAENV::{env_signal['direction']}"
+                        if not state.in_cooldown(saved_state, env_state_symbol, env_signal["direction"], env_signal["candle_time"], config.MA_ENVELOPE_COOLDOWN_MINUTES):
+                            env_signal["chart_link"] = build_chart_link(symbol, "15-min")
+                            state.mark_alerted(saved_state, env_state_symbol, env_signal["direction"], env_signal["candle_time"])
+                            try:
+                                send_ma_envelope_alert(env_signal)
+                                alerts_sent += 1
+                            except Exception as e:
+                                print(f"send_ma_envelope_alert failed for {symbol}: {e}")
             else:
                 if config.PRIMARY_TIMEFRAME == "15min":
                     primary_df, primary_label = df15, "15-min"
@@ -2173,6 +2194,23 @@ def run_fo_scan(now_ist, index_only=False):
                                 alerts_sent += 1
                             except Exception as e:
                                 print(f"send_liquidity_sweep_alert failed for {symbol}: {e}")
+
+                # Moving Average Envelope — see the matching comment
+                # in the index branch above. Checked on primary_df.
+                if config.ENABLE_MA_ENVELOPE_ALERTS:
+                    mv_env = momentum_volume.get(symbol)
+                    ema200_val = mv_env["ema_cross"]["ema200"] if mv_env and mv_env.get("ema_cross") else None
+                    env_signal = check_ma_envelope(primary_df, symbol, ema200_val)
+                    if env_signal is not None:
+                        env_state_symbol = f"{symbol}::MAENV::{env_signal['direction']}"
+                        if not state.in_cooldown(saved_state, env_state_symbol, env_signal["direction"], env_signal["candle_time"], config.MA_ENVELOPE_COOLDOWN_MINUTES):
+                            env_signal["chart_link"] = build_chart_link(symbol, primary_label)
+                            state.mark_alerted(saved_state, env_state_symbol, env_signal["direction"], env_signal["candle_time"])
+                            try:
+                                send_ma_envelope_alert(env_signal)
+                                alerts_sent += 1
+                            except Exception as e:
+                                print(f"send_ma_envelope_alert failed for {symbol}: {e}")
 
                 # "Perfect Daily Score" F&O report (added, per request)
                 # — checked on EVERY F&O stock's latest closed
@@ -2328,6 +2366,21 @@ def run_fo_scan(now_ist, index_only=False):
                     deliv_avg = delivery_avg_map.get(symbol.upper())
                     if deliv_avg is not None:
                         signal["delivery_avg_1m"] = deliv_avg
+
+                    # Delivery Support gate (ADDED, per request,
+                    # 2026-09-09 — "delivery ar volume ta base koro...
+                    # jodi negative hoy to alert asbe na"): MANDATORY —
+                    # previous day's delivery % must exceed this
+                    # symbol's trailing 1-month average delivery %, or
+                    # the signal is rejected outright (not marked
+                    # alerted, so it's re-checked next run). Same
+                    # missing-data-never-blocks rule as
+                    # REQUIRE_VOLUME_1M_SUPPORT above — stocks with no
+                    # bhavcopy delivery data (delivery_avg_1m never
+                    # set) simply skip this check.
+                    if config.REQUIRE_DELIVERY_1M_SUPPORT and signal.get("delivery_avg_1m") and signal.get("delivery_pct") is not None:
+                        if signal["delivery_pct"] <= signal["delivery_avg_1m"]:
+                            continue
 
                     # Sector index trend — stocks only (indices/
                     # commodities aren't in STOCK_SECTOR_MAP, so this is
@@ -2729,6 +2782,23 @@ def run_nifty500_scan(now_ist):
                         except Exception as e:
                             print(f"send_liquidity_sweep_alert failed for {symbol}: {e}")
 
+            # Moving Average Envelope — see the matching comment in
+            # run_fo_scan above.
+            if config.ENABLE_MA_ENVELOPE_ALERTS:
+                mv_env = momentum_volume.get(symbol)
+                ema200_val = mv_env["ema_cross"]["ema200"] if mv_env and mv_env.get("ema_cross") else None
+                env_signal = check_ma_envelope(primary_df, symbol, ema200_val)
+                if env_signal is not None:
+                    env_state_symbol = f"{symbol}::MAENV::{env_signal['direction']}"
+                    if not state.in_cooldown(saved_state, env_state_symbol, env_signal["direction"], env_signal["candle_time"], config.MA_ENVELOPE_COOLDOWN_MINUTES):
+                        env_signal["chart_link"] = build_chart_link(symbol, primary_label)
+                        state.mark_alerted(saved_state, env_state_symbol, env_signal["direction"], env_signal["candle_time"])
+                        try:
+                            send_ma_envelope_alert(env_signal)
+                            alerts_sent += 1
+                        except Exception as e:
+                            print(f"send_ma_envelope_alert failed for {symbol}: {e}")
+
             # "Perfect Daily Score" report (added, per request) — CASH
             # side. Every symbol reaching this loop body is guaranteed
             # NOT in fno_underlyings (see the skip at the top of this
@@ -2825,6 +2895,12 @@ def run_nifty500_scan(now_ist):
                 deliv_avg = delivery_avg_map.get(symbol.upper())
                 if deliv_avg is not None:
                     signal["delivery_avg_1m"] = deliv_avg
+
+                # Delivery Support gate — see the matching comment in
+                # run_fo_scan above (config.REQUIRE_DELIVERY_1M_SUPPORT).
+                if config.REQUIRE_DELIVERY_1M_SUPPORT and signal.get("delivery_avg_1m") and signal.get("delivery_pct") is not None:
+                    if signal["delivery_pct"] <= signal["delivery_avg_1m"]:
+                        continue
 
                 last_deal = bulk_block_data.get_last_deal_for_symbol(symbol)
                 if last_deal:
