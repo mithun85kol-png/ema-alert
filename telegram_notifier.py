@@ -613,6 +613,17 @@ def send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links=N
     bearish_links = bearish_links or {}
     pct_changes = pct_changes or {}
 
+    # Sort each group by day-change magnitude, strongest mover first
+    # (ADDED, per request, 2026-09-09 — "Ei list a daily change diye
+    # sorting koro"). A symbol with no pct_changes entry (pivot data
+    # unavailable) sorts to the bottom of its group rather than
+    # crashing or landing arbitrarily in the middle.
+    def _sort_key(sym):
+        pct = pct_changes.get(sym)
+        return abs(pct) if pct is not None else -1
+    bullish = sorted(bullish, key=_sort_key, reverse=True)
+    bearish = sorted(bearish, key=_sort_key, reverse=True)
+
     def _fmt(symbols, links):
         if not links and not pct_changes:
             return ", ".join(symbols)
