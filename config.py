@@ -753,7 +753,7 @@ LIQUIDITY_SWEEP_COOLDOWN_MINUTES = 75  # same-symbol/direction cooldown — same
 # feature (main.py's _compute_ema50_200_cross via
 # build_momentum_volume_data) — no extra daily-history fetch needed.
 # See strategy.check_ma_envelope.
-ENABLE_MA_ENVELOPE_ALERTS = False  # CHANGED (per request, 2026-09-10 — "Ei alert stop koro"): stopped. Flip back to True to re-enable.
+ENABLE_MA_ENVELOPE_ALERTS = True
 MA_ENVELOPE_PCT = 14.0               # matches the "Env 200 14 close" indicator shown (period is EMA200, reused from the existing feature above)
 MA_ENVELOPE_COOLDOWN_MINUTES = 1440  # once/day per symbol/direction — this is a daily-chart signal, no need to re-alert every scan cycle while price stays outside the band
 
