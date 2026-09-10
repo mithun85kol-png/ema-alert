@@ -421,6 +421,72 @@ def check_liquidity_sweep_scan(df, symbol, swing_lookback=None, prev_day_high=No
     return signals
 
 
+def check_ma_envelope(df, symbol, ema200, pct=None):
+    """
+    Moving Average Envelope touch/break (added, per request, 2026-09-09
+    — "Ei strategy develop kore alert hobe?", matching a TradingView
+    "Env 200 14 close" indicator: EMA(200) on DAILY closes, with a
+    fixed +/-pct% band around it).
+
+    ema200: the daily EMA(200) value, computed elsewhere on daily
+    closes (see main.py's _compute_ema50_200_cross, which already
+    computes this for the EMA50/200 daily-cross feature — reused here
+    rather than recomputed, so no extra API call is needed). None if
+    unavailable (not enough daily history yet) — this simply returns
+    None, never fires a false signal.
+
+    df: the intraday df already fetched for the main scan (whichever
+    timeframe main.py is passing around, e.g. 15-min) — used only to
+    read TODAY's session high/low/close so far, not for the EMA math.
+
+    upper = ema200 * (1 + pct/100); lower = ema200 * (1 - pct/100).
+    BEARISH: today's high has touched/broken the upper band (price
+    stretched into overbought territory relative to the 200-day EMA).
+    BULLISH: today's low has touched/broken the lower band (oversold).
+    If a huge-range day trips both bands, BEARISH takes priority (the
+    rarer, more decisive case) — see the elif below.
+
+    Returns a signal dict or None.
+    """
+    if pct is None:
+        pct = config.MA_ENVELOPE_PCT
+    if ema200 is None or ema200 <= 0 or df.empty:
+        return None
+
+    today_date = str(df["timestamp"].iloc[-1]).split(" ")[0]
+    today_rows = df[df["timestamp"].astype(str).str.startswith(today_date)]
+    if today_rows.empty:
+        return None
+
+    today_high = float(today_rows["high"].max())
+    today_low = float(today_rows["low"].min())
+    today_close = float(today_rows["close"].iloc[-1])
+
+    upper = round(ema200 * (1 + pct / 100), 2)
+    lower = round(ema200 * (1 - pct / 100), 2)
+
+    if today_high >= upper:
+        direction = "BEARISH"
+        band = upper
+    elif today_low <= lower:
+        direction = "BULLISH"
+        band = lower
+    else:
+        return None
+
+    return {
+        "symbol": symbol,
+        "direction": direction,
+        "ema200": round(float(ema200), 2),
+        "band": band,
+        "pct": pct,
+        "high": round(today_high, 2),
+        "low": round(today_low, 2),
+        "close": round(today_close, 2),
+        "candle_time": str(df["timestamp"].iloc[-1]),
+    }
+
+
 def compute_daily_score(curr, prev, vwap, close_price):
     """
     "Daily Score" (added, per request) — a fixed 8-point bullish-quality
