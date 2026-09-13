@@ -115,6 +115,18 @@ def send_alert(signal):
         # what matters).
         oi_buildup_line = f"OI Buildup: {bias} {bias_icon} ({oi_buildup['note']}){since_note}\n"
 
+    # Stock News (added, per request, 2026-09-10) — headline text only
+    # (see main.py's fetch_stock_news), each one linked back to a
+    # Google News search for that symbol rather than the underlying
+    # article (avoids reproducing/displacing the source, and Google
+    # News RSS item links are redirect URLs anyway). Omitted entirely
+    # if no headlines came back (fetch failed, disabled, or none
+    # found) — never shows an empty "News:" line.
+    news_line = ""
+    news_items = signal.get("news")
+    if news_items:
+        news_line = "📰 News:\n" + "\n".join(f"• {h}" for h in news_items) + "\n"
+
     # F&O / Cash flag — shown at the TOP of the message, right under the
     # header line. Only present for actual stock signals (both the F&O
     # scan's stocks and the Nifty 500 scan's stocks) — indices and
@@ -361,6 +373,12 @@ def send_alert(signal):
     chart_link = signal.get("chart_link")
     chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
 
+    # Screener.in link (added, per request, 2026-09-10) — company
+    # fundamentals (quarterly results, ratios, etc), one tap away.
+    # Stocks only — main.py never sets this for indices/commodities.
+    screener_link = signal.get("screener_link")
+    screener_line = f"📊 <a href=\"{screener_link}\">Quarterly Results (Screener.in)</a>\n" if screener_link else ""
+
     # Angel One link removed per request (2026-08-18).
 
     # SHORTENED (per request): merged the "Timeframe: X | date time"
@@ -547,6 +565,7 @@ def send_alert(signal):
         f"RSI(14): {signal.get('rsi', 'N/A')}\n"
         f"{pcr_line}"
         f"{oi_buildup_line}"
+        f"{news_line}"
     ).rstrip()
 
     volume_delivery_tap = (
@@ -562,6 +581,7 @@ def send_alert(signal):
         f"{checklist_block}"
         f"{daily_score_line}"
         f"{chart_line}"
+        f"{screener_line}"
         f"{date_part} {time_part} | Close: {signal['close']}\n"
         f"{day_change_line}"
         f"{volume_delivery_tap}"

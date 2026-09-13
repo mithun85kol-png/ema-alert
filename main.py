@@ -116,6 +116,8 @@ import time
 import random
 import threading
 import datetime as dt
+import xml.etree.ElementTree as ET
+from urllib.parse import quote
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
@@ -393,6 +395,42 @@ def drop_unclosed_candle(df, now_ist, candle_minutes=3):
         df = df.iloc[:-1].reset_index(drop=True)
 
     return df
+
+
+def fetch_stock_news(symbol, max_headlines=2):
+    """
+    Fetch recent headlines for a symbol via Google News RSS (added,
+    per request, 2026-09-10 — "alert er sathe stock news paoa jabe?").
+    No API key needed, no extra dependency (stdlib xml.etree only).
+
+    Only headline TEXT is returned (never full article body) — this
+    keeps the alert message short and avoids reproducing copyrighted
+    article content. Results can be noisy/loosely matched since this
+    is an unfiltered public search, not a curated financial news feed.
+
+    On ANY failure (network, timeout, parsing, no results) this
+    returns [] silently and logs to stdout — news is a nice-to-have
+    add-on, never allowed to block or break the main MACD alert.
+    Called only for symbols that are actually about to alert (see
+    main.py's send_alert call sites), not for every scanned symbol.
+    """
+    try:
+        query = quote(f"{symbol} share")
+        url = f"https://news.google.com/rss/search?q={query}&hl=en-IN&gl=IN&ceid=IN:en"
+        resp = requests.get(url, timeout=8)
+        resp.raise_for_status()
+        root = ET.fromstring(resp.content)
+        headlines = []
+        for item in root.findall(".//item"):
+            title_el = item.find("title")
+            if title_el is not None and title_el.text:
+                headlines.append(title_el.text.strip())
+            if len(headlines) >= max_headlines:
+                break
+        return headlines
+    except Exception as e:
+        print(f"fetch_stock_news failed for {symbol}: {e}")
+        return []
 
 
 def fetch_prev_day_ohlc(instrument_key):
@@ -2293,6 +2331,16 @@ def run_fo_scan(now_ist, index_only=False):
                 # this ran after the checklist, so those two fields
                 # were always None/missing at checklist time.
                 signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
+                # Screener.in link (added, per request, 2026-09-10 —
+                # "shudhu Screener.in link jog koro") — company
+                # fundamentals (quarterly results, ratios, etc), one
+                # tap away, instead of scraping numbers from NSE's
+                # session-protected API (unreliable from GitHub
+                # Actions — see the matching note in bulk_block_data.py
+                # for why that approach was avoided there too). Real
+                # stocks only, never indices/commodities.
+                if symbol not in non_stock_symbols:
+                    signal["screener_link"] = f"https://www.screener.in/company/{symbol}/consolidated/"
                 if mv is not None:
                     signal["momentum"] = signal["close"] > mv["four_week_high_close"]
                     signal["four_week_high_close"] = mv["four_week_high_close"]
@@ -2504,6 +2552,11 @@ def run_fo_scan(now_ist, index_only=False):
                 # send failure costs at most one missed alert, never
                 # an infinite duplicate loop.
                 state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
+                # Stock News (added, per request, 2026-09-10) — fetched
+                # only now, for symbols actually about to alert, not
+                # for every scanned symbol. See fetch_stock_news above.
+                if config.ENABLE_STOCK_NEWS:
+                    signal["news"] = fetch_stock_news(symbol, config.STOCK_NEWS_MAX_HEADLINES)
                 try:
                     send_alert(signal)
                     alerts_sent += 1
@@ -2851,6 +2904,11 @@ def run_nifty500_scan(now_ist):
                 # comment in run_fo_scan above) to before the checklist,
                 # since it now uses signal["momentum"]/["volume_spike"].
                 signal["chart_link"] = build_chart_link(symbol, signal.get("timeframe"))
+                # Screener.in link — see the matching comment in
+                # run_fo_scan above. Every symbol here is a real stock
+                # (this scan never covers indices/commodities), so no
+                # non_stock_symbols check needed.
+                signal["screener_link"] = f"https://www.screener.in/company/{symbol}/consolidated/"
                 mv = momentum_volume.get(symbol)
                 if mv is not None:
                     signal["momentum"] = signal["close"] > mv["four_week_high_close"]
@@ -2949,6 +3007,10 @@ def run_nifty500_scan(now_ist):
                 # Mark BEFORE sending -- see the matching comment in
                 # run_fo_scan() above for why.
                 state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
+                # Stock News — see the matching comment in run_fo_scan
+                # above.
+                if config.ENABLE_STOCK_NEWS:
+                    signal["news"] = fetch_stock_news(symbol, config.STOCK_NEWS_MAX_HEADLINES)
                 try:
                     send_alert(signal)
                     alerts_sent += 1

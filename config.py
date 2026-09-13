@@ -159,6 +159,17 @@ REQUIRE_VWAP_CONFIRMATION = True
 REQUIRE_VOLUME_1M_SUPPORT = True
 REQUIRE_DELIVERY_1M_SUPPORT = True  # ADDED (per request, 2026-09-09 — "delivery ar volume ta base koro... jodi negative hoy to alert asbe na, positive hole asbe"): previous day's delivery % must exceed this symbol's trailing 1-month average delivery %, or the alert is rejected. Stocks only (indices/commodities/F&O-only symbols have no delivery data — that's fine, missing data never blocks, same rule as REQUIRE_VOLUME_1M_SUPPORT). See main.py's delivery_avg_map / signal["delivery_pct"] vs signal["delivery_avg_1m"].
 
+# Stock News (ADDED, per request, 2026-09-10 — "alert er sathe stock
+# news paoa jabe?") — MAIN MACD alert ONLY (not liquidity sweep,
+# trendline, or MA envelope). Fetched via Google News RSS (free, no
+# API key) only for symbols actually about to alert — see main.py's
+# fetch_stock_news / send_alert call sites. Headline text only, never
+# full article body. Unfiltered public search — headlines can be
+# noisy or loosely related. Any fetch failure is silent (empty list),
+# never blocks the alert itself.
+ENABLE_STOCK_NEWS = True
+STOCK_NEWS_MAX_HEADLINES = 2
+
 # Volume Spike (a DIFFERENT check — prev day's volume vs 5 trading
 # days ago, not the 1-month average above) stays informational-only,
 # unchanged from before.
