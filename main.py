@@ -2340,7 +2340,7 @@ def run_fo_scan(now_ist, index_only=False):
                 # for why that approach was avoided there too). Real
                 # stocks only, never indices/commodities.
                 if symbol not in non_stock_symbols:
-                    signal["screener_link"] = f"https://www.screener.in/company/{symbol}/consolidated/"
+                    signal["screener_link"] = f"https://www.screener.in/company/{symbol}/consolidated/#quarters"
                 if mv is not None:
                     signal["momentum"] = signal["close"] > mv["four_week_high_close"]
                     signal["four_week_high_close"] = mv["four_week_high_close"]
@@ -2908,7 +2908,7 @@ def run_nifty500_scan(now_ist):
                 # run_fo_scan above. Every symbol here is a real stock
                 # (this scan never covers indices/commodities), so no
                 # non_stock_symbols check needed.
-                signal["screener_link"] = f"https://www.screener.in/company/{symbol}/consolidated/"
+                signal["screener_link"] = f"https://www.screener.in/company/{symbol}/consolidated/#quarters"
                 mv = momentum_volume.get(symbol)
                 if mv is not None:
                     signal["momentum"] = signal["close"] > mv["four_week_high_close"]
