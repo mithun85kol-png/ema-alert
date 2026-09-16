@@ -138,8 +138,8 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan
-from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, check_monthly_rsi70_cross
+from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_monthly_rsi70_summary
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -3213,6 +3213,75 @@ def run_consolidation_breakout_scan(now_ist):
     return alerts_sent, failed_symbols, len(watchlist)
 
 
+def run_monthly_rsi_scan(now_ist):
+    """
+    Standalone Monthly RSI(14) 70-Cross screener (added, per request —
+    "ALADA EKTA alert chai kon kon stock 1 month time frame e RSI 70
+    CROSS KORECHE"). Own SCAN_MODE ("monthly_rsi_scan"), meant to run
+    once per day at/after market close (so today's daily candle — and
+    therefore this month's running monthly candle — is settled).
+    Reuses the same Nifty 500 cash universe as run_breakout_scan /
+    run_consolidation_breakout_scan (build_nifty500_watchlist).
+
+    Unlike those two scans, this one needs only DAILY candles
+    (fetch_daily_history) — no intraday 1-min fetch/resample/"today's
+    bar" plumbing, since the monthly candle is built straight from
+    daily closes (strategy._resample_daily_to_monthly).
+
+    Dedup key is (symbol, "MONTHLY_RSI70", month) — see
+    strategy.check_monthly_rsi70_cross's "month" field ("YYYY-MM") —
+    so a stock that stays above the RSI 70 level for the rest of the
+    same calendar month is only reported once; it can fire again next
+    calendar month if RSI dips back below 70 and crosses up again.
+    """
+    watchlist = build_nifty500_watchlist(now_ist)
+    if not watchlist:
+        print("Monthly RSI scan: empty watchlist (outside session or list unavailable) — skipping.")
+        return 0, [], 0
+
+    print(f"Monthly RSI scan: scanning {len(watchlist)} Nifty 500 stocks...")
+
+    saved_state = state.load_state()
+    hits = []
+    failed_symbols = []
+
+    for symbol, instrument_key in watchlist.items():
+        try:
+            history = fetch_daily_history(
+                instrument_key,
+                days_back=config.MONTHLY_RSI_HISTORY_LOOKBACK_DAYS,
+                include_today=True,
+            )
+            if not history:
+                failed_symbols.append(symbol)
+                continue
+
+            signal = check_monthly_rsi70_cross(history, symbol)
+            if signal is None:
+                continue
+
+            state_symbol = f"{symbol}::MONTHLY_RSI70"
+            if state.already_alerted(saved_state, state_symbol, "BULLISH", signal["month"]):
+                continue
+
+            signal["chart_link"] = build_chart_link(symbol)
+            state.mark_alerted(saved_state, state_symbol, "BULLISH", signal["month"])
+            hits.append(signal)
+
+        except Exception as e:
+            print(f"Error on {symbol} (Monthly RSI scan): {e}")
+            failed_symbols.append(symbol)
+
+    if hits:
+        send_monthly_rsi70_summary(hits, now_ist)
+
+    state.save_state(saved_state)
+    if failed_symbols:
+        print(f"{len(failed_symbols)} Monthly-RSI-scan instrument(s) failed to fetch this run: {failed_symbols}")
+    print(f"Monthly RSI scan done. {len(hits)} stock(s) reported.")
+    return len(hits), failed_symbols, len(watchlist)
+
+
 def run():
     # TEMP DEBUG — remove once we confirm why "Run scan" finished in ~1s
     # with zero stdout beyond the auto-generated env dump: this print
@@ -3337,6 +3406,20 @@ def run():
                 send_mode_failure_notice("consolidation_breakout_scan", e, now_ist)
         else:
             print("Consolidation breakout scan disabled (config.CONSOLIDATION_BREAKOUT_SCAN_ENABLED=False) — skipping.", flush=True)
+        return
+
+    # SCAN_MODE=monthly_rsi_scan -> the standalone Monthly RSI(14)
+    # 70-Cross screener (added, per request — "ALADA EKTA alert chai
+    # kon kon stock 1 month time frame e RSI 70 CROSS KORECHE"), fully
+    # separate from every other scan above. Meant to run once/day via
+    # its own cron trigger, at/after market close, same timing as
+    # breakout_scan/consolidation_breakout_scan.
+    if mode == "monthly_rsi_scan":
+        try:
+            run_monthly_rsi_scan(now_ist)
+        except Exception as e:
+            print(f"run_monthly_rsi_scan failed: {e}", flush=True)
+            send_mode_failure_notice("monthly_rsi_scan", e, now_ist)
         return
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):

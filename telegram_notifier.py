@@ -976,6 +976,60 @@ def send_consolidation_breakout_summary(signals, now_ist):
         print("Telegram send failed (consolidation breakout summary):", e)
 
 
+def send_monthly_rsi70_summary(signals, now_ist):
+    """
+    Monthly RSI(14) 70-Cross — SUMMARY (added, per request — "ALADA
+    EKTA alert chai kon kon stock 1 month time frame e RSI 70 CROSS
+    KORECHE"). Batches every stock whose monthly RSI crossed above 70
+    this run into ONE message, numbered, same batched-summary shape as
+    send_consolidation_breakout_summary above (one message, not
+    one-per-stock).
+
+    `signals` is whatever main.run_monthly_rsi_scan collected this
+    run — dicts shaped like strategy.check_monthly_rsi70_cross's
+    return value, each with "chart_link" added by the caller.
+
+    Sends nothing if `signals` is empty — a run with zero fresh
+    crosses is the normal case for a monthly-timeframe signal, so a
+    message every single day would be pure noise.
+    """
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
+        print("Telegram not configured, skipping send:", signals)
+        return
+    if not signals:
+        return
+
+    date_str = now_ist.strftime("%Y-%m-%d")
+    month_label = signals[0]["month"]
+
+    lines = [
+        f"📈 <b>Monthly RSI 70 Cross</b> — {month_label} (as of {date_str})",
+        f"{len(signals)} stock(s) crossed above RSI 70 on the monthly chart:\n",
+    ]
+
+    for i, s in enumerate(signals, start=1):
+        chart_link = s.get("chart_link")
+        symbol_part = f"<a href=\"{chart_link}\">{s['symbol']}</a>" if chart_link else s["symbol"]
+        lines.append(
+            f"{i}. <b>{symbol_part}</b> — Close {s['close']}, "
+            f"RSI {s['rsi_prev']} → {s['rsi_curr']}"
+        )
+
+    text = "\n".join(lines).rstrip()
+
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (monthly RSI 70 cross summary):", e)
+
+
 def send_trendline_alert(signal):
     """
     Standalone Trendline Break alert (added, per request) — sent by

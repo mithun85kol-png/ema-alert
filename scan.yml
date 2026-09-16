@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Scan mode: full (F&O+cash+commodity, 75-min), index (NIFTY50/BANK/SENSEX only, 5-min), ema_cross_report (EMA50/200 + Delivery% report, run at market open/close), breakout_scan (12-condition Nifty 500 breakout scanner, once/day), or opening_bias_report (F&O Open=Low/Open=High consolidated list, once shortly after 09:30)'
+        description: 'Scan mode: full (F&O+cash+commodity, 75-min), index (NIFTY50/BANK/SENSEX only, 5-min), ema_cross_report (EMA50/200 + Delivery% report, run at market open/close), breakout_scan (12-condition Nifty 500 breakout scanner, once/day), opening_bias_report (F&O Open=Low/Open=High consolidated list, once shortly after 09:30), or monthly_rsi_scan (Nifty 500 Monthly RSI 70 cross screener, once/day at/after close)'
         required: false
         default: 'full'
         type: choice
@@ -14,6 +14,7 @@ on:
           - ema_cross_report
           - breakout_scan
           - opening_bias_report
+          - monthly_rsi_scan
   repository_dispatch:
     types: [run-scan]
 

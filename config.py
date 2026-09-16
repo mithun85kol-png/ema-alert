@@ -780,3 +780,26 @@ MA_ENVELOPE_COOLDOWN_MINUTES = 1440  # once/day per symbol/direction — this is
 # closing price (from pivot_cache.json, same prev_close every other
 # alert already uses).
 TOP_MOVERS_COUNT = 10   # how many symbols to show on each side (gainers / losers)
+
+# ---------- Monthly RSI 70 Cross scan (ADDED, per request — "ALADA
+# EKTA alert chai kon kon stock 1 month time frame e RSI 70 CROSS
+# KORECHE") ----------
+# Standalone once/day screener, own SCAN_MODE ("monthly_rsi_scan") —
+# reports every stock whose MONTHLY RSI(14) has just crossed above 70
+# this calendar month (previous fully-closed month's RSI was below
+# 70, this month's running RSI is at/above it). Reuses the same
+# Nifty 500 cash universe as run_breakout_scan /
+# run_consolidation_breakout_scan (build_nifty500_watchlist). Dedup
+# key is the calendar month ("YYYY-MM"), not the day, so a stock that
+# stays above 70 for the rest of that month is only reported once —
+# see main.run_monthly_rsi_scan / strategy.check_monthly_rsi70_cross.
+MONTHLY_RSI_PERIOD = 14
+MONTHLY_RSI_CROSS_LEVEL = 70
+
+# How many calendar days of daily history to fetch per symbol before
+# resampling to monthly candles. A bare 15-16 monthly closes technically
+# satisfies add_rsi's min_periods=14, but that's a barely-warmed-up
+# EWM; 1800 calendar days (~5 years) gives ~60 monthly bars, a
+# comfortable convergence margin (same "over-provision the lookback"
+# approach as BREAKOUT_HISTORY_LOOKBACK_DAYS above).
+MONTHLY_RSI_HISTORY_LOOKBACK_DAYS = 1800

@@ -2144,3 +2144,76 @@ def passes_alert_gate(signal):
         reasons.append(f"Trading Score {trading['label']} ({trading['score']}/10)")
 
     return trading_ok, reasons
+
+
+def _resample_daily_to_monthly(history):
+    """
+    Converts a list of daily {"date","open","high","low","close",
+    "volume"} dicts (oldest -> newest — main.fetch_daily_history's
+    output) into monthly OHLCV bars: one row per calendar month, close
+    = the LAST daily close seen in that month (the standard "monthly
+    candle" convention). If `history` includes today (see
+    fetch_daily_history's include_today), the current calendar
+    month's row is a month-to-date bar, not a fully-closed one — the
+    caller (check_monthly_rsi70_cross) treats it as "this month's RSI
+    so far", same idea as watching a live, still-forming candle.
+    """
+    if not history:
+        return pd.DataFrame()
+    df = pd.DataFrame(history)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.set_index("date").sort_index()
+    monthly = df.resample("MS").agg({
+        "open": "first", "high": "max", "low": "min",
+        "close": "last", "volume": "sum",
+    })
+    return monthly.dropna(subset=["close"])
+
+
+def check_monthly_rsi70_cross(history, symbol):
+    """
+    Monthly-timeframe RSI(config.MONTHLY_RSI_PERIOD) 70-cross screener
+    (added, per request — "ALADA EKTA alert chai kon kon stock 1
+    month time frame e RSI 70 CROSS KORECHE"). `history` is
+    main.fetch_daily_history's output — pass include_today=True so
+    the current calendar month's bar reflects today's close too.
+
+    Resamples to monthly candles (_resample_daily_to_monthly above),
+    computes RSI on monthly closes, and fires when the LATEST monthly
+    RSI (this month, month-to-date) is >= config.MONTHLY_RSI_CROSS_LEVEL
+    while the PREVIOUS fully-closed month's RSI was still below it —
+    i.e. a genuine cross happening this month, not "has already been
+    over 70 for months".
+
+    Returns None if there isn't enough monthly history yet (needs
+    config.MONTHLY_RSI_PERIOD + 2 monthly bars — one extra for the
+    "previous month" comparison, one more so that comparison month
+    itself isn't the very first, all-NaN RSI row), or if there's no
+    cross. Otherwise a signal dict: {"symbol", "close", "month",
+    "rsi_prev", "rsi_curr"} — "month" is "YYYY-MM" for the current
+    (crossing) month, doubling as this alert's dedup key (see
+    main.run_monthly_rsi_scan).
+    """
+    monthly = _resample_daily_to_monthly(history)
+    min_bars = config.MONTHLY_RSI_PERIOD + 2
+    if len(monthly) < min_bars:
+        return None
+
+    monthly = add_rsi(monthly, config.MONTHLY_RSI_PERIOD)
+    if pd.isna(monthly["rsi"].iloc[-1]) or pd.isna(monthly["rsi"].iloc[-2]):
+        return None
+
+    rsi_curr = monthly["rsi"].iloc[-1]
+    rsi_prev = monthly["rsi"].iloc[-2]
+    level = config.MONTHLY_RSI_CROSS_LEVEL
+
+    if rsi_prev >= level or rsi_curr < level:
+        return None
+
+    return {
+        "symbol": symbol,
+        "close": round(float(monthly["close"].iloc[-1]), 2),
+        "month": monthly.index[-1].strftime("%Y-%m"),
+        "rsi_prev": round(float(rsi_prev), 1),
+        "rsi_curr": round(float(rsi_curr), 1),
+    }
