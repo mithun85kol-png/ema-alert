@@ -741,6 +741,12 @@ def send_ema_cross_report(crosses, now_ist, period_label="Fresh Cross"):
     even when the list is empty, so a scheduled run never looks like it
     might have silently failed.
 
+    Each entry now also links to its Chart and Quarterly Results
+    (added, per request — "Etet chart link ar result add kore dao"),
+    using "chart_link"/"screener_link" if the caller set them
+    (main.py's build_todays_ema_cross_list(_evening) does), else
+    falling back to plain symbol text with no link.
+
     period_label (added, per request — "sokale gotokal, bikale aajker
     cross chai") distinguishes the morning run (reports crosses on the
     most recent COMPLETED daily candle — i.e. yesterday's close, since
@@ -768,13 +774,23 @@ def send_ema_cross_report(crosses, now_ist, period_label="Fresh Cross"):
         golden = [c for c in crosses if c["bias"] == "BULLISH"]
         death = [c for c in crosses if c["bias"] == "BEARISH"]
 
+        def _links_suffix(c):
+            parts = []
+            chart_link = c.get("chart_link")
+            screener_link = c.get("screener_link")
+            if chart_link:
+                parts.append(f"<a href=\"{chart_link}\">{_chart_app_label(chart_link)}</a>")
+            if screener_link:
+                parts.append(f"<a href=\"{screener_link}\">Results</a>")
+            return f" · {' · '.join(parts)}" if parts else ""
+
         if golden:
             lines.append("🟢 <b>Golden Cross</b> (EMA50 crossed above EMA200):")
             for c in golden:
                 deliv = f"{c['delivery_pct']:.1f}%" if c["delivery_pct"] is not None else "N/A"
                 lines.append(
                     f"  • <b>{c['symbol']}</b> — EMA50 {c['ema50']} / EMA200 {c['ema200']} "
-                    f"| Delivery: {deliv} | {c['cross_date']}"
+                    f"| Delivery: {deliv} | {c['cross_date']}{_links_suffix(c)}"
                 )
             lines.append("")
 
@@ -784,7 +800,7 @@ def send_ema_cross_report(crosses, now_ist, period_label="Fresh Cross"):
                 deliv = f"{c['delivery_pct']:.1f}%" if c["delivery_pct"] is not None else "N/A"
                 lines.append(
                     f"  • <b>{c['symbol']}</b> — EMA50 {c['ema50']} / EMA200 {c['ema200']} "
-                    f"| Delivery: {deliv} | {c['cross_date']}"
+                    f"| Delivery: {deliv} | {c['cross_date']}{_links_suffix(c)}"
                 )
 
         text = "\n".join(lines).rstrip()

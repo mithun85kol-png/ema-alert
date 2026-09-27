@@ -1393,7 +1393,7 @@ def build_todays_ema_cross_list(watchlist, now_ist):
     standalone "EMA50/200 (Golden/Death Cross) + Delivery%" report
     (SCAN_MODE=ema_cross_report), separate from the regular alert scan.
     Returns a list of {symbol, bias, ema50, ema200, cross_date,
-    delivery_pct}, sorted by symbol, for every watchlist symbol whose
+    delivery_pct, chart_link, screener_link}, sorted by symbol, for every watchlist symbol whose
     EMA50/200 cross happened on the LATEST trading day actually present
     in its own fetched daily history (cross_date == latest_date — see
     _compute_ema50_200_cross) — i.e. a FRESH cross, not one from
@@ -1429,6 +1429,13 @@ def build_todays_ema_cross_list(watchlist, now_ist):
                 "ema200": ema_cross["ema200"],
                 "cross_date": ema_cross["cross_date"],
                 "delivery_pct": delivery_map.get(symbol),
+                # Chart + Quarterly Results links (added, per request —
+                # "Etet chart link ar result add kore dao") — same
+                # build_chart_link (now Groww, falls back to
+                # TradingView) and plain screener.in URL the main
+                # per-symbol alert already uses.
+                "chart_link": build_chart_link(symbol),
+                "screener_link": f"https://www.screener.in/company/{symbol}/consolidated/",
             })
         except Exception as e:
             # Safety net (added 2026-08-29, see chat) — one malformed
@@ -1528,6 +1535,10 @@ def build_todays_ema_cross_list_evening(watchlist, now_ist):
                     "ema200": ema_cross["ema200"],
                     "cross_date": ema_cross["cross_date"],
                     "delivery_pct": delivery_map.get(sym),
+                    # Chart + Quarterly Results links — see the matching
+                    # comment in build_todays_ema_cross_list above.
+                    "chart_link": build_chart_link(sym),
+                    "screener_link": f"https://www.screener.in/company/{sym}/consolidated/",
                 })
             except Exception as e:
                 print(f"Error building evening EMA cross entry for {symbol}: {e}")
