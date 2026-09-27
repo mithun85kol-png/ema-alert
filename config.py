@@ -276,6 +276,27 @@ TRADINGVIEW_SYMBOL_OVERRIDES = {
     "CRUDEOIL": "MCX:CRUDEOIL1!",
 }
 
+# ---------- Groww chart-link symbol overrides (ADDED, per request —
+# "Chart tradingview theke soriye onno app e kora jabe? Ota to chart
+# delay hochhe" -> user picked Groww) ----------
+# main.py's build_chart_link now builds a Groww stock-page link
+# (https://groww.in/stocks/{slug}) instead of TradingView for plain
+# stocks. The slug is normally derived automatically from the
+# company's full legal name via main.py's _slugify_groww_name (e.g.
+# "Reliance Industries Limited" -> "reliance-industries-ltd") — that
+# is a HEURISTIC, not guaranteed, since real company names carry
+# "&", brackets, recent renames (e.g. Zomato -> Eternal), etc. that
+# the simple slugify rule may not match exactly.
+#
+# Add an entry here for any symbol whose auto-generated link turns
+# out wrong (404s) — checked BEFORE the heuristic ever runs, exact
+# same override-first pattern as TRADINGVIEW_SYMBOL_OVERRIDES above.
+# Value is just the slug (the part after "https://groww.in/stocks/"),
+# not the full URL.
+GROWW_SYMBOL_OVERRIDES = {
+    # "ZOMATO": "eternal-ltd",   # example — confirm the real slug before enabling
+}
+
 
 # ---------- F&O stocks ----------
 USE_FULL_FO_LIST = True
@@ -781,18 +802,17 @@ MA_ENVELOPE_COOLDOWN_MINUTES = 1440  # once/day per symbol/direction — this is
 # alert already uses).
 TOP_MOVERS_COUNT = 10   # how many symbols to show on each side (gainers / losers)
 
-# ---------- Monthly RSI 70 Cross scan (ADDED, per request — "ALADA
-# EKTA alert chai kon kon stock 1 month time frame e RSI 70 CROSS
-# KORECHE") ----------
-# Standalone once/day screener, own SCAN_MODE ("monthly_rsi_scan") —
-# reports every stock whose MONTHLY RSI(14) has just crossed above 70
-# this calendar month (previous fully-closed month's RSI was below
-# 70, this month's running RSI is at/above it). Reuses the same
-# Nifty 500 cash universe as run_breakout_scan /
-# run_consolidation_breakout_scan (build_nifty500_watchlist). Dedup
-# key is the calendar month ("YYYY-MM"), not the day, so a stock that
-# stays above 70 for the rest of that month is only reported once —
-# see main.run_monthly_rsi_scan / strategy.check_monthly_rsi70_cross.
+# ---------- Monthly RSI(14) info line on the EXISTING alert (CHANGED,
+# per request — first "ALADA EKTA alert chai kon kon stock 1 month
+# time frame e RSI 70 CROSS KORECHE" [a standalone scan], then "charo
+# amar ager je alert ache tate monthly rsi ta add kore dao" [folded
+# into the existing alert instead]) ----------
+# NOT its own scan/SCAN_MODE anymore — computed on-demand only for a
+# symbol whose main EMA-cross alert is about to fire (same pattern as
+# Bulk/Block deal, PCR, etc. in run_fo_scan/run_nifty500_scan),
+# purely informational, never blocks. See
+# strategy.get_monthly_rsi_info and telegram_notifier.send_alert's
+# monthly_rsi_line.
 MONTHLY_RSI_PERIOD = 14
 MONTHLY_RSI_CROSS_LEVEL = 70
 
@@ -803,3 +823,48 @@ MONTHLY_RSI_CROSS_LEVEL = 70
 # comfortable convergence margin (same "over-provision the lookback"
 # approach as BREAKOUT_HISTORY_LOOKBACK_DAYS above).
 MONTHLY_RSI_HISTORY_LOOKBACK_DAYS = 1800
+
+# ---------- Swing-Trade Entry Confluence Score (ADDED, per request —
+# "ekta perfect swing trade er alert ready kore dao... sob combine
+# kore ekta confluence score") ----------
+# NOT financial advice — a rules-based technical screener; the
+# entry/stop/target it outputs are mechanical results of the rules
+# below, not a recommendation to trade. Own SCAN_MODE
+# ("swing_entry_scan"), meant to run once/day at/after close, same
+# Nifty 500 universe as the other once/day scans. See
+# strategy.compute_swing_confluence_score / check_swing_entry_scan
+# for exactly how the 5 components are scored and combined.
+SWING_EMA_FAST = 20
+SWING_EMA_SLOW = 50
+SWING_EMA_TREND = 200
+SWING_RSI_PERIOD = 14
+SWING_ATR_PERIOD = 14
+SWING_VOL_AVG_PERIOD = 20
+# How many days back (each side) to compare swing lows for the
+# "structure" component — is the recent low higher than the one
+# before it.
+SWING_STRUCTURE_LOOKBACK = 10
+
+# Calendar days of daily history to fetch per symbol. EMA200 needs
+# genuine convergence, not just config.SWING_EMA_TREND (200) bars —
+# 600 calendar days (~1.6 years) gets ~390-400 trading days, a
+# comfortable margin (same over-provisioning idea as
+# MONTHLY_RSI_HISTORY_LOOKBACK_DAYS above).
+SWING_HISTORY_LOOKBACK_DAYS = 600
+# Hard floor before even attempting a score — below this, EMA200
+# itself is still mostly warm-up noise, not a real reading.
+SWING_MIN_BARS = 220
+
+# Confluence score (see compute_swing_confluence_score's label bands:
+# 8-10 STRONG, 6-7.9 GOOD, 4-5.9 MODERATE, <4 WEAK) must be at/above
+# this AND must have just crossed up through it today (not merely
+# "still above it" from an earlier day) to fire.
+SWING_CONFLUENCE_MIN_SCORE = 7.0
+
+# Stop-loss = the recent structure swing low, pulled down by this
+# many ATRs as a buffer (so routine noise around the low doesn't stop
+# the trade out immediately).
+SWING_STOP_ATR_BUFFER = 0.5
+# Target = entry + this multiple of (entry - stop) — i.e. the
+# risk:reward ratio the target enforces. 2.0 = a 1:2 R:R.
+SWING_TARGET_RRR = 2.0

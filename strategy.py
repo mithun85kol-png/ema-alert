@@ -2155,8 +2155,8 @@ def _resample_daily_to_monthly(history):
     candle" convention). If `history` includes today (see
     fetch_daily_history's include_today), the current calendar
     month's row is a month-to-date bar, not a fully-closed one — the
-    caller (check_monthly_rsi70_cross) treats it as "this month's RSI
-    so far", same idea as watching a live, still-forming candle.
+    caller (get_monthly_rsi_info) treats it as "this month's RSI so
+    far", same idea as watching a live, still-forming candle.
     """
     if not history:
         return pd.DataFrame()
@@ -2170,29 +2170,30 @@ def _resample_daily_to_monthly(history):
     return monthly.dropna(subset=["close"])
 
 
-def check_monthly_rsi70_cross(history, symbol):
+def get_monthly_rsi_info(history):
     """
-    Monthly-timeframe RSI(config.MONTHLY_RSI_PERIOD) 70-cross screener
-    (added, per request — "ALADA EKTA alert chai kon kon stock 1
-    month time frame e RSI 70 CROSS KORECHE"). `history` is
-    main.fetch_daily_history's output — pass include_today=True so
-    the current calendar month's bar reflects today's close too.
+    Monthly RSI(config.MONTHLY_RSI_PERIOD) INFORMATIONAL snapshot
+    (CHANGED, per request — "amar ager je alert ache tate monthly rsi
+    ta add kore dao": folded into the EXISTING alert as one more info
+    line, same as Near-High/Smart Money/EMA50-200-cross/etc., instead
+    of being its own separate scan/summary message).
 
-    Resamples to monthly candles (_resample_daily_to_monthly above),
-    computes RSI on monthly closes, and fires when the LATEST monthly
-    RSI (this month, month-to-date) is >= config.MONTHLY_RSI_CROSS_LEVEL
-    while the PREVIOUS fully-closed month's RSI was still below it —
-    i.e. a genuine cross happening this month, not "has already been
-    over 70 for months".
+    `history` is main.fetch_daily_history's output — pass
+    include_today=True so the current calendar month's bar reflects
+    today's close too. Resamples to monthly candles
+    (_resample_daily_to_monthly above) and computes RSI on monthly
+    closes.
 
     Returns None if there isn't enough monthly history yet (needs
     config.MONTHLY_RSI_PERIOD + 2 monthly bars — one extra for the
     "previous month" comparison, one more so that comparison month
-    itself isn't the very first, all-NaN RSI row), or if there's no
-    cross. Otherwise a signal dict: {"symbol", "close", "month",
-    "rsi_prev", "rsi_curr"} — "month" is "YYYY-MM" for the current
-    (crossing) month, doubling as this alert's dedup key (see
-    main.run_monthly_rsi_scan).
+    itself isn't the very first, all-NaN RSI row). Otherwise:
+      {"rsi": float, "prev_rsi": float, "month": "YYYY-MM",
+       "above_70": bool, "fresh_cross": bool}
+    "fresh_cross" is True only when THIS reading is a brand-new cross
+    above config.MONTHLY_RSI_CROSS_LEVEL this calendar month (the
+    previous fully-closed month's RSI was still below it) — not
+    merely "has been over 70 for a while already".
     """
     monthly = _resample_daily_to_monthly(history)
     min_bars = config.MONTHLY_RSI_PERIOD + 2
@@ -2203,17 +2204,247 @@ def check_monthly_rsi70_cross(history, symbol):
     if pd.isna(monthly["rsi"].iloc[-1]) or pd.isna(monthly["rsi"].iloc[-2]):
         return None
 
-    rsi_curr = monthly["rsi"].iloc[-1]
-    rsi_prev = monthly["rsi"].iloc[-2]
+    rsi_curr = round(float(monthly["rsi"].iloc[-1]), 1)
+    rsi_prev = round(float(monthly["rsi"].iloc[-2]), 1)
     level = config.MONTHLY_RSI_CROSS_LEVEL
 
-    if rsi_prev >= level or rsi_curr < level:
+    return {
+        "rsi": rsi_curr,
+        "prev_rsi": rsi_prev,
+        "month": monthly.index[-1].strftime("%Y-%m"),
+        "above_70": rsi_curr >= level,
+        "fresh_cross": rsi_prev < level <= rsi_curr,
+    }
+
+
+def compute_swing_confluence_score(df, row_idx=-1):
+    """
+    Reads ONE row (default: the latest) off an already
+    indicator-decorated daily dataframe and turns it into a
+    swing-entry confluence score (added, per request — "ekta perfect
+    swing trade er alert... sob combine kore ekta confluence score").
+    NOT financial advice — a mechanical, rules-based score.
+
+    `df` must already have columns: close, high, low, volume, ema20,
+    ema50, ema200, rsi, atr, vol_avg, swing_low_recent,
+    swing_low_prior (see check_swing_entry_scan, which builds all of
+    these once on the full history). All of them are CAUSAL —
+    ewm()/rolling() only look backward — so reading row_idx=-2 here
+    gives exactly what "yesterday's score" would have been; no need
+    to recompute on a truncated frame.
+
+    Five components, each normalized to /10, averaged with equal
+    weight (same pattern as compute_trading_score elsewhere in this
+    file):
+
+      1. Trend alignment  — EMA20 > EMA50 > EMA200 AND close > EMA20.
+         This one ALSO comes back as the separate "trend_ok" boolean
+         below, because check_swing_entry_scan treats it as a hard,
+         non-negotiable gate: no amount of momentum/volume/structure
+         should make up for the higher-timeframe trend not being up.
+      2. Momentum health  — RSI(14) 45-65 is "room to run"; the score
+         falls off on both sides (overbought above ~65-75, weakening
+         below ~45-35) — chasing an RSI already near 70+ is a
+         classically bad fresh-entry moment, not a good one.
+      3. Pullback quality — close's distance above EMA20, in ATRs.
+         0-1 ATR above EMA20 is a shallow, buyable pullback; 1-3 ATRs
+         is increasingly a chase; below EMA20 means the short-term
+         trend may already be cracking.
+      4. Volume confirmation — today's volume vs its 20-day average.
+         A genuine entry/bounce day should show above-average
+         participation, not a listless drift on thin volume.
+      5. Structure — the most recent SWING_STRUCTURE_LOOKBACK-day
+         swing low vs the one before it. Catches a stock that's
+         technically "above its EMAs" but whose actual price
+         structure underneath is already breaking down (lower lows).
+
+    Returns None if any required value at row_idx is still NaN (not
+    enough history for that indicator yet), or if atr/vol_avg is 0
+    (division guard). Otherwise:
+      {"score": float 0-10, "label": str, "trend_ok": bool,
+       "components": {"trend","momentum","pullback","volume",
+       "structure"}, "close", "atr", "swing_low_recent"}
+    label bands: 8-10 STRONG, 6-7.9 GOOD, 4-5.9 MODERATE, <4 WEAK.
+    """
+    row = df.iloc[row_idx]
+    needed = ["close", "ema20", "ema50", "ema200", "rsi", "atr",
+              "vol_avg", "swing_low_recent", "swing_low_prior"]
+    if any(pd.isna(row[c]) for c in needed):
         return None
+    if row["atr"] <= 0 or row["vol_avg"] <= 0 or row["swing_low_prior"] <= 0:
+        return None
+
+    close, ema20, ema50, ema200 = row["close"], row["ema20"], row["ema50"], row["ema200"]
+    rsi, atr, volume, vol_avg = row["rsi"], row["atr"], row["volume"], row["vol_avg"]
+    swing_low_recent, swing_low_prior = row["swing_low_recent"], row["swing_low_prior"]
+
+    # 1. Trend alignment — the one non-negotiable filter.
+    trend_ok = (ema20 > ema50 > ema200) and (close > ema20)
+    if ema20 > ema50 > ema200:
+        score_trend = 10.0
+    elif close > ema200 and ema20 > ema50:
+        score_trend = 6.0
+    elif close > ema200:
+        score_trend = 3.0
+    else:
+        score_trend = 0.0
+
+    # 2. Momentum health.
+    if 45 <= rsi <= 65:
+        score_momentum = 10.0
+    elif 65 < rsi <= 75:
+        score_momentum = max(0.0, 10 - (rsi - 65) * 0.8)
+    elif rsi > 75:
+        score_momentum = max(0.0, 2 - (rsi - 75) * 0.4)
+    elif 35 <= rsi < 45:
+        score_momentum = max(0.0, 10 - (45 - rsi) * 0.5)
+    else:
+        score_momentum = max(0.0, 5 - (35 - rsi) * 0.5)
+
+    # 3. Pullback quality (distance above EMA20, in ATRs).
+    dist_atr = (close - ema20) / atr
+    if dist_atr < 0:
+        score_pullback = max(0.0, 10 + dist_atr * 10)
+    elif dist_atr <= 1:
+        score_pullback = 10.0
+    elif dist_atr <= 3:
+        score_pullback = max(0.0, 10 - (dist_atr - 1) * 4)
+    else:
+        score_pullback = max(0.0, 2 - (dist_atr - 3) * 2)
+
+    # 4. Volume confirmation (today's volume vs its 20-day average).
+    vol_ratio = volume / vol_avg
+    if vol_ratio >= 1.5:
+        score_volume = 10.0
+    elif vol_ratio >= 1.0:
+        score_volume = 6 + (vol_ratio - 1.0) * 8
+    elif vol_ratio >= 0.7:
+        score_volume = 3 + (vol_ratio - 0.7) * 10
+    else:
+        score_volume = max(0.0, vol_ratio / 0.7 * 3)
+
+    # 5. Structure (higher low vs the swing low before it).
+    diff_pct = (swing_low_recent - swing_low_prior) / swing_low_prior * 100
+    if diff_pct >= 0:
+        score_structure = 10.0
+    elif diff_pct >= -2:
+        score_structure = 6.0
+    elif diff_pct >= -5:
+        score_structure = 3.0
+    else:
+        score_structure = 0.0
+
+    components = {
+        "trend": round(score_trend, 1),
+        "momentum": round(score_momentum, 1),
+        "pullback": round(score_pullback, 1),
+        "volume": round(score_volume, 1),
+        "structure": round(score_structure, 1),
+    }
+    score = round(sum(components.values()) / len(components), 1)
+
+    if score >= 8:
+        label = "STRONG"
+    elif score >= 6:
+        label = "GOOD"
+    elif score >= 4:
+        label = "MODERATE"
+    else:
+        label = "WEAK"
+
+    return {
+        "score": score, "label": label, "trend_ok": trend_ok,
+        "components": components, "close": round(float(close), 2),
+        "atr": round(float(atr), 2),
+        "swing_low_recent": round(float(swing_low_recent), 2),
+    }
+
+
+def check_swing_entry_scan(history, symbol):
+    """
+    Swing-trade ENTRY screener (added, per request — "ekta perfect
+    swing trade er alert ready kore dao dekhi... sob combine kore
+    ekta confluence score"). NOT financial advice — a mechanical,
+    rules-based technical screener; entry/stop/target below are just
+    the arithmetic outputs of the rules, not a recommendation.
+
+    `history` is main.fetch_daily_history's output (oldest -> newest
+    daily candles; pass include_today=True so today counts). Builds
+    ONE indicator-decorated dataframe (EMA20/50/200, RSI14, ATR14,
+    20-day volume average, and the two swing-low columns
+    compute_swing_confluence_score needs), then scores TODAY and
+    YESTERDAY with that function.
+
+    Fires only on a fresh cross INTO the qualifying zone THIS session
+    — yesterday's score was below config.SWING_CONFLUENCE_MIN_SCORE,
+    today's is at/above it (same "fresh cross, not still-qualifying"
+    idea as get_monthly_rsi_info's "fresh_cross" flag, so a stock
+    that stays strong for a week doesn't re-fire every single day) —
+    AND hard-requires
+    today's trend_ok == True (see compute_swing_confluence_score): a
+    stock cannot qualify on momentum/volume/structure alone if the
+    higher-timeframe EMA trend itself isn't up.
+
+    Entry/stop/target are mechanical:
+      entry  = today's close
+      stop   = today's SWING_STRUCTURE_LOOKBACK-day low, minus
+               config.SWING_STOP_ATR_BUFFER × ATR
+      target = entry + config.SWING_TARGET_RRR × (entry - stop)
+
+    Returns None if there isn't config.SWING_MIN_BARS worth of daily
+    history yet, if today doesn't qualify, or if it already qualified
+    yesterday (not a fresh cross), or if the mechanical stop ends up
+    at/above entry (guard against a degenerate risk calc). Otherwise:
+      {"symbol", "date", "close", "score", "label", "components",
+       "entry", "stop", "target", "risk_per_share", "rr_ratio"}
+    """
+    if len(history) < config.SWING_MIN_BARS:
+        return None
+
+    df = pd.DataFrame(history)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date").reset_index(drop=True)
+
+    df = add_ema(df, config.SWING_EMA_FAST, "ema20")
+    df = add_ema(df, config.SWING_EMA_SLOW, "ema50")
+    df = add_ema(df, config.SWING_EMA_TREND, "ema200")
+    df = add_rsi(df, config.SWING_RSI_PERIOD)
+    df = add_atr(df, config.SWING_ATR_PERIOD)
+    df = add_volume_avg(df, config.SWING_VOL_AVG_PERIOD)
+    df["swing_low_recent"] = df["low"].rolling(config.SWING_STRUCTURE_LOOKBACK).min()
+    df["swing_low_prior"] = df["swing_low_recent"].shift(config.SWING_STRUCTURE_LOOKBACK)
+
+    today = compute_swing_confluence_score(df, -1)
+    yesterday = compute_swing_confluence_score(df, -2)
+    if today is None or yesterday is None:
+        return None
+    if not today["trend_ok"]:
+        return None
+
+    level = config.SWING_CONFLUENCE_MIN_SCORE
+    if yesterday["score"] >= level or today["score"] < level:
+        return None
+
+    close = today["close"]
+    atr = today["atr"]
+    swing_low = today["swing_low_recent"]
+
+    stop = round(swing_low - config.SWING_STOP_ATR_BUFFER * atr, 2)
+    risk = round(close - stop, 2)
+    if risk <= 0:
+        return None
+    target = round(close + config.SWING_TARGET_RRR * risk, 2)
 
     return {
         "symbol": symbol,
-        "close": round(float(monthly["close"].iloc[-1]), 2),
-        "month": monthly.index[-1].strftime("%Y-%m"),
-        "rsi_prev": round(float(rsi_prev), 1),
-        "rsi_curr": round(float(rsi_curr), 1),
+        "date": df["date"].iloc[-1].strftime("%Y-%m-%d"),
+        "close": close,
+        "score": today["score"],
+        "label": today["label"],
+        "components": today["components"],
+        "entry": close,
+        "stop": stop,
+        "target": target,
+        "risk_per_share": risk,
+        "rr_ratio": config.SWING_TARGET_RRR,
     }

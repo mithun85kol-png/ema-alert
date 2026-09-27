@@ -2,6 +2,20 @@ import requests
 import config
 
 
+def _chart_app_label(url):
+    """
+    Which app a chart_link actually points at, for the "Open Chart
+    (X)" label text (added, per request — "Chart tradingview theke
+    soriye onno app e kora jabe" -> user picked Groww). main.py's
+    build_chart_link now returns a Groww link for most stocks, but
+    falls back to a TradingView link for indices/MCX commodities and
+    for any stock whose company name it couldn't resolve — so the
+    label has to match whichever link actually ended up in the
+    message, not stay hardcoded to one app.
+    """
+    return "Groww" if url and "groww.in" in url else "TradingView"
+
+
 def send_alert(signal):
     if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
         print("Telegram not configured, skipping send:", signal)
@@ -328,6 +342,27 @@ def send_alert(signal):
     else:
         ema_cross_line = ""
 
+    # Monthly RSI(14) (CHANGED, per request — "amar ager je alert
+    # ache tate monthly rsi ta add kore dao": folded into this alert
+    # rather than kept as a separate scan/summary) — see
+    # strategy.get_monthly_rsi_info. Omitted entirely if there wasn't
+    # enough monthly history yet. Flags a FRESH cross above
+    # config.MONTHLY_RSI_CROSS_LEVEL this month with 🔥, otherwise
+    # just shows the current reading (still useful context even when
+    # it's not a fresh cross — e.g. already above 70, or well below).
+    monthly_rsi = signal.get("monthly_rsi")
+    if monthly_rsi:
+        if monthly_rsi["fresh_cross"]:
+            monthly_rsi_line = (
+                f"🔥 Monthly RSI: {monthly_rsi['prev_rsi']} → {monthly_rsi['rsi']} "
+                f"(just crossed {config.MONTHLY_RSI_CROSS_LEVEL}, {monthly_rsi['month']})\n"
+            )
+        else:
+            above_note = " (above 70)" if monthly_rsi["above_70"] else ""
+            monthly_rsi_line = f"Monthly RSI: {monthly_rsi['rsi']}{above_note}\n"
+    else:
+        monthly_rsi_line = ""
+
     # "Smart Money Entry" 🐋 (added) — informational only, see
     # strategy.compute_smart_money_signal / config.SMART_MONEY_*.
     # SHORTENED (per request, 2026-08-25 — "smart money te oto detail
@@ -371,7 +406,7 @@ def send_alert(signal):
     # build_chart_link() for every signal (indices, stocks,
     # commodities alike). Omitted if an older caller didn't set it.
     chart_link = signal.get("chart_link")
-    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart ({_chart_app_label(chart_link)})</a>\n" if chart_link else ""
 
     # Screener.in link (added, per request, 2026-09-10) — company
     # fundamentals (quarterly results, ratios, etc), one tap away.
@@ -558,6 +593,7 @@ def send_alert(signal):
         f"{multi_month_high_line}"
         f"{near_high_line}"
         f"{ema_cross_line}"
+        f"{monthly_rsi_line}"
         f"{trend3_block}"
         f"{bulk_block_block}"
         f"{sector_line}"
@@ -830,7 +866,7 @@ def send_breakout_alert(signal):
 
     symbol = signal["symbol"]
     chart_link = signal.get("chart_link")
-    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart ({_chart_app_label(chart_link)})</a>\n" if chart_link else ""
 
     text = (
         f"🚀 <b>{symbol}</b> — Breakout Scan match\n"
@@ -879,7 +915,7 @@ def send_consolidation_breakout_alert(signal):
     break_label = "above" if direction == "BULLISH" else "below"
 
     chart_link = signal.get("chart_link")
-    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart ({_chart_app_label(chart_link)})</a>\n" if chart_link else ""
 
     text = (
         f"{arrow} <b>{symbol}</b> — Consolidation Breakout ({direction})\n"
@@ -976,22 +1012,23 @@ def send_consolidation_breakout_summary(signals, now_ist):
         print("Telegram send failed (consolidation breakout summary):", e)
 
 
-def send_monthly_rsi70_summary(signals, now_ist):
+def send_swing_entry_summary(signals, now_ist):
     """
-    Monthly RSI(14) 70-Cross — SUMMARY (added, per request — "ALADA
-    EKTA alert chai kon kon stock 1 month time frame e RSI 70 CROSS
-    KORECHE"). Batches every stock whose monthly RSI crossed above 70
-    this run into ONE message, numbered, same batched-summary shape as
-    send_consolidation_breakout_summary above (one message, not
-    one-per-stock).
+    Swing-Trade Entry Confluence Score — SUMMARY (added, per request —
+    "ekta perfect swing trade er alert ready kore dao... sob combine
+    kore ekta confluence score"). NOT financial advice — this message
+    reports a mechanical, rules-based technical screener; entry/stop/
+    target are arithmetic outputs of strategy.check_swing_entry_scan's
+    rules, not a recommendation to actually place the trade. Batches
+    every stock that qualified this run into ONE message, same
+    batched-summary shape as send_consolidation_breakout_summary
+    above.
 
-    `signals` is whatever main.run_monthly_rsi_scan collected this
-    run — dicts shaped like strategy.check_monthly_rsi70_cross's
-    return value, each with "chart_link" added by the caller.
+    `signals` is whatever main.run_swing_entry_scan collected this
+    run — dicts shaped like strategy.check_swing_entry_scan's return
+    value, each with "chart_link" added by the caller.
 
-    Sends nothing if `signals` is empty — a run with zero fresh
-    crosses is the normal case for a monthly-timeframe signal, so a
-    message every single day would be pure noise.
+    Sends nothing if `signals` is empty.
     """
     if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
         print("Telegram not configured, skipping send:", signals)
@@ -1000,19 +1037,23 @@ def send_monthly_rsi70_summary(signals, now_ist):
         return
 
     date_str = now_ist.strftime("%Y-%m-%d")
-    month_label = signals[0]["month"]
 
     lines = [
-        f"📈 <b>Monthly RSI 70 Cross</b> — {month_label} (as of {date_str})",
-        f"{len(signals)} stock(s) crossed above RSI 70 on the monthly chart:\n",
+        f"🎯 <b>Swing Entry — Confluence Score</b> (as of {date_str})",
+        f"{len(signals)} stock(s) crossed into a qualifying setup today:",
+        "<i>Not financial advice — a rules-based screener, not a recommendation.</i>\n",
     ]
 
     for i, s in enumerate(signals, start=1):
         chart_link = s.get("chart_link")
         symbol_part = f"<a href=\"{chart_link}\">{s['symbol']}</a>" if chart_link else s["symbol"]
+        c = s["components"]
         lines.append(
-            f"{i}. <b>{symbol_part}</b> — Close {s['close']}, "
-            f"RSI {s['rsi_prev']} → {s['rsi_curr']}"
+            f"{i}. <b>{symbol_part}</b> — Score {s['score']}/10 ({s['label']})\n"
+            f"   Entry {s['entry']} | Stop {s['stop']} | Target {s['target']} "
+            f"(R:R 1:{s['rr_ratio']:g}, risk ₹{s['risk_per_share']}/share)\n"
+            f"   Trend {c['trend']} · Momentum {c['momentum']} · Pullback {c['pullback']} "
+            f"· Volume {c['volume']} · Structure {c['structure']}"
         )
 
     text = "\n".join(lines).rstrip()
@@ -1027,7 +1068,7 @@ def send_monthly_rsi70_summary(signals, now_ist):
         }, timeout=15)
         r.raise_for_status()
     except Exception as e:
-        print("Telegram send failed (monthly RSI 70 cross summary):", e)
+        print("Telegram send failed (swing entry summary):", e)
 
 
 def send_trendline_alert(signal):
@@ -1057,7 +1098,7 @@ def send_trendline_alert(signal):
     date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
 
     chart_link = signal.get("chart_link")
-    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart ({_chart_app_label(chart_link)})</a>\n" if chart_link else ""
 
     p1, p2 = signal["point1"], signal["point2"]
     p1_time = str(p1["time"]).split(" ")[0] + " " + str(p1["time"]).split(" ")[1][:5]
@@ -1110,7 +1151,7 @@ def send_liquidity_sweep_alert(signal):
     date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
 
     chart_link = signal.get("chart_link")
-    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart ({_chart_app_label(chart_link)})</a>\n" if chart_link else ""
 
     levels_line = "\n".join(f"• {lvl}" for lvl in signal["levels_swept"])
 
@@ -1157,7 +1198,7 @@ def send_ma_envelope_alert(signal):
     date_part, time_part = str(candle_time).split(" ")[0], str(candle_time).split(" ")[1][:5]
 
     chart_link = signal.get("chart_link")
-    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart (TradingView)</a>\n" if chart_link else ""
+    chart_line = f"📈 <a href=\"{chart_link}\">Open Chart ({_chart_app_label(chart_link)})</a>\n" if chart_link else ""
 
     text = (
         f"{arrow} <b>{signal['symbol']}</b> — MA Envelope {side_label} touched ({direction})\n"
@@ -1241,12 +1282,19 @@ def send_daily_score_report(hits, now_ist):
 
 def _bulk_deal_chart_link(symbol):
     """
-    TradingView deep link for a bulk/block-deal symbol — same
-    resolution rule as main.py's build_chart_link (checks
-    config.TRADINGVIEW_SYMBOL_OVERRIDES first, else "NSE:{symbol}").
-    Kept as a small local copy here (instead of importing from main.py)
-    to avoid a circular import — telegram_notifier is imported BY
+    TradingView deep link for a bulk/block-deal symbol. Kept as a
+    small local copy here (instead of importing from main.py) to
+    avoid a circular import — telegram_notifier is imported BY
     main.py, so main.py can't be imported back here.
+
+    DELIBERATELY NOT switched to Groww along with main.py's
+    build_chart_link (per request — "Chart tradingview theke soriye
+    onno app e kora jabe" -> Groww): Groww's link needs the symbol's
+    full company name (see main.py's _lookup_company_name/
+    _slugify_groww_name), which needs instruments.py's instrument
+    master — exactly the circular-import problem this function exists
+    to avoid. This report's chart links stay on TradingView unless
+    that's worth resolving properly later.
     """
     tv_symbol = config.TRADINGVIEW_SYMBOL_OVERRIDES.get(symbol, f"NSE:{symbol}")
     return f"https://www.tradingview.com/chart/?symbol={tv_symbol}&interval=15"

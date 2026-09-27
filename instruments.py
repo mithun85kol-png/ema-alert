@@ -314,3 +314,31 @@ def get_fno_underlyings():
     """
     master = _load_master()
     return _fno_underlyings_from_master(master)
+
+
+def resolve_stock_names(watchlist):
+    """
+    Returns {trading_symbol: company_name} for every symbol in
+    `watchlist` found in Upstox's NSE_EQ instrument master (added, per
+    request — "Chart tradingview theke soriye onno app e kora
+    jabe?" -> user picked Groww). Same master/loop as
+    resolve_fo_stock_list, just pulling row["name"] (the full legal
+    company name Upstox carries per instrument) instead of the
+    instrument_key.
+
+    main.py's build_chart_link needs this because Groww's stock-page
+    URL is built from a slugified version of the full company name
+    (e.g. "Reliance Industries Limited" -> "reliance-industries-ltd"),
+    not the bare NSE trading symbol the way TradingView's link was.
+    A symbol not found in the master is simply omitted (never an
+    error) — the caller falls back to a TradingView link for it.
+    """
+    master = _load_master()
+    underlyings = {s.upper() for s in watchlist}
+    out = {}
+    for row in master:
+        if row.get("segment") == "NSE_EQ" and row.get("trading_symbol", "").upper() in underlyings:
+            name = row.get("name")
+            if name:
+                out[row["trading_symbol"].upper()] = name
+    return out
