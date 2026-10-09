@@ -139,7 +139,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
@@ -242,6 +242,30 @@ def _slugify_groww_name(name):
     return s
 
 
+_groww_ok_cache = {}
+_groww_net_errors = 0
+
+
+def _groww_url_ok(url):
+    """True unless Groww confirms the page is missing (HTTP 404 or its
+    "Page Not Found" body). Cached per run; after 2 network errors the
+    check is skipped for the rest of the run so alerts never get slow."""
+    global _groww_net_errors
+    if url in _groww_ok_cache:
+        return _groww_ok_cache[url]
+    if _groww_net_errors >= 2:
+        return True
+    ok = True
+    try:
+        r = requests.get(url, timeout=4, headers={"User-Agent": "Mozilla/5.0"})
+        if r.status_code == 404 or "Page Not Found" in r.text[:200000]:
+            ok = False
+    except Exception:
+        _groww_net_errors += 1
+    _groww_ok_cache[url] = ok
+    return ok
+
+
 def build_chart_link(symbol, timeframe_label=None):
     """
     Chart deep link for `symbol` — tapping it in the Telegram alert
@@ -277,7 +301,23 @@ def build_chart_link(symbol, timeframe_label=None):
 
     name = _lookup_company_name(symbol)
     if name:
-        return f"https://groww.in/stocks/{_slugify_groww_name(name)}"
+        # FIX (per "Uh Oh! 404 Page Not Found" screenshots): the slug is
+        # only a heuristic. "&" in a name (M&M, L&T, ...) is the usual
+        # culprit -- other sites turn it into "and", Groww-style slugs
+        # typically just drop it ("mahindra-mahindra-ltd"). So try the
+        # "&"-dropped slug first, then the "and" slug, verifying each
+        # once per run; fall through to TradingView if neither exists.
+        # Network errors keep the first candidate (never block alerts).
+        base = _slugify_groww_name(name)
+        dropped = re.sub(r"[^a-z0-9]+", "-",
+                         re.sub(r"\blimited\b", "ltd",
+                                re.sub(r"[.,]", "", name.lower().replace("&", " ")))).strip("-")
+        candidates = [dropped] if dropped == base else [dropped, base]
+        for slug in candidates:
+            groww_url = f"https://groww.in/stocks/{slug}"
+            if _groww_url_ok(groww_url):
+                return groww_url
+        print(f"[chart-link] Groww 404 for {symbol} ({candidates}) -> TradingView fallback; add to config.GROWW_SYMBOL_OVERRIDES")
 
     tv_symbol = config.TRADINGVIEW_SYMBOL_OVERRIDES.get(symbol, f"NSE:{symbol}")
     return f"https://www.tradingview.com/chart/?symbol={tv_symbol}&interval=15"
@@ -3402,6 +3442,142 @@ def run_swing_entry_scan(now_ist):
     return len(hits), failed_symbols, len(watchlist)
 
 
+def _tv_daily_link(symbol):
+    """TradingView DAILY chart link (interval=D) — used by the daily
+    EMA50 scan alert alongside the Groww link, so a Groww outage never
+    leaves the alert without a working chart."""
+    tv_symbol = config.TRADINGVIEW_SYMBOL_OVERRIDES.get(symbol, f"NSE:{symbol}")
+    return f"https://www.tradingview.com/chart/?symbol={tv_symbol}&interval=D"
+
+
+def _send_telegram_chunks(lines, header, max_chars=3800):
+    """Sends `lines` as one or more Telegram messages (each under
+    Telegram's 4096-char cap), repeating `header` on each part."""
+    parts, cur = [], header
+    for ln in lines:
+        if len(cur) + len(ln) + 2 > max_chars and cur != header:
+            parts.append(cur)
+            cur = header
+        cur += "\n\n" + ln
+    parts.append(cur)
+    for part in parts:
+        send_telegram_text(part)
+
+
+def send_daily_ema50_summary(hits, now_ist):
+    hits = sorted(hits, key=lambda h: -(h.get("volume_vs_20d_avg") or 0))
+    header = f"\U0001F4C8 DAILY 50-EMA CROSS + MACD CROSS + RSI>{config.DAILY_EMA50_RSI_MIN}  ({now_ist.strftime('%d %b %Y')})\n{len(hits)} stock(s)"
+    lines = []
+    for h in hits:
+        chg = f"{h['day_change_pct']:+.2f}%" if h.get("day_change_pct") is not None else "-"
+        vol = f"{h['volume_vs_20d_avg']:.1f}x" if h.get("volume_vs_20d_avg") is not None else "-"
+        when = "today" if h["macd_cross_days_ago"] == 0 else f"{h['macd_cross_days_ago']}d ago"
+        lines.append(
+            f"\U0001F7E2 {h['symbol']}  Close {h['close']} ({chg})\n"
+            f"EMA50 {h['ema50']} | RSI {h['rsi']} | MACD cross: {when}\n"
+            f"Volume vs 20d avg: {vol}\n"
+            f"TradingView (1D): {h['tv_link']}\n"
+            f"Groww: {h['chart_link']}"
+        )
+    _send_telegram_chunks(lines, header)
+
+
+def run_daily_ema50_scan(now_ist):
+    """
+    Daily 50-EMA cross + MACD cross + RSI>50 scan (added, per request
+    2026-10-09). Own SCAN_MODE ("daily_ema50_scan"), meant to run ONCE a
+    day after the close (~16:00-16:30 IST) so today's daily candle is
+    final. See strategy.check_daily_ema50_macd_scan for the exact rules
+    and the DAILY_EMA50_* block in config.py for every knob.
+
+    Universe: F&O stocks + Nifty 500 (union), deliberately WITHOUT the
+    session-time gate build_nifty500_watchlist has (that one returns {}
+    after 15:30, which is exactly when this scan should run).
+
+    Safety: if too many symbols have no candle dated TODAY yet (ran too
+    early, holiday, Upstox lag), it sends a "not ready" notice and
+    exits without marking anything alerted, instead of scanning stale
+    data. Dedup key is (symbol::DAILY_EMA50, BULLISH, today's date).
+    """
+    today_str = now_ist.date().isoformat()
+    watchlist = {}
+    watchlist.update(instruments.resolve_fo_stock_list(None))
+    watchlist.update(instruments.resolve_nifty500_stocks())
+    if not watchlist:
+        print("Daily EMA50 scan: empty watchlist — skipping.")
+        send_telegram_text("Daily EMA50 scan: stock list unavailable, scan skipped.")
+        return 0, [], 0
+
+    print(f"Daily EMA50 scan: scanning {len(watchlist)} stocks...", flush=True)
+
+    def _fetch_one(symbol, instrument_key):
+        return symbol, fetch_daily_history(
+            instrument_key,
+            days_back=config.DAILY_EMA50_HISTORY_LOOKBACK_DAYS,
+            include_today=True,
+        )
+
+    histories, failed_symbols = {}, []
+    with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
+        futures = {pool.submit(_fetch_one, sym, key): sym for sym, key in watchlist.items()}
+        for fut in as_completed(futures):
+            sym = futures[fut]
+            try:
+                _, hist = fut.result()
+                if hist:
+                    histories[sym] = hist
+                else:
+                    failed_symbols.append(sym)
+            except Exception as e:
+                print(f"Fetch failed for {sym} (Daily EMA50 scan): {e}")
+                failed_symbols.append(sym)
+
+    # stale-data guard: last candle must be dated today
+    fresh = {s: h for s, h in histories.items() if str(h[-1]["date"])[:10] == today_str}
+    if not histories or (len(histories) - len(fresh)) / len(histories) > config.DAILY_EMA50_STALE_ABORT_FRACTION:
+        msg = (f"Daily EMA50 scan: today's ({today_str}) daily candle isn't available yet for "
+               f"{len(histories) - len(fresh)}/{len(histories)} stocks (market holiday, or ran too early). "
+               f"Nothing scanned — run again a bit later.")
+        print(msg, flush=True)
+        send_telegram_text(msg)
+        return 0, failed_symbols, len(watchlist)
+
+    saved_state = state.load_state()
+    hits = []
+    already_sent = 0
+    for symbol, history in fresh.items():
+        try:
+            signal = check_daily_ema50_macd_scan(history, symbol)
+            if signal is None:
+                continue
+            state_symbol = f"{symbol}::DAILY_EMA50"
+            if state.already_alerted(saved_state, state_symbol, "BULLISH", today_str):
+                already_sent += 1
+                continue
+            signal["chart_link"] = build_chart_link(symbol)
+            signal["tv_link"] = _tv_daily_link(symbol)
+            state.mark_alerted(saved_state, state_symbol, "BULLISH", today_str)
+            hits.append(signal)
+        except Exception as e:
+            print(f"Error on {symbol} (Daily EMA50 scan): {e}")
+            failed_symbols.append(symbol)
+
+    if hits:
+        send_daily_ema50_summary(hits, now_ist)
+    elif config.DAILY_EMA50_SEND_EMPTY_NOTICE:
+        extra = f" ({already_sent} qualifying stock(s) were already alerted earlier today.)" if already_sent else ""
+        send_telegram_text(
+            f"Daily 50-EMA + MACD + RSI scan ({now_ist.strftime('%d %b %Y')}): no NEW stock qualified. "
+            f"{len(fresh)} stocks scanned.{extra}"
+        )
+
+    state.save_state(saved_state)
+    if failed_symbols:
+        print(f"{len(failed_symbols)} Daily-EMA50-scan instrument(s) failed: {failed_symbols}")
+    print(f"Daily EMA50 scan done. {len(hits)} stock(s) reported.", flush=True)
+    return len(hits), failed_symbols, len(watchlist)
+
+
 def run():
     # TEMP DEBUG — remove once we confirm why "Run scan" finished in ~1s
     # with zero stdout beyond the auto-generated env dump: this print
@@ -3541,6 +3717,21 @@ def run():
         except Exception as e:
             print(f"run_swing_entry_scan failed: {e}", flush=True)
             send_mode_failure_notice("swing_entry_scan", e, now_ist)
+        return
+
+    # SCAN_MODE=daily_ema50_scan -> Daily 50-EMA cross + MACD cross +
+    # RSI>50 scan (added, per request 2026-10-09). Own cron trigger,
+    # once/day after the close (~16:00-16:30 IST). See
+    # run_daily_ema50_scan.
+    if mode == "daily_ema50_scan":
+        if config.DAILY_EMA50_SCAN_ENABLED:
+            try:
+                run_daily_ema50_scan(now_ist)
+            except Exception as e:
+                print(f"run_daily_ema50_scan failed: {e}", flush=True)
+                send_mode_failure_notice("daily_ema50_scan", e, now_ist)
+        else:
+            print("Daily EMA50 scan disabled (config.DAILY_EMA50_SCAN_ENABLED=False) — skipping.", flush=True)
         return
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):

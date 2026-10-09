@@ -868,3 +868,37 @@ SWING_STOP_ATR_BUFFER = 0.5
 # Target = entry + this multiple of (entry - stop) — i.e. the
 # risk:reward ratio the target enforces. 2.0 = a 1:2 R:R.
 SWING_TARGET_RRR = 2.0
+
+
+# ---------- Daily 50-EMA cross + MACD cross + RSI scan (added, per
+# request 2026-10-09 — "daily time frame e je stock 50 Ema cross korche
+# with macd cross and rsi 50 above") ----------
+# Standalone once-a-day scan on DAILY candles (SCAN_MODE=daily_ema50_scan,
+# own cron trigger — run it after the market closes, e.g. ~16:00-16:30
+# IST, so today's daily candle is final). A stock is reported when, on
+# TODAY's daily candle, ALL of these hold:
+#   1. close crosses ABOVE its 50-day EMA (yesterday's close <= EMA50,
+#      today's close > EMA50)
+#   2. MACD line crosses ABOVE the MACD signal line (standard 12/26/9)
+#   3. RSI(14) > DAILY_EMA50_RSI_MIN
+# Bullish only. One alert per stock per day.
+DAILY_EMA50_SCAN_ENABLED = True
+DAILY_EMA50_PERIOD = 50
+DAILY_EMA50_RSI_PERIOD = 14
+DAILY_EMA50_RSI_MIN = 50          # RSI must be strictly ABOVE this
+# 0 = the MACD cross must happen on TODAY's candle itself (literal
+# "both cross together"). N = also accept a MACD cross that happened
+# within the last N daily candles (e.g. 2 = today, yesterday or the day
+# before) — the 50-EMA cross must still be today's.
+DAILY_EMA50_MACD_CROSS_LOOKBACK_DAYS = 0
+# Calendar days of daily history per symbol. EMA50 + MACD(26/9) need
+# ~100+ candles to settle; 400 calendar days ~ 270 trading days.
+DAILY_EMA50_HISTORY_LOOKBACK_DAYS = 400
+DAILY_EMA50_MIN_BARS = 120
+# Universe: F&O stocks + Nifty 500 (union, no session-time gate).
+# If this share of symbols has no TODAY candle yet, the scan stops and
+# sends a "candle not ready" notice instead of scanning stale data.
+DAILY_EMA50_STALE_ABORT_FRACTION = 0.5
+# Send a short "nothing today" message when no stock qualifies, so a
+# quiet day is distinguishable from a scan that never ran.
+DAILY_EMA50_SEND_EMPTY_NOTICE = True

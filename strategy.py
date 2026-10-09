@@ -175,6 +175,16 @@ def _compute_vwap_at(df, idx):
     session's first candle.
     """
     window = df.iloc[: idx + 1]
+    # FIX: df15/df75 now carry MULTI-DAY history (warm-up for MACD/EMA),
+    # so a plain cumulative sum was a multi-day VWAP (e.g. AUBANK showed
+    # VWAP 1043 vs close 1003 on the 09:15 candle). VWAP must reset each
+    # session -> keep only rows dated the same day as candle `idx`.
+    if "timestamp" in window.columns and len(window) > 0:
+        try:
+            day = window["timestamp"].iloc[-1].date()
+            window = window[window["timestamp"].dt.date == day]
+        except Exception:
+            pass  # unusable timestamps -> old whole-df behaviour
     typical_price = (window["high"] + window["low"] + window["close"]) / 3
     cum_vol = window["volume"].sum()
     if cum_vol <= 0:
@@ -2447,4 +2457,81 @@ def check_swing_entry_scan(history, symbol):
         "target": target,
         "risk_per_share": risk,
         "rr_ratio": config.SWING_TARGET_RRR,
+    }
+
+
+def check_daily_ema50_macd_scan(history, symbol):
+    """
+    Daily 50-EMA cross + MACD cross + RSI scan (added, per request
+    2026-10-09). `history` is main.fetch_daily_history's output
+    (oldest -> newest daily candles, include_today=True). Judges the
+    LAST candle in `history` (the caller verifies it is today's).
+
+    Fires (bullish only) when, on the last candle:
+      1. close crossed ABOVE EMA(close, config.DAILY_EMA50_PERIOD):
+         previous close <= previous EMA50 and last close > last EMA50
+      2. MACD line crossed ABOVE the MACD signal line on that candle
+         (or, if config.DAILY_EMA50_MACD_CROSS_LOOKBACK_DAYS = N > 0,
+         within the last N candles before it as well)
+      3. RSI(config.DAILY_EMA50_RSI_PERIOD) > config.DAILY_EMA50_RSI_MIN
+
+    Returns None if there isn't enough history or any condition fails,
+    else a dict with symbol/date/close/ema50/rsi/macd values plus two
+    informational extras (day change %, volume vs 20-day average).
+    """
+    if len(history) < config.DAILY_EMA50_MIN_BARS:
+        return None
+
+    df = pd.DataFrame(history)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date").reset_index(drop=True)
+
+    df = add_ema(df, config.DAILY_EMA50_PERIOD, "ema50")
+    df = add_macd(df)
+    df = add_rsi(df, config.DAILY_EMA50_RSI_PERIOD)
+
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    if pd.isna(last["ema50"]) or pd.isna(prev["ema50"]) or pd.isna(last["rsi"]):
+        return None
+
+    # 1. fresh close-above-EMA50 cross on the last candle
+    if not (prev["close"] <= prev["ema50"] and last["close"] > last["ema50"]):
+        return None
+
+    # 3. RSI strictly above the floor
+    if not last["rsi"] > config.DAILY_EMA50_RSI_MIN:
+        return None
+
+    # 2. MACD line crossing above signal, on the last candle or (if
+    # configured) within the last N candles
+    lookback = max(0, int(config.DAILY_EMA50_MACD_CROSS_LOOKBACK_DAYS))
+    macd_cross_days_ago = None
+    for k in range(lookback + 1):
+        i = len(df) - 1 - k
+        if i < 1:
+            break
+        m_now, s_now = df["macd_line"].iloc[i], df["macd_signal"].iloc[i]
+        m_prev, s_prev = df["macd_line"].iloc[i - 1], df["macd_signal"].iloc[i - 1]
+        if m_prev <= s_prev and m_now > s_now:
+            macd_cross_days_ago = k
+            break
+    if macd_cross_days_ago is None:
+        return None
+
+    day_change_pct = (last["close"] / prev["close"] - 1) * 100 if prev["close"] else None
+    vol_avg = df["volume"].iloc[-21:-1].mean() if len(df) > 21 else None
+    vol_ratio = (last["volume"] / vol_avg) if vol_avg and vol_avg > 0 else None
+
+    return {
+        "symbol": symbol,
+        "date": df["date"].iloc[-1].strftime("%Y-%m-%d"),
+        "close": round(float(last["close"]), 2),
+        "ema50": round(float(last["ema50"]), 2),
+        "rsi": round(float(last["rsi"]), 1),
+        "macd_line": round(float(last["macd_line"]), 3),
+        "macd_signal": round(float(last["macd_signal"]), 3),
+        "macd_cross_days_ago": macd_cross_days_ago,
+        "day_change_pct": round(float(day_change_pct), 2) if day_change_pct is not None else None,
+        "volume_vs_20d_avg": round(float(vol_ratio), 2) if vol_ratio is not None else None,
     }
