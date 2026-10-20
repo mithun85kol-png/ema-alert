@@ -129,6 +129,7 @@ import instruments
 import state
 import delivery_data
 import bulk_block_data
+import groww_links
 try:
     import corporate_actions
 except ImportError:
@@ -139,7 +140,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
@@ -198,17 +199,10 @@ _groww_name_cache = {}
 
 def _lookup_company_name(symbol):
     """
-    Company (legal) name for `symbol` — added, per request ("Chart
-    tradingview theke soriye onno app e kora jabe" -> Groww), because
-    build_chart_link below needs it to build a Groww stock-page slug.
-    Cached per-process (_groww_name_cache): instruments._load_master()
-    is itself already cached after the first download this run, so
-    this is only a fresh (in-memory, cheap) scan of that master list
-    the first time a given symbol is looked up, O(1) after that.
-    Returns None if the symbol isn't in Upstox's NSE_EQ master (true
-    for indices/MCX commodities, and rare for anything else — every
-    stock reaching this point already resolved through that same
-    master to get its instrument_key).
+    Company name for `symbol` from Upstox's NSE_EQ instrument master —
+    only used as a LAST-resort hint by groww_links.get_url (the real
+    Groww slug comes from Groww's own search, see groww_links.py).
+    Cached per-process. None for indices/MCX commodities.
     """
     if symbol not in _groww_name_cache:
         names = instruments.resolve_stock_names([symbol])
@@ -216,108 +210,33 @@ def _lookup_company_name(symbol):
     return _groww_name_cache[symbol]
 
 
-def _slugify_groww_name(name):
-    """
-    Best-effort NSE company name -> Groww stock-page slug (added, per
-    request — "Chart tradingview theke soriye onno app e kora jabe?
-    Ota to chart delay hochhe" -> user picked Groww). Confirmed
-    pattern from real Groww URLs: lowercase the full legal name,
-    "Limited" -> "ltd", spaces/punctuation -> hyphens — e.g. "Reliance
-    Industries Limited" -> "reliance-industries-ltd", "Infosys
-    Limited" -> "infosys-ltd", "Billionbrains Garage Ventures
-    Limited" -> "billionbrains-garage-ventures-ltd" (all confirmed
-    live Groww URLs at the time this was written).
-
-    THIS IS A HEURISTIC, NOT GUARANTEED — company names with "&",
-    brackets, recent renames (e.g. Zomato -> Eternal), or other
-    punctuation may not land on Groww's actual slug. Known exceptions
-    belong in config.GROWW_SYMBOL_OVERRIDES (checked BEFORE this ever
-    runs — see build_chart_link) rather than special-cased here. If a
-    generated link 404s, add that symbol to the override dict.
-    """
-    s = name.lower().replace("&", " and ")
-    s = re.sub(r"[.,]", "", s)
-    s = re.sub(r"\blimited\b", "ltd", s)
-    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
-    return s
-
-
-_groww_ok_cache = {}
-_groww_net_errors = 0
-
-
-def _groww_url_ok(url):
-    """True unless Groww confirms the page is missing (HTTP 404 or its
-    "Page Not Found" body). Cached per run; after 2 network errors the
-    check is skipped for the rest of the run so alerts never get slow."""
-    global _groww_net_errors
-    if url in _groww_ok_cache:
-        return _groww_ok_cache[url]
-    if _groww_net_errors >= 2:
-        return True
-    ok = True
-    try:
-        r = requests.get(url, timeout=4, headers={"User-Agent": "Mozilla/5.0"})
-        if r.status_code == 404 or "Page Not Found" in r.text[:200000]:
-            ok = False
-    except Exception:
-        _groww_net_errors += 1
-    _groww_ok_cache[url] = ok
-    return ok
-
-
 def build_chart_link(symbol, timeframe_label=None):
     """
-    Chart deep link for `symbol` — tapping it in the Telegram alert
-    opens that symbol's live chart directly (no login/API key
-    needed). timeframe_label is accepted for backward compatibility
-    but doesn't affect the link.
+    Chart link for `symbol` — tapping it in the Telegram alert opens
+    that symbol on Groww. timeframe_label is accepted for backward
+    compatibility but doesn't affect the link.
 
-    CHANGED (per request — "Chart tradingview theke soriye onno app e
-    kora jabe? Ota to chart delay hochhe" -> user picked Groww): now
-    builds a Groww stock-page link (https://groww.in/stocks/{slug})
-    for plain stocks instead of TradingView, since Groww shows live
-    LTP to its own logged-in users rather than TradingView's
-    exchange-delayed free-tier feed.
-
-    Resolution order:
-      1. config.GROWW_SYMBOL_OVERRIDES — known exceptions where the
-         auto-slug below is wrong (same override-first pattern as
-         config.TRADINGVIEW_SYMBOL_OVERRIDES always used).
-      2. Look up the symbol's full company name (_lookup_company_name)
-         and slugify it (_slugify_groww_name). This only ever
-         resolves for NSE_EQ stocks (the F&O watchlist + Nifty 500) —
-         see instruments.resolve_stock_names.
-      3. FALLBACK — the OLD TradingView link (checks
-         config.TRADINGVIEW_SYMBOL_OVERRIDES first, else
-         "NSE:{symbol}"). This is what indices and MCX commodity
-         futures always hit (step 2 can never resolve a name for
-         them, they're not NSE_EQ), and it's also the safety net for
-         any stock Groww's slug heuristic can't be confirmed for yet
-         — so a link is ALWAYS returned, never broken/empty.
+    FIXED (2026-10-19 — "sob chart groww te khulche na"): all the
+    resolution logic moved to groww_links.get_url, which now covers
+    stocks (Groww's real search_id slug, not a guess from the company
+    name), indices and MCX commodities (config.GROWW_FIXED_URLS).
+    TradingView is only the fallback when Groww has nothing for the
+    symbol — the Telegram label then says "TradingView", so you can
+    see at a glance which links still need a GROWW_SYMBOL_OVERRIDES
+    entry.
     """
-    if symbol in config.GROWW_SYMBOL_OVERRIDES:
-        return f"https://groww.in/stocks/{config.GROWW_SYMBOL_OVERRIDES[symbol]}"
+    # Indices / commodities never need a company name; skip the master
+    # lookup unless the symbol could actually be a plain stock.
+    name = None
+    if symbol not in config.GROWW_FIXED_URLS and symbol not in config.GROWW_SYMBOL_OVERRIDES:
+        try:
+            name = _lookup_company_name(symbol)
+        except Exception:
+            name = None
 
-    name = _lookup_company_name(symbol)
-    if name:
-        # FIX (per "Uh Oh! 404 Page Not Found" screenshots): the slug is
-        # only a heuristic. "&" in a name (M&M, L&T, ...) is the usual
-        # culprit -- other sites turn it into "and", Groww-style slugs
-        # typically just drop it ("mahindra-mahindra-ltd"). So try the
-        # "&"-dropped slug first, then the "and" slug, verifying each
-        # once per run; fall through to TradingView if neither exists.
-        # Network errors keep the first candidate (never block alerts).
-        base = _slugify_groww_name(name)
-        dropped = re.sub(r"[^a-z0-9]+", "-",
-                         re.sub(r"\blimited\b", "ltd",
-                                re.sub(r"[.,]", "", name.lower().replace("&", " ")))).strip("-")
-        candidates = [dropped] if dropped == base else [dropped, base]
-        for slug in candidates:
-            groww_url = f"https://groww.in/stocks/{slug}"
-            if _groww_url_ok(groww_url):
-                return groww_url
-        print(f"[chart-link] Groww 404 for {symbol} ({candidates}) -> TradingView fallback; add to config.GROWW_SYMBOL_OVERRIDES")
+    url = groww_links.get_url(symbol, name)
+    if url:
+        return url
 
     tv_symbol = config.TRADINGVIEW_SYMBOL_OVERRIDES.get(symbol, f"NSE:{symbol}")
     return f"https://www.tradingview.com/chart/?symbol={tv_symbol}&interval=15"
@@ -1342,7 +1261,13 @@ def build_momentum_volume_data(watchlist):
     if cache.get("date") != today_str:
         cache = {"date": today_str, "data": {}}
 
-    missing = {sym: key for sym, key in watchlist.items() if sym not in cache["data"]}
+    # Entries cached before 2026-10-19 have no month_high/month_low;
+    # treat them as missing so they get refetched once (same cost as the
+    # normal first-run-of-the-day rebuild).
+    missing = {
+        sym: key for sym, key in watchlist.items()
+        if sym not in cache["data"] or "month_high" not in cache["data"][sym]
+    }
 
     if missing:
         print(f"Fetching daily history for {len(missing)} instrument(s) for Momentum/Volume Spike checks...")
@@ -1398,7 +1323,18 @@ def build_momentum_volume_data(watchlist):
             # strategy.compute_consolidation_window.
             consolidation_window = compute_consolidation_window(history)
 
+            # 1-MONTH RANGE (ADDED, 2026-10-19 — "one month position"):
+            # highest HIGH / lowest LOW over the last 21 completed
+            # trading days (same 21-day "1M" window as multi_month_highs
+            # above), from the `history` already fetched — no extra API
+            # call. The alert shows where the close sits inside it.
+            month_window = history[-MONTHLY_HIGH_LOOKBACKS_TRADING_DAYS[1]:]
+            month_high = max(day["high"] for day in month_window)
+            month_low = min(day["low"] for day in month_window)
+
             return symbol, {
+                "month_high": month_high,
+                "month_low": month_low,
                 "four_week_high_close": four_week_high_close,
                 "prev_day_volume": prev_day_volume,
                 "volume_5day_ago": volume_5day_ago,
@@ -2524,6 +2460,10 @@ def run_fo_scan(now_ist, index_only=False):
                 # docstring for the approximation used.
                 signal["opening_buy_sell"] = get_opening_candle_buy_sell_estimate(df15, symbol)
 
+                # 1st 15-min / 75-min / 1-month position lines (ADDED,
+                # 2026-10-19) — see strategy.compute_position_info.
+                signal["positions"] = compute_position_info(df15, df75, signal, mv)
+
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
 
@@ -2568,7 +2508,7 @@ def run_fo_scan(now_ist, index_only=False):
                     # on-demand right here since this alert is about to
                     # fire anyway — a failed/empty fetch never blocks
                     # the alert, just means no Bulk/Block line on it.
-                    last_deal = bulk_block_data.get_last_deal_for_symbol(symbol)
+                    last_deal = None if config.COMPACT_ALERT_FORMAT else bulk_block_data.get_last_deal_for_symbol(symbol)
                     if last_deal:
                         signal["last_bulk_block_deal"] = last_deal
 
@@ -2583,7 +2523,7 @@ def run_fo_scan(now_ist, index_only=False):
                     # pattern as Bulk/Block deal just above. A
                     # failed/short fetch never blocks the alert, just
                     # means no Monthly RSI line on it.
-                    monthly_history = fetch_daily_history(
+                    monthly_history = [] if config.COMPACT_ALERT_FORMAT else fetch_daily_history(
                         watchlist[symbol],
                         days_back=config.MONTHLY_RSI_HISTORY_LOOKBACK_DAYS,
                         include_today=True,
@@ -2600,7 +2540,7 @@ def run_fo_scan(now_ist, index_only=False):
                     # fire anyway. Informational only — a failed/slow
                     # fetch never blocks the alert, just means no PCR/
                     # buildup line on it.
-                    if signal["is_fno"]:
+                    if signal["is_fno"] and not config.COMPACT_ALERT_FORMAT:
                         oi = get_stock_oi_buildup(symbol, watchlist[symbol])
                         if oi:
                             signal["pcr"] = oi["pcr"]
@@ -2699,7 +2639,7 @@ def run_fo_scan(now_ist, index_only=False):
                 # Stock News (added, per request, 2026-09-10) — fetched
                 # only now, for symbols actually about to alert, not
                 # for every scanned symbol. See fetch_stock_news above.
-                if config.ENABLE_STOCK_NEWS:
+                if config.ENABLE_STOCK_NEWS and not config.COMPACT_ALERT_FORMAT:
                     signal["news"] = fetch_stock_news(symbol, config.STOCK_NEWS_MAX_HEADLINES)
                 try:
                     send_alert(signal)
@@ -3089,6 +3029,10 @@ def run_nifty500_scan(now_ist):
                 # matching comment in run_fo_scan above.
                 signal["opening_buy_sell"] = get_opening_candle_buy_sell_estimate(df15, symbol)
 
+                # 1st 15-min / 75-min / 1-month position lines (ADDED,
+                # 2026-10-19) — see strategy.compute_position_info.
+                signal["positions"] = compute_position_info(df15, df75, signal, mv)
+
                 signal["is_fno"] = symbol.upper() in fno_underlyings
 
                 deliv = delivery_map.get(symbol.upper())
@@ -3104,7 +3048,7 @@ def run_nifty500_scan(now_ist):
                     if signal["delivery_pct"] <= signal["delivery_avg_1m"]:
                         continue
 
-                last_deal = bulk_block_data.get_last_deal_for_symbol(symbol)
+                last_deal = None if config.COMPACT_ALERT_FORMAT else bulk_block_data.get_last_deal_for_symbol(symbol)
                 if last_deal:
                     signal["last_bulk_block_deal"] = last_deal
 
@@ -3112,7 +3056,7 @@ def run_nifty500_scan(now_ist):
                 # run_fo_scan above. Every symbol here is a real
                 # stock (this scan never covers indices/commodities),
                 # so no non_stock_symbols check needed.
-                monthly_history = fetch_daily_history(
+                monthly_history = [] if config.COMPACT_ALERT_FORMAT else fetch_daily_history(
                     watchlist[symbol],
                     days_back=config.MONTHLY_RSI_HISTORY_LOOKBACK_DAYS,
                     include_today=True,
@@ -3167,7 +3111,7 @@ def run_nifty500_scan(now_ist):
                 state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
                 # Stock News — see the matching comment in run_fo_scan
                 # above.
-                if config.ENABLE_STOCK_NEWS:
+                if config.ENABLE_STOCK_NEWS and not config.COMPACT_ALERT_FORMAT:
                     signal["news"] = fetch_stock_news(symbol, config.STOCK_NEWS_MAX_HEADLINES)
                 try:
                     send_alert(signal)
@@ -3578,6 +3522,118 @@ def run_daily_ema50_scan(now_ist):
     return len(hits), failed_symbols, len(watchlist)
 
 
+def send_monthly_macd_rsi_summary(hits, now_ist):
+    hits = sorted(hits, key=lambda h: (h["direction"] != "BULLISH", h["symbol"]))
+    header = f"\U0001F5D3 1-MONTH MACD + RSI CROSS  ({now_ist.strftime('%d %b %Y')})\n{len(hits)} symbol(s)"
+    lines = []
+    for h in hits:
+        icon = "\U0001F7E2\u2B06\uFE0F" if h["direction"] == "BULLISH" else "\U0001F534\u2B07\uFE0F"
+        chg = f"{h['month_change_pct']:+.2f}%" if h.get("month_change_pct") is not None else "-"
+        note = " (month so far - can still flip)" if h["in_progress"] else " (month closed)"
+        sym = f"<a href=\"{h['chart_link']}\">{h['symbol']}</a>" if h.get("chart_link") else h["symbol"]
+        lines.append(
+            f"{icon} <b>{sym}</b> {h['direction']} - {h['month']}{note}\n"
+            f"Close {h['close']} | Month change {chg}\n"
+            f"MACD {h['macd_line']} / Signal {h['macd_signal']} | RSI {h['rsi']}"
+        )
+    parts, cur = [], header
+    for ln in lines:
+        if len(cur) + len(ln) + 2 > 3800 and cur != header:
+            parts.append(cur); cur = header
+        cur += "\n\n" + ln
+    parts.append(cur)
+    for part in parts:
+        _send_html_text(part)
+
+
+def _send_html_text(text):
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text,
+                                     "parse_mode": "HTML", "disable_web_page_preview": True}, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed (monthly):", e)
+
+
+def run_monthly_macd_rsi_scan(now_ist):
+    """
+    1-month MACD cross + RSI alert (ADDED 2026-10-19 — "15 minite eo cross
+    e asbe abar 1 month eo asbe"). See strategy.check_monthly_macd_rsi_scan
+    and the MONTHLY_ALERT_* block in config.py. Universe: F&O stocks +
+    indices (+ Nifty 500 if config.MONTHLY_ALERT_UNIVERSE == "fo+n500").
+    One combined message; each (symbol, direction, month) alerted once.
+    """
+    watchlist = {}
+    watchlist.update(instruments.resolve_fo_stock_list(None))
+    watchlist.update(instruments.resolve_indices(config.INDICES))
+    if config.MONTHLY_ALERT_UNIVERSE == "fo+n500":
+        watchlist.update(instruments.resolve_nifty500_stocks())
+    if not watchlist:
+        print("Monthly scan: empty watchlist - skipping.", flush=True)
+        return 0, [], 0
+
+    print(f"Monthly MACD+RSI scan: {len(watchlist)} instruments...", flush=True)
+
+    def _fetch_one(symbol, key):
+        return symbol, fetch_daily_history(key, days_back=config.MONTHLY_RSI_HISTORY_LOOKBACK_DAYS, include_today=True)
+
+    histories, failed = {}, []
+    with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
+        futures = {pool.submit(_fetch_one, s, k): s for s, k in watchlist.items()}
+        for fut in as_completed(futures):
+            sym = futures[fut]
+            try:
+                _, hist = fut.result()
+                if hist:
+                    histories[sym] = hist
+                else:
+                    failed.append(sym)
+            except Exception as e:
+                print(f"Fetch failed for {sym} (monthly scan): {e}")
+                failed.append(sym)
+
+    saved_state = state.load_state()
+    hits = []
+    for symbol, history in histories.items():
+        try:
+            sig = check_monthly_macd_rsi_scan(history, symbol)
+            if sig is None:
+                continue
+            state_symbol = f"{symbol}::MONTHLY"
+            if state.already_alerted(saved_state, state_symbol, sig["direction"], sig["month"]):
+                continue
+            sig["chart_link"] = build_chart_link(symbol)
+            state.mark_alerted(saved_state, state_symbol, sig["direction"], sig["month"])
+            hits.append(sig)
+        except Exception as e:
+            print(f"Error on {symbol} (monthly scan): {e}")
+            failed.append(symbol)
+
+    if hits:
+        send_monthly_macd_rsi_summary(hits, now_ist)
+    state.save_state(saved_state)
+    print(f"Monthly scan done. {len(hits)} new cross(es).", flush=True)
+    return len(hits), failed, len(watchlist)
+
+
+def maybe_run_monthly_scan_once_a_day(now_ist):
+    """Called from every normal run; does real work only on the first run
+    of the day at/after config.MONTHLY_ALERT_RUN_AFTER IST (weekdays)."""
+    if not config.MONTHLY_ALERT_ENABLED or now_ist.weekday() >= 5:
+        return
+    hh, mm = (int(x) for x in config.MONTHLY_ALERT_RUN_AFTER.split(":"))
+    if now_ist.time() < dt.time(hh, mm):
+        return
+    today = now_ist.date().isoformat()
+    st = state.load_state()
+    if state.already_alerted(st, "MONTHLY_SCAN", "DONE", today):
+        return
+    state.mark_alerted(st, "MONTHLY_SCAN", "DONE", today)  # mark first: a crash must not retry every 3 min
+    state.save_state(st)
+    run_monthly_macd_rsi_scan(now_ist)
+
+
 def run():
     # TEMP DEBUG — remove once we confirm why "Run scan" finished in ~1s
     # with zero stdout beyond the auto-generated env dump: this print
@@ -3603,6 +3659,9 @@ def run():
     # the full 75-min F&O/Nifty500/commodity scan below: only ~3 API
     # calls, safe to run every 5 minutes without touching rate limits.
     mode = os.environ.get("SCAN_MODE", "full")
+    if mode not in getattr(config, "ENABLED_SCAN_MODES", {mode}):
+        print(f"SCAN_MODE={mode} is switched off (config.ENABLED_SCAN_MODES) — nothing sent.", flush=True)
+        return
     if mode == "index":
         if not _in_stock_session(now_ist):
             print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — index-only scan skipping.", flush=True)
@@ -3734,18 +3793,33 @@ def run():
             print("Daily EMA50 scan disabled (config.DAILY_EMA50_SCAN_ENABLED=False) — skipping.", flush=True)
         return
 
+    if mode == "monthly_scan":
+        if config.MONTHLY_ALERT_ENABLED:
+            try:
+                run_monthly_macd_rsi_scan(now_ist)
+            except Exception as e:
+                print(f"run_monthly_macd_rsi_scan failed: {e}", flush=True)
+                send_mode_failure_notice("monthly_scan", e, now_ist)
+        return
+
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)
         return
 
     _, fo_failed, fo_total, fo_ds_hits, fo_ts_hits = run_fo_scan(now_ist)
 
+    # 1-month MACD+RSI alert: once a day, non-blocking (see config.MONTHLY_ALERT_*)
+    try:
+        maybe_run_monthly_scan_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Monthly scan failed this run (non-blocking): {e}", flush=True)
+
     # ---- Corporate-action alerts (Dividend/Bonus/Buyback/Order Win) ----
     # Same watchlist, same Telegram channel as the EMA alerts. Cheap to
     # call every run -- corporate_actions.check_and_alert() only does
     # real work (NSE fetch) once per calendar day; every other call
     # this same day is a no-op (see its own cache check).
-    if corporate_actions is not None:
+    if corporate_actions is not None and getattr(config, "CORPORATE_ACTIONS_ALERT_ENABLED", True):
         try:
             corporate_actions.check_and_alert(now_ist)
         except Exception as e:

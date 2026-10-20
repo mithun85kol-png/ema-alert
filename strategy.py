@@ -1,30 +1,21 @@
 
 """
-CHANGED (2026-09-05, per request — "Ema cross charo, Macd cross final
-koro"): the trigger condition is no longer an EMA9/EMA20 crossover.
-A signal now fires for a given closed candle only when a genuine
-MACD LINE crosses its SIGNAL LINE on THAT exact candle (bullish =
-crossing up, bearish = crossing down), checked on the 15-min
-timeframe (config.PRIMARY_TIMEFRAME). EMA9/EMA20 is no longer a
-gating condition at all — its values are still computed and shown on
-the alert purely as informational context (see "ema_fast"/"ema_slow"
-in the signal dict and the trend3_block on the other timeframe).
+ALERT TRIGGER (CHANGED 2026-10-19, per request — "alert asbe MACD & RSI
+based, 15 minit"): a signal fires for a closed 15-min candle only when
 
-On top of the MACD-cross trigger, ALL of these still hold before an
-alert fires — see config.py's REQUIRE_* flags:
-  - REQUIRE_MACD_DIVERGENCE: a price-vs-MACD divergence in the
-    matching direction (see _detect_macd_divergence) — a SEPARATE
-    check from the cross above, both MACD-based but measuring
-    different things.
-  - REQUIRE_VOLUME_1M_SUPPORT: previous day's volume > this symbol's
-    trailing 1-month average daily volume (applied in main.py).
-  - REQUIRE_VWAP_CONFIRMATION: close on the side of VWAP matching the
-    direction.
-  - REQUIRE_VOLUME_CONFIRMATION: crossing candle's volume > previous
-    candle's.
-  - REQUIRE_RSI_CONFIRMATION: RSI(14) > 50 bullish / < 50 bearish.
-  - REQUIRE_TREND_CONFIRMATION (EMA50 trend agreement): OFF by
-    default now — informational only unless re-enabled.
+  1. the MACD LINE crosses its SIGNAL LINE on THAT exact candle
+     (bullish = crossing up, bearish = crossing down), and
+  2. RSI(14) agrees (> config.ALERT_RSI_BULLISH_MIN for bullish,
+     < config.ALERT_RSI_BEARISH_MAX for bearish).
+
+That's all. VWAP side, candle volume, last-day volume / delivery vs their
+1-month averages, EMA trend and so on are NOT gates anymore (their
+REQUIRE_* flags in config.py are False) — they are shown on the alert as
+information. (Earlier history: 2026-09-05 the trigger moved from an
+EMA9/20 cross to the MACD cross; this change removes the extra gates.)
+
+compute_position_info() below builds the 1st-15-min / 75-min / 1-month
+"position" lines shown on the alert.
 """
 
 import datetime as _dt
@@ -719,16 +710,19 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
     rsi_val = curr["rsi"] if not pd_isna(curr["rsi"]) else None
 
     # RSI condition — MANDATORY when require_rsi_confirmation=True
-    # (added, per request): RSI(14) > 50 for a BULLISH cross, < 50 for
-    # a BEARISH cross, or the signal is rejected outright. If rsi_val
+    # (added, per request): RSI(14) above ALERT_RSI_BULLISH_MIN for a
+    # BULLISH cross, below ALERT_RSI_BEARISH_MAX for a BEARISH cross,
+    # or the signal is rejected outright. If rsi_val
     # is unavailable (not enough history yet), the alert still fires
     # rather than being blocked on missing data — same
     # missing-data-never-blocks philosophy as require_volume_increase
     # above.
     if require_rsi_confirmation and rsi_val is not None:
-        if bullish and rsi_val <= 50:
+        # Thresholds are config.ALERT_RSI_BULLISH_MIN / _BEARISH_MAX
+        # (both 50 by default) — editable without touching this file.
+        if bullish and rsi_val <= config.ALERT_RSI_BULLISH_MIN:
             return None
-        if not bullish and rsi_val >= 50:
+        if not bullish and rsi_val >= config.ALERT_RSI_BEARISH_MAX:
             return None
 
     cross_pattern = detect_candle_pattern(curr)
@@ -1198,6 +1192,154 @@ def get_opening_candle_buy_sell_estimate(df, symbol):
         "sell_volume": int(round(sell_volume)),
         "buy_pct": round((buy_volume / volume) * 100, 1),
     }
+
+
+def _range_position(close, high, low):
+    """Where `close` sits relative to a high/low range. Returns None if
+    the range is unusable. state: ABOVE (closed over the high), BELOW
+    (closed under the low) or INSIDE; pct = position within the range
+    (0 = at the low, 100 = at the high; can be <0 / >100 outside it);
+    dist_pct = how far outside the range, as % (ABOVE/BELOW only)."""
+    if close is None or high is None or low is None or high <= low:
+        return None
+    pct = (close - low) / (high - low) * 100.0
+    dist = None
+    if close > high:
+        state, dist = "ABOVE", (close - high) / high * 100.0
+    elif close < low:
+        state, dist = "BELOW", (low - close) / low * 100.0
+    else:
+        state = "INSIDE"
+    return {
+        "state": state,
+        "high": round(float(high), 2),
+        "low": round(float(low), 2),
+        "pct": round(pct, 0),
+        "dist_pct": round(dist, 2) if dist is not None else None,
+    }
+
+
+def compute_position_info(df15, df75, signal, mv=None):
+    """
+    "Position" lines for the alert (ADDED 2026-10-19, per request —
+    "1st 15 minit position / 75 minit position / one month position").
+    Each one answers: where is the alert candle's CLOSE relative to a
+    reference high/low range?
+
+      first15 — the day's 1st 15-min candle (09:15-09:30) high/low.
+                state SELF if the alert candle IS that candle.
+      first75 — the PREVIOUS closed 75-min bar's high/low (default; set
+                config.POSITION_75MIN_REFERENCE = "first" for the day's
+                1st 75-min bar instead). Carries the 75-min EMA bias
+                too (signal["trend_3min"], when it is the 75-min
+                context block).
+      month   — the last 21 completed trading days' high/low (mv from
+                main.build_momentum_volume_data: month_high/month_low).
+
+    "Day" is the ALERT CANDLE's own day, so a catch-up alert for a candle
+    from earlier in the session still measures against that day's
+    opening candles. Any part with missing data is simply None (the
+    message leaves that line out) — this never raises or blocks an alert.
+    """
+    out = {"first15": None, "first75": None, "month": None, "ema75": None}
+    try:
+        close = float(signal["close"])
+        sig_ts = pd.Timestamp(signal["candle_time"])
+        day = sig_ts.date()
+
+        # ---- 1st 15-min candle ----
+        if df15 is not None and not df15.empty:
+            rows = df15[df15["timestamp"].dt.date == day]
+            if not rows.empty:
+                first = rows.iloc[0]
+                hi, lo = float(first["high"]), float(first["low"])
+                if sig_ts <= first["timestamp"]:
+                    out["first15"] = {"state": "SELF", "high": round(hi, 2), "low": round(lo, 2)}
+                else:
+                    out["first15"] = _range_position(close, hi, lo)
+                if out["first15"] is not None:
+                    out["first15"]["bias"] = signal.get("opening_candle_bias")
+
+        # ---- 75-min ----
+        # config.POSITION_75MIN_REFERENCE:
+        #   "previous" (default, per request 2026-10-19 — "75 minit to
+        #     age theke calculation hobe"): the last fully-closed 75-min
+        #     bar BEFORE the 75-min bar the alert candle sits in. At the
+        #     open that is yesterday's last bar, so the line is available
+        #     from the very first alert of the day.
+        #   "first": the day's 1st 75-min bar (09:15-10:30) — shows
+        #     "forming" until 10:30.
+        ema_tag = None
+        t3 = signal.get("trend_3min")
+        if t3 and signal.get("info_timeframe_label") == "75-min":
+            ema_tag = {
+                "bias": t3.get("bias"),
+                "fast": t3.get("ema_fast_period"),
+                "slow": t3.get("ema_slow_period"),
+            }
+        if df75 is not None and not df75.empty:
+            ref_mode = getattr(config, "POSITION_75MIN_REFERENCE", "previous")
+            if ref_mode == "first":
+                rows75 = df75[df75["timestamp"].dt.date == day]
+                if rows75.empty:
+                    out["first75"] = {"state": "FORMING"}
+                else:
+                    first75 = rows75.iloc[0]
+                    hi, lo = float(first75["high"]), float(first75["low"])
+                    first75_end = first75["timestamp"] + pd.Timedelta(minutes=75)
+                    if sig_ts < first75_end:
+                        out["first75"] = {"state": "SELF", "high": round(hi, 2), "low": round(lo, 2)}
+                    else:
+                        out["first75"] = _range_position(close, hi, lo)
+            else:
+                # start of the 75-min bar containing the alert candle
+                # (bars are aligned to the 09:15 session start, per day)
+                day_start = pd.Timestamp(sig_ts.date()).tz_localize(sig_ts.tzinfo) + pd.Timedelta(hours=9, minutes=15) \
+                    if sig_ts.tzinfo is not None else pd.Timestamp(sig_ts.date()) + pd.Timedelta(hours=9, minutes=15)
+                n_bars = int((sig_ts - day_start) / pd.Timedelta(minutes=75)) if sig_ts >= day_start else 0
+                cur_bar_start = day_start + pd.Timedelta(minutes=75 * n_bars)
+                prev_rows = df75[df75["timestamp"] < cur_bar_start]
+                if not prev_rows.empty:
+                    prev_bar = prev_rows.iloc[-1]
+                    out["first75"] = _range_position(close, float(prev_bar["high"]), float(prev_bar["low"]))
+                    if out["first75"] is not None:
+                        out["first75"]["bar_start"] = str(prev_bar["timestamp"])
+            if out["first75"] is not None and ema_tag:
+                out["first75"]["ema"] = ema_tag
+
+        # ---- 75-min EMA50: is price above it? (informational only) ----
+        # Uses the last 75-min bar that was already CLOSED when the alert
+        # candle closed (bar_start + 75min <= alert candle end), so a
+        # catch-up alert never peeks at a later bar.
+        try:
+            p = int(getattr(config, "POSITION_75MIN_EMA_PERIOD", 50))
+            min_bars = int(getattr(config, "POSITION_75MIN_EMA_MIN_BARS", 60))
+            if df75 is not None and len(df75) >= min_bars:
+                ema_col = df75["close"].ewm(span=p, adjust=False).mean()
+                candle_end = sig_ts + pd.Timedelta(minutes=15)
+                closed = df75["timestamp"] + pd.Timedelta(minutes=75) <= candle_end
+                if closed.any():
+                    idx = closed[closed].index[-1]
+                    pos_idx = df75.index.get_loc(idx)
+                    ema_val = float(ema_col.iloc[pos_idx])
+                    if ema_val > 0:
+                        diff = (close - ema_val) / ema_val * 100.0
+                        out["ema75"] = {
+                            "state": "ABOVE" if close >= ema_val else "BELOW",
+                            "ema": round(ema_val, 2),
+                            "dist_pct": round(abs(diff), 2),
+                            "period": p,
+                            "bar_start": str(df75.loc[idx, "timestamp"]),
+                        }
+        except Exception as e:
+            print(f"75-min EMA position failed for {signal.get('symbol')}: {e}")
+
+        # ---- 1 month ----
+        if mv and mv.get("month_high") is not None and mv.get("month_low") is not None:
+            out["month"] = _range_position(close, float(mv["month_high"]), float(mv["month_low"]))
+    except Exception as e:
+        print(f"compute_position_info failed for {signal.get('symbol')}: {e}")
+    return out
 
 
 def get_sector_trend(df):
@@ -2534,4 +2676,66 @@ def check_daily_ema50_macd_scan(history, symbol):
         "macd_cross_days_ago": macd_cross_days_ago,
         "day_change_pct": round(float(day_change_pct), 2) if day_change_pct is not None else None,
         "volume_vs_20d_avg": round(float(vol_ratio), 2) if vol_ratio is not None else None,
+    }
+
+
+def check_monthly_macd_rsi_scan(history, symbol):
+    """
+    1-MONTH timeframe alert (ADDED 2026-10-19, per request — "15 minite
+    eo cross e asbe abar 1 month eo asbe"). Same trigger as the 15-min
+    alert, on MONTHLY candles: the monthly MACD line crosses its signal
+    line on the latest monthly bar AND monthly RSI(14) agrees
+    (> config.ALERT_RSI_BULLISH_MIN for BULLISH, < ALERT_RSI_BEARISH_MAX
+    for BEARISH).
+
+    `history` = main.fetch_daily_history output with include_today=True.
+    The latest monthly bar is the CURRENT month so far (a live,
+    still-forming candle — the cross can still flip back before month
+    end; the alert says so). With config.MONTHLY_ALERT_COMPLETED_ONLY =
+    True that in-progress bar is dropped and only a cross on the last
+    fully-closed month fires (i.e. alerts arrive in the first days of the
+    next month).
+
+    Returns None (no signal / not enough monthly bars) or a dict.
+    """
+    monthly = _resample_daily_to_monthly(history)
+    if monthly.empty:
+        return None
+
+    last_day = pd.to_datetime(history[-1]["date"])
+    in_progress = (monthly.index[-1].year, monthly.index[-1].month) == (last_day.year, last_day.month)
+    if getattr(config, "MONTHLY_ALERT_COMPLETED_ONLY", False) and in_progress and len(monthly) > 1:
+        monthly = monthly.iloc[:-1]
+        in_progress = False
+
+    if len(monthly) < config.MONTHLY_ALERT_MIN_BARS:
+        return None
+
+    monthly = add_macd(monthly, config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL)
+    monthly = add_rsi(monthly, config.RSI_PERIOD)
+    last, prev = monthly.iloc[-1], monthly.iloc[-2]
+    if pd.isna(last["rsi"]) or pd.isna(last["macd_signal"]) or pd.isna(prev["macd_signal"]):
+        return None
+
+    prev_diff = prev["macd_line"] - prev["macd_signal"]
+    curr_diff = last["macd_line"] - last["macd_signal"]
+    rsi_val = float(last["rsi"])
+    if prev_diff <= 0 < curr_diff and rsi_val > config.ALERT_RSI_BULLISH_MIN:
+        direction = "BULLISH"
+    elif prev_diff >= 0 > curr_diff and rsi_val < config.ALERT_RSI_BEARISH_MAX:
+        direction = "BEARISH"
+    else:
+        return None
+
+    prev_close = float(prev["close"])
+    return {
+        "symbol": symbol,
+        "direction": direction,
+        "month": monthly.index[-1].strftime("%Y-%m"),
+        "in_progress": bool(in_progress),
+        "close": round(float(last["close"]), 2),
+        "month_change_pct": round((float(last["close"]) / prev_close - 1) * 100, 2) if prev_close else None,
+        "rsi": round(rsi_val, 1),
+        "macd_line": round(float(last["macd_line"]), 2),
+        "macd_signal": round(float(last["macd_signal"]), 2),
     }

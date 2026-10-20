@@ -16,10 +16,202 @@ def _chart_app_label(url):
     return "Groww" if url and "groww.in" in url else "TradingView"
 
 
+def _p(x):
+    """Price/number without trailing zeros: 2465.0 -> '2465', 12.5 -> '12.5'."""
+    return f"{x:.2f}".rstrip("0").rstrip(".")
+
+
+def _vs_avg(value, avg):
+    """(+12.3% vs avg) style string + arrow, or None if not computable."""
+    if value is None or not avg:
+        return None
+    pct = (value - avg) / avg * 100.0
+    return f"{pct:+.1f}% {'⬆️' if pct >= 0 else '⬇️'}"
+
+
+def _position_line(label, info, direction, close, kind="day"):
+    """
+    One 'position' line. info comes from strategy.compute_position_info
+    (None -> no line). Leading icon: ✅ = the position agrees with the
+    alert direction (above the range for BULLISH, below it for BEARISH),
+    ⚠️ = against it, ➖ = inside the range / nothing to compare yet.
+    """
+    if not info:
+        return ""
+    state = info.get("state")
+    bullish = direction == "BULLISH"
+    rng = ""
+    if info.get("high") is not None and info.get("low") is not None:
+        rng = f"{_p(info['low'])}–{_p(info['high'])}"
+    ref = {"day": "range", "month": "1M range"}[kind]
+
+    if state == "FORMING":
+        icon, text = "➖", "1st candle still forming (closes 10:30)"
+    elif state == "SELF":
+        icon, text = "➖", f"alert is inside the 1st candle ({rng})"
+    elif state == "ABOVE":
+        icon = "✅" if bullish else "⚠️"
+        nm = "1M high" if kind == "month" else "high"
+        text = f"Above {nm} {_p(info['high'])} (+{info['dist_pct']}%)"
+        if kind == "month":
+            text += " — breakout"
+    elif state == "BELOW":
+        icon = "⚠️" if bullish else "✅"
+        nm = "1M low" if kind == "month" else "low"
+        text = f"Below {nm} {_p(info['low'])} (-{info['dist_pct']}%)"
+        if kind == "month":
+            text += " — breakdown"
+    else:  # INSIDE
+        icon = "➖"
+        text = f"Inside {ref} ({info['pct']:.0f}% from low) {rng}"
+        if kind == "month" and info.get("high"):
+            gap = (info["high"] - close) / info["high"] * 100.0
+            text += f" · {gap:.1f}% below 1M high"
+
+    tail = ""
+    if kind == "day" and info.get("bias") == "BULLISH":
+        tail += " · Open=Low 🟢"
+    elif kind == "day" and info.get("bias") == "BEARISH":
+        tail += " · Open=High 🔴"
+    ema = info.get("ema")
+    if ema and ema.get("bias"):
+        e_icon = "📈" if ema["bias"] == "BULLISH" else "📉"
+        tail += f" · EMA{ema.get('fast', 9)}/{ema.get('slow', 20)} {ema['bias'].title()} {e_icon}"
+    return f"{icon} <b>{label}:</b> {text}{tail}\n"
+
+
+def _ema75_line(info, direction):
+    """'75-min EMA50: price above/below it' — informational. ✅ when it agrees
+    with the alert direction (above for BULLISH, below for BEARISH), ⚠️ when not."""
+    if not info:
+        return ""
+    above = info.get("state") == "ABOVE"
+    agrees = above if direction == "BULLISH" else (not above)
+    icon = "✅" if agrees else "⚠️"
+    word = "Above" if above else "Below"
+    sign = "+" if above else "-"
+    return (f"{icon} <b>75-min EMA{info.get('period', 50)}:</b> Price {word} "
+            f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
+
+
+def _build_compact_alert_text(signal):
+    """
+    The short MACD+RSI alert (2026-10-19). Same skeleton as the old
+    message — header, F&O flag, chart/screener links, date | close, day
+    change, then expandable blocks — but only the lines asked for:
+
+      visible:     1st 15-min position, 75-min position, 1-month position
+      tap 1:       volume (last day vs 1M avg), delivery % (last day vs 1M avg)
+      tap 2:       what triggered it (MACD, RSI) + VWAP / candle volume
+    Any line whose data isn't available is left out, never shown empty.
+    """
+    direction = signal["direction"]
+    arrow = "🟢⬆️" if direction == "BULLISH" else "🔴⬇️"
+    timeframe_label = signal.get("timeframe", "15-min")
+    close = float(signal["close"])
+
+    candle_time = str(signal["candle_time"])
+    date_part, time_part = candle_time.split(" ")[0], candle_time.split(" ")[1][:5]
+
+    is_fno = signal.get("is_fno")
+    fno_line = "F&O: Yes ✅\n" if is_fno is True else ("F&O: No (Cash only) 💵\n" if is_fno is False else "")
+
+    chart_link = signal.get("chart_link")
+    chart_line = f'📈 <a href="{chart_link}">Open Chart ({_chart_app_label(chart_link)})</a>\n' if chart_link else ""
+    screener_link = signal.get("screener_link")
+    screener_line = f'📊 <a href="{screener_link}">Quarterly Results (Screener.in)</a>\n' if screener_link else ""
+
+    dc = signal.get("day_change_pct")
+    day_change_line = f"Day Change: {dc:+.2f}% {'🟢' if dc >= 0 else '🔴'}\n" if dc is not None else ""
+
+    pos = signal.get("positions") or {}
+    position_block = (
+        _position_line("1st 15-min", pos.get("first15"), direction, close)
+        + _position_line("75-min (prev bar)" if getattr(config, "POSITION_75MIN_REFERENCE", "previous") != "first" else "1st 75-min", pos.get("first75"), direction, close)
+        + _ema75_line(pos.get("ema75"), direction)
+        + _position_line("1-month", pos.get("month"), direction, close, kind="month")
+    )
+
+    # Tap 1 — volume + delivery, each "last completed day vs its own 1-month avg"
+    vol_lines = ""
+    pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
+    cmp_v = _vs_avg(pdv, avg_v)
+    if cmp_v:
+        vol_lines += f"Volume (last day): {pdv:,} vs 1M avg {avg_v:,.0f} → {cmp_v}\n"
+    dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
+    cmp_d = _vs_avg(dp, avg_d)
+    if cmp_d:
+        vol_lines += f"Delivery % (last day): {dp}% vs 1M avg {avg_d:.1f}% → {cmp_d}\n"
+    elif dp is not None:
+        vol_lines += f"Delivery % (last day): {dp}%\n"
+    vol_tap = f"<blockquote expandable>{vol_lines.rstrip()}</blockquote>\n" if vol_lines else ""
+
+    # Tap 2 — the trigger itself, plus the old gates now shown as info
+    det = ""
+    ml, ms = signal.get("macd_line"), signal.get("macd_signal")
+    cross_word = "crossed UP ↑" if direction == "BULLISH" else "crossed DOWN ↓"
+    if ml is not None and ms is not None:
+        det += f"MACD {cross_word}\n"
+    rsi = signal.get("rsi")
+    if rsi is not None:
+        lim = config.ALERT_RSI_BULLISH_MIN if direction == "BULLISH" else config.ALERT_RSI_BEARISH_MAX
+        sym = ">" if direction == "BULLISH" else "<"
+        det += f"RSI(14) condition: {sym} {lim} ✔\n"
+    if signal.get("vwap") is not None and signal.get("vwap_note"):
+        det += f"VWAP: {signal['vwap']} ({signal['vwap_note']})\n"
+    vc = signal.get("vol_change_pct")
+    if vc is not None:
+        det += f"Candle volume: {signal.get('volume', 0):,} ({vc:+.1f}% vs previous)\n"
+    det_tap = f"<blockquote expandable>{det.rstrip()}</blockquote>" if det else ""
+
+    # MACD / RSI values — shown openly (not in a tap block), per request 2026-10-20
+    macd_rsi_line = ""
+    if ml is not None and ms is not None:
+        macd_rsi_line += f"MACD: {ml} / Signal: {ms}"
+    if rsi is not None:
+        macd_rsi_line += (" | " if macd_rsi_line else "") + f"RSI: {rsi}"
+    if macd_rsi_line:
+        macd_rsi_line += "\n"
+
+    return (
+        f"{arrow} <b>{signal['symbol']}</b> — {direction} MACD+RSI Alert ({timeframe_label})\n"
+        f"{fno_line}"
+        f"{chart_line}"
+        f"{screener_line}"
+        f"{date_part} {time_part} | Close: {_p(close)}\n"
+        f"{day_change_line}"
+        f"{macd_rsi_line}"
+        f"{position_block}"
+        f"{vol_tap}"
+        f"{det_tap}"
+    ).rstrip()
+
+
+def _send_compact_alert(signal):
+    text = _build_compact_alert_text(signal)
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, data={
+            "chat_id": config.TELEGRAM_CHAT_ID,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print("Telegram send failed:", e)
+
+
 def send_alert(signal):
     if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_ID:
         print("Telegram not configured, skipping send:", signal)
         return
+
+    # COMPACT FORMAT (2026-10-19): the short MACD+RSI alert — see
+    # _build_compact_alert_text. Set config.COMPACT_ALERT_FORMAT = False
+    # to get the old long message below instead.
+    if config.COMPACT_ALERT_FORMAT:
+        return _send_compact_alert(signal)
 
     # NOTE: every signal always gets this full message regardless of
     # its timeframe label — there is no separate stripped-down message
@@ -1298,20 +1490,17 @@ def send_daily_score_report(hits, now_ist):
 
 def _bulk_deal_chart_link(symbol):
     """
-    TradingView deep link for a bulk/block-deal symbol. Kept as a
-    small local copy here (instead of importing from main.py) to
-    avoid a circular import — telegram_notifier is imported BY
-    main.py, so main.py can't be imported back here.
-
-    DELIBERATELY NOT switched to Groww along with main.py's
-    build_chart_link (per request — "Chart tradingview theke soriye
-    onno app e kora jabe" -> Groww): Groww's link needs the symbol's
-    full company name (see main.py's _lookup_company_name/
-    _slugify_groww_name), which needs instruments.py's instrument
-    master — exactly the circular-import problem this function exists
-    to avoid. This report's chart links stay on TradingView unless
-    that's worth resolving properly later.
+    Chart link for a bulk/block-deal symbol — Groww first (via
+    groww_links, which has no dependency on main.py so there is no
+    circular import), TradingView only if Groww has nothing for it.
     """
+    try:
+        import groww_links
+        url = groww_links.get_url(symbol)
+        if url:
+            return url
+    except Exception:
+        pass
     tv_symbol = config.TRADINGVIEW_SYMBOL_OVERRIDES.get(symbol, f"NSE:{symbol}")
     return f"https://www.tradingview.com/chart/?symbol={tv_symbol}&interval=15"
 

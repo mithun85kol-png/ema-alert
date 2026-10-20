@@ -104,60 +104,39 @@ STRONG_CANDLE_BODY_RATIO = 0.30  # unused by current strategy.py (strong-candle 
 # else needs to change.
 PRIMARY_TIMEFRAME = "15min"
 
-# FULL GATING REWRITE (per request, 2026-09-05 — "ei sob change kore
-# ekta alert chai"). The main EMA-cross alert (stocks/F&O/commodities/
-# Nifty 500 — indices too, same flags) now fires ONLY when ALL SIX of
-# these hold on the crossing candle — see strategy.check_signals /
-# strategy._evaluate_candle:
-#   1. MACD LINE crosses its SIGNAL LINE on the exact candle (CHANGED,
-#      2026-09-05, per request — "Ema cross charo, Macd cross final
-#      koro": the trigger is no longer an EMA9/EMA20 cross; EMA9/EMA20
-#      is now purely informational). Always mandatory, not a flag —
-#      checked on the 15-min timeframe (PRIMARY_TIMEFRAME).
-#   2. REQUIRE_MACD_DIVERGENCE — OFF by default now (per request,
-#      2026-09-05 — "divergence sorao khali cross rakho"). When True,
-#      also requires a bullish price/MACD divergence for a
-#      BULLISH cross, bearish divergence for a BEARISH cross (see
-#      strategy._detect_macd_divergence). A SEPARATE MACD-based check
-#      from the cross trigger in #1 — cross = momentum direction just
-#      flipped; divergence = price/momentum disagreement building up.
-#   3. REQUIRE_VOLUME_1M_SUPPORT — previous COMPLETED trading day's
-#      total volume must exceed this symbol's trailing 1-month average
-#      daily volume (see main.py's build_momentum_volume_data /
-#      signal["volume_avg_1m"] vs signal["prev_day_volume"]). Applied
-#      as a post-filter in main.py (needs daily history, not available
-#      inside strategy.py's intraday check_signals()).
-#   4. REQUIRE_VWAP_CONFIRMATION — close must sit on the side of VWAP
-#      that agrees with the cross direction (above VWAP for BULLISH,
-#      below for BEARISH).
-#   5. REQUIRE_VOLUME_CONFIRMATION — crossing candle's volume must be
-#      strictly higher than the previous candle's.
-#   6. REQUIRE_RSI_CONFIRMATION — RSI(14) > 50 for a bullish cross,
-#      < 50 for a bearish cross.
-#   7. REQUIRE_DELIVERY_1M_SUPPORT (ADDED, 2026-09-09) — previous
-#      day's NSE delivery % must exceed this symbol's trailing 1-month
-#      average delivery % (stocks only — see main.py's delivery_avg_map
-#      / signal["delivery_pct"] vs signal["delivery_avg_1m"]).
-# REQUIRE_TREND_CONFIRMATION (EMA50 trend agreement) is OFF — no
-# longer in the mandatory list; EMA50/200 status is shown as
-# informational context on the alert instead (see main.py/
-# telegram_notifier.py's "EMA50/200" line). REQUIRE_MACD_CROSS (a
-# trailing-WINDOW "was there a recent MACD cross" check, DIFFERENT
-# from the exact-candle trigger in #1 above) is OFF — kept only in
-# case a wider recent-cross window is ever wanted in addition to the
-# exact-candle trigger. REQUIRE_STRONG_CANDLE stays off (see
-# strategy.py — that
-# filter was removed from _evaluate_candle entirely; kept here only so
-# main.py's call doesn't need an unconditional literal baked in).
+# ALERT TRIGGER — SIMPLIFIED (per request, 2026-10-19 — "alert asbe MACD
+# & RSI based, 15 minit"). The main alert (F&O stocks, commodities,
+# indices, Nifty 500 — same flags everywhere) now fires ONLY when BOTH of
+# these hold on a just-closed 15-min candle (PRIMARY_TIMEFRAME):
+#   1. MACD LINE crosses its SIGNAL LINE on that exact candle
+#      (up = BULLISH, down = BEARISH) — always on, not a flag.
+#   2. RSI(14) agrees with the direction — REQUIRE_RSI_CONFIRMATION:
+#      BULLISH needs RSI > ALERT_RSI_BULLISH_MIN, BEARISH needs
+#      RSI < ALERT_RSI_BEARISH_MAX (both 50 by default; edit below).
+# Everything else that used to BLOCK an alert is now INFORMATION only —
+# shown on the alert, never blocks it: VWAP side, candle volume vs the
+# previous candle, last-day volume vs 1-month average, last-day delivery %
+# vs 1-month average. (Flip any flag back to True to make it a gate again.)
 REQUIRE_TREND_CONFIRMATION = False
-REQUIRE_VOLUME_CONFIRMATION = True
+REQUIRE_VOLUME_CONFIRMATION = False
 REQUIRE_STRONG_CANDLE = False
 REQUIRE_MACD_CROSS = False
-REQUIRE_MACD_DIVERGENCE = False  # CHANGED (per request, 2026-09-05 — "divergence sorao khali cross rakho"): divergence removed from the mandatory list. Only the MACD cross trigger (#1 above) plus conditions #3-6 gate the alert now. Still computed/shown on the alert as informational (macd_divergence note) — just doesn't block. Flip back to True to require it again.
+REQUIRE_MACD_DIVERGENCE = False
 REQUIRE_RSI_CONFIRMATION = True
-REQUIRE_VWAP_CONFIRMATION = True
-REQUIRE_VOLUME_1M_SUPPORT = True
-REQUIRE_DELIVERY_1M_SUPPORT = True  # ADDED (per request, 2026-09-09 — "delivery ar volume ta base koro... jodi negative hoy to alert asbe na, positive hole asbe"): previous day's delivery % must exceed this symbol's trailing 1-month average delivery %, or the alert is rejected. Stocks only (indices/commodities/F&O-only symbols have no delivery data — that's fine, missing data never blocks, same rule as REQUIRE_VOLUME_1M_SUPPORT). See main.py's delivery_avg_map / signal["delivery_pct"] vs signal["delivery_avg_1m"].
+REQUIRE_VWAP_CONFIRMATION = False
+REQUIRE_VOLUME_1M_SUPPORT = False
+REQUIRE_DELIVERY_1M_SUPPORT = False
+ALERT_RSI_BULLISH_MIN = 50   # BULLISH MACD cross only fires if RSI(14) is ABOVE this
+ALERT_RSI_BEARISH_MAX = 50   # BEARISH MACD cross only fires if RSI(14) is BELOW this
+
+# ALERT LAYOUT (per request, 2026-10-19). True = the short alert with just
+# these lines: 1st 15-min position, 75-min position, 1-month position,
+# volume (last day vs 1M avg), delivery (last day vs 1M avg), day change
+# (+ the MACD/RSI values that triggered it). False = the old long message
+# (scores, Smart Money, news, OI, monthly RSI ...). While True, the extra
+# lookups that only fed the old message (news, option-chain OI, monthly
+# RSI) are skipped too, so alerts go out faster with fewer API calls.
+COMPACT_ALERT_FORMAT = True
 
 # Stock News (ADDED, per request, 2026-09-10 — "alert er sathe stock
 # news paoa jabe?") — MAIN MACD alert ONLY (not liquidity sweep,
@@ -276,25 +255,35 @@ TRADINGVIEW_SYMBOL_OVERRIDES = {
     "CRUDEOIL": "MCX:CRUDEOIL1!",
 }
 
-# ---------- Groww chart-link symbol overrides (ADDED, per request —
-# "Chart tradingview theke soriye onno app e kora jabe? Ota to chart
-# delay hochhe" -> user picked Groww) ----------
-# main.py's build_chart_link now builds a Groww stock-page link
-# (https://groww.in/stocks/{slug}) instead of TradingView for plain
-# stocks. The slug is normally derived automatically from the
-# company's full legal name via main.py's _slugify_groww_name (e.g.
-# "Reliance Industries Limited" -> "reliance-industries-ltd") — that
-# is a HEURISTIC, not guaranteed, since real company names carry
-# "&", brackets, recent renames (e.g. Zomato -> Eternal), etc. that
-# the simple slugify rule may not match exactly.
-#
-# Add an entry here for any symbol whose auto-generated link turns
-# out wrong (404s) — checked BEFORE the heuristic ever runs, exact
-# same override-first pattern as TRADINGVIEW_SYMBOL_OVERRIDES above.
-# Value is just the slug (the part after "https://groww.in/stocks/"),
-# not the full URL.
+# ---------- Groww chart links (REWRITTEN 2026-10-19 — "sob chart groww te
+# khulche na thik kore dao") ----------
+# All the logic lives in groww_links.py — see its docstring for why the
+# old "slugify the company name" approach 404'd for renamed stocks.
+# Stocks: the real Groww slug is looked up from Groww's own search by
+# exact NSE symbol and saved in GROWW_SLUG_CACHE_FILE, so each stock is
+# only looked up once ever. (If your GitHub Action commits state files,
+# add this file to its `git add` line so the cache survives between runs;
+# if not, it simply re-resolves per alert — still correct, just one extra
+# fast request.)
+GROWW_SLUG_CACHE_FILE = "groww_slug_cache.json"
+
+# Indices + MCX commodities: fixed Groww pages (taken from Groww's own
+# sitemap, https://groww.in/sitemap). Keys are the names used in
+# INDICES / COMMODITIES above.
+GROWW_FIXED_URLS = {
+    "NIFTY 50": "https://groww.in/indices/nifty",
+    "NIFTY BANK": "https://groww.in/indices/nifty-bank",
+    "SENSEX": "https://groww.in/indices/sp-bse-sensex",
+    "GOLD": "https://groww.in/commodities/futures/mcx_gold",
+    "SILVER": "https://groww.in/commodities/futures/mcx_silver",
+    "CRUDEOIL": "https://groww.in/commodities/futures/mcx_crudeoil",
+}
+
+# Hand-fixed stock slugs, checked before anything else. Add a symbol here
+# if one still opens the wrong page / falls back to TradingView: open the
+# stock in Groww, copy the last part of the URL (groww.in/stocks/<THIS>).
 GROWW_SYMBOL_OVERRIDES = {
-    # "ZOMATO": "eternal-ltd",   # example — confirm the real slug before enabling
+    # "TMPV": "tata-motors-ltd",   # example format
 }
 
 
@@ -902,3 +891,60 @@ DAILY_EMA50_STALE_ABORT_FRACTION = 0.5
 # Send a short "nothing today" message when no stock qualifies, so a
 # quiet day is distinguishable from a scan that never ran.
 DAILY_EMA50_SEND_EMPTY_NOTICE = True
+
+
+# ---------- Monthly (1-month) MACD + RSI alert (ADDED 2026-10-19, per
+# request — "15 minite eo cross e asbe abar 1 month eo asbe") ----------
+# Same rule as the 15-min alert (MACD line crosses signal line + RSI agrees,
+# thresholds ALERT_RSI_BULLISH_MIN / ALERT_RSI_BEARISH_MAX above), but on
+# MONTHLY candles built from daily history. ONE combined Telegram message
+# per day listing the new crosses. Runs automatically ONCE a day from the
+# normal scheduled run (first run at/after MONTHLY_ALERT_RUN_AFTER IST), or
+# on demand with SCAN_MODE=monthly_scan. Each (symbol, direction, month) is
+# alerted once.
+MONTHLY_ALERT_ENABLED = True
+# False = also look at the current, still-forming month (cross can flip back
+# before month end — the alert says "month so far"). True = only a cross on
+# the last fully-CLOSED month counts (alerts arrive in the first days of the
+# next month).
+MONTHLY_ALERT_COMPLETED_ONLY = False
+# "fo" = F&O stocks + NIFTY 50/BANK/SENSEX (~215 daily-history calls/day).
+# "fo+n500" adds the Nifty 500 list (~700 calls — slow under Upstox limits).
+MONTHLY_ALERT_UNIVERSE = "fo"
+MONTHLY_ALERT_RUN_AFTER = "16:00"   # IST, so today's daily candle is final
+MONTHLY_ALERT_MIN_BARS = 40         # monthly bars needed for MACD(12/26/9) + RSI to settle
+
+# 75-min "position" line reference (see strategy.compute_position_info):
+# "previous" = last closed 75-min bar before the alert's own 75-min bar
+# (available from the first alert of the day); "first" = the day's 1st
+# 75-min bar (09:15-10:30), "forming" until 10:30.
+POSITION_75MIN_REFERENCE = "previous"
+
+# 75-min "price above/below EMA50" info line on the 15-min MACD+RSI alert
+# (ADDED 2026-10-20, per request — "MACD alert e 75 minite price above EMA 50
+# achhe ki na, informative"). Informational ONLY — never blocks an alert.
+# Uses the last CLOSED 75-min bar at alert time; needs ~POSITION_75MIN_EMA_MIN_BARS
+# of 75-min history (28 days of 1-min cache gives ~95 bars).
+POSITION_75MIN_EMA_PERIOD = 50
+POSITION_75MIN_EMA_MIN_BARS = 60
+
+# ---------- ONLY THESE 4 ALERTS ARE ACTIVE (2026-10-20, per request) ----------
+#   1. 15-min MACD + RSI alert          (SCAN_MODE full / index)
+#   2. 1st 15-min opening report        (SCAN_MODE opening_bias_report)
+#   3. EMA 50/200 report                (SCAN_MODE ema_cross_report / _evening)
+#   4. 1-month MACD + RSI alert         (SCAN_MODE monthly_scan, or auto after 16:00)
+# Any other SCAN_MODE a cron-job still sends (breakout_scan, swing_entry_scan,
+# daily_ema50_scan, top_movers_1min, consolidation_breakout_scan) now exits
+# immediately with no Telegram message. To bring one back, add its name here.
+ENABLED_SCAN_MODES = {
+    "full", "index",
+    "opening_bias_report",
+    "ema_cross_report", "ema_cross_report_evening",
+    "monthly_scan",
+}
+# Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
+CORPORATE_ACTIONS_ALERT_ENABLED = False
+# The once-a-day "Daily EMA50 + MACD + RSI" scan and every other extra alert
+# already default to off through ENABLED_SCAN_MODES above; this just makes it explicit.
+DAILY_EMA50_SCAN_ENABLED = False
+BREAKOUT_SCAN_ENABLED = False
