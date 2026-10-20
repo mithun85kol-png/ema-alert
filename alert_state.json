@@ -9398,5 +9398,26 @@
   ],
   "LT:BULLISH": [
     "2026-10-19 09:45:00+05:30"
+  ],
+  "MONTHLY_SCAN:DONE": [
+    "2026-10-20"
+  ],
+  "KOTAKBANK::MONTHLY:BULLISH": [
+    "2026-10"
+  ],
+  "YESBANK::MONTHLY:BEARISH": [
+    "2026-10"
+  ],
+  "TECHM::MONTHLY:BULLISH": [
+    "2026-10"
+  ],
+  "NESTLEIND::MONTHLY:BEARISH": [
+    "2026-10"
+  ],
+  "ETERNAL::MONTHLY:BULLISH": [
+    "2026-10"
+  ],
+  "DELHIVERY::MONTHLY:BEARISH": [
+    "2026-10"
   ]
 }
