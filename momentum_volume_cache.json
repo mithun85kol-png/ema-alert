@@ -2,6 +2,8 @@
   "date": "2026-10-20",
   "data": {
     "NIFTY 50": {
+      "month_high": 23489.0,
+      "month_low": 22179.9,
       "four_week_high_close": 23446.8,
       "prev_day_volume": 0,
       "volume_5day_ago": 0,
@@ -30,6 +32,8 @@
       }
     },
     "NIFTY BANK": {
+      "month_high": 56671.1,
+      "month_low": 53785.7,
       "four_week_high_close": 56548.9,
       "prev_day_volume": 0,
       "volume_5day_ago": 0,
@@ -58,6 +62,8 @@
       }
     },
     "SENSEX": {
+      "month_high": 75038.93,
+      "month_low": 71292.88,
       "four_week_high_close": 74858.99,
       "prev_day_volume": 0,
       "volume_5day_ago": 0,
@@ -86,6 +92,8 @@
       }
     },
     "MARUTI": {
+      "month_high": 12458.0,
+      "month_low": 11125.0,
       "four_week_high_close": 12230.0,
       "prev_day_volume": 453832,
       "volume_5day_ago": 323997,
@@ -108,6 +116,8 @@
       "consolidation_window": null
     },
     "MANAPPURAM": {
+      "month_high": 334.25,
+      "month_low": 303.35,
       "four_week_high_close": 334.0,
       "prev_day_volume": 1895664,
       "volume_5day_ago": 5000299,
@@ -130,6 +140,8 @@
       "consolidation_window": null
     },
     "ENRIN": {
+      "month_high": 3408.9,
+      "month_low": 2832.0,
       "four_week_high_close": 3344.0,
       "prev_day_volume": 276028,
       "volume_5day_ago": 460048,
@@ -152,6 +164,8 @@
       "consolidation_window": null
     },
     "NATIONALUM": {
+      "month_high": 363.95,
+      "month_low": 309.9,
       "four_week_high_close": 363.45,
       "prev_day_volume": 2826003,
       "volume_5day_ago": 3501215,
@@ -174,6 +188,8 @@
       "consolidation_window": null
     },
     "BAJAJ-AUTO": {
+      "month_high": 11540.0,
+      "month_low": 9637.0,
       "four_week_high_close": 11460.0,
       "prev_day_volume": 110832,
       "volume_5day_ago": 313934,
@@ -196,6 +212,8 @@
       "consolidation_window": null
     },
     "HINDZINC": {
+      "month_high": 602.8,
+      "month_low": 524.5,
       "four_week_high_close": 595.45,
       "prev_day_volume": 3040983,
       "volume_5day_ago": 1953013,
@@ -218,6 +236,8 @@
       "consolidation_window": null
     },
     "360ONE": {
+      "month_high": 1122.0,
+      "month_low": 1008.0,
       "four_week_high_close": 1108.0,
       "prev_day_volume": 1696837,
       "volume_5day_ago": 330899,
@@ -240,6 +260,8 @@
       "consolidation_window": null
     },
     "SHREECEM": {
+      "month_high": 23000.0,
+      "month_low": 21355.0,
       "four_week_high_close": 22550.0,
       "prev_day_volume": 62653,
       "volume_5day_ago": 36998,
@@ -262,6 +284,8 @@
       "consolidation_window": null
     },
     "JINDALSTEL": {
+      "month_high": 1187.4,
+      "month_low": 1001.1,
       "four_week_high_close": 1175.3,
       "prev_day_volume": 935822,
       "volume_5day_ago": 1274101,
@@ -284,6 +308,8 @@
       "consolidation_window": null
     },
     "BDL": {
+      "month_high": 1196.6,
+      "month_low": 1047.7,
       "four_week_high_close": 1175.0,
       "prev_day_volume": 366812,
       "volume_5day_ago": 509519,
@@ -306,6 +332,8 @@
       "consolidation_window": null
     },
     "COFORGE": {
+      "month_high": 1970.0,
+      "month_low": 1722.0,
       "four_week_high_close": 1951.9,
       "prev_day_volume": 1309638,
       "volume_5day_ago": 1259800,
@@ -328,6 +356,8 @@
       "consolidation_window": null
     },
     "PNB": {
+      "month_high": 125.22,
+      "month_low": 109.37,
       "four_week_high_close": 121.9,
       "prev_day_volume": 78115490,
       "volume_5day_ago": 8980416,
@@ -350,6 +380,8 @@
       "consolidation_window": null
     },
     "ADANIPOWER": {
+      "month_high": 210.55,
+      "month_low": 182.85,
       "four_week_high_close": 206.96,
       "prev_day_volume": 8537257,
       "volume_5day_ago": 13331869,
@@ -372,6 +404,8 @@
       "consolidation_window": null
     },
     "GODREJCP": {
+      "month_high": 891.0,
+      "month_low": 832.6,
       "four_week_high_close": 880.0,
       "prev_day_volume": 709267,
       "volume_5day_ago": 339250,
@@ -400,6 +434,8 @@
       }
     },
     "CDSL": {
+      "month_high": 1394.4,
+      "month_low": 1223.9,
       "four_week_high_close": 1361.0,
       "prev_day_volume": 555214,
       "volume_5day_ago": 750601,
@@ -428,6 +464,8 @@
       }
     },
     "PFC": {
+      "month_high": 349.95,
+      "month_low": 313.35,
       "four_week_high_close": 346.0,
       "prev_day_volume": 7892261,
       "volume_5day_ago": 6955063,
@@ -450,6 +488,8 @@
       "consolidation_window": null
     },
     "INFY": {
+      "month_high": 1167.85,
+      "month_low": 980.4,
       "four_week_high_close": 1161.2,
       "prev_day_volume": 13258477,
       "volume_5day_ago": 8429312,
@@ -472,6 +512,8 @@
       "consolidation_window": null
     },
     "KAYNES": {
+      "month_high": 3707.2,
+      "month_low": 3200.1,
       "four_week_high_close": 3658.0,
       "prev_day_volume": 269611,
       "volume_5day_ago": 657971,
@@ -494,6 +536,8 @@
       "consolidation_window": null
     },
     "BIOCON": {
+      "month_high": 397.2,
+      "month_low": 340.0,
       "four_week_high_close": 395.0,
       "prev_day_volume": 3222416,
       "volume_5day_ago": 2632161,
@@ -516,6 +560,8 @@
       "consolidation_window": null
     },
     "PATANJALI": {
+      "month_high": 412.9,
+      "month_low": 348.55,
       "four_week_high_close": 409.45,
       "prev_day_volume": 4011352,
       "volume_5day_ago": 1397374,
@@ -538,6 +584,8 @@
       "consolidation_window": null
     },
     "BHARATFORG": {
+      "month_high": 2023.2,
+      "month_low": 1773.2,
       "four_week_high_close": 2009.0,
       "prev_day_volume": 429055,
       "volume_5day_ago": 1189319,
@@ -560,6 +608,8 @@
       "consolidation_window": null
     },
     "ALKEM": {
+      "month_high": 5466.5,
+      "month_low": 4975.5,
       "four_week_high_close": 5417.5,
       "prev_day_volume": 95218,
       "volume_5day_ago": 179595,
@@ -582,6 +632,8 @@
       "consolidation_window": null
     },
     "DIVISLAB": {
+      "month_high": 9740.0,
+      "month_low": 8937.5,
       "four_week_high_close": 9624.0,
       "prev_day_volume": 448972,
       "volume_5day_ago": 358499,
@@ -604,6 +656,8 @@
       "consolidation_window": null
     },
     "PRESTIGE": {
+      "month_high": 1507.4,
+      "month_low": 1389.8,
       "four_week_high_close": 1492.0,
       "prev_day_volume": 287546,
       "volume_5day_ago": 494685,
@@ -626,6 +680,8 @@
       "consolidation_window": null
     },
     "KOTAKBANK": {
+      "month_high": 453.1,
+      "month_low": 394.7,
       "four_week_high_close": 447.95,
       "prev_day_volume": 15004260,
       "volume_5day_ago": 17833238,
@@ -648,6 +704,8 @@
       "consolidation_window": null
     },
     "VMM": {
+      "month_high": 108.23,
+      "month_low": 94.01,
       "four_week_high_close": 106.0,
       "prev_day_volume": 5406486,
       "volume_5day_ago": 5877580,
@@ -670,6 +728,8 @@
       "consolidation_window": null
     },
     "CANBK": {
+      "month_high": 126.7,
+      "month_low": 116.51,
       "four_week_high_close": 126.0,
       "prev_day_volume": 31038836,
       "volume_5day_ago": 9100287,
@@ -692,6 +752,8 @@
       "consolidation_window": null
     },
     "HINDUNILVR": {
+      "month_high": 1966.6,
+      "month_low": 1814.4,
       "four_week_high_close": 1950.0,
       "prev_day_volume": 1226363,
       "volume_5day_ago": 1479326,
@@ -714,6 +776,8 @@
       "consolidation_window": null
     },
     "SAGILITY": {
+      "month_high": 46.7,
+      "month_low": 42.11,
       "four_week_high_close": 45.99,
       "prev_day_volume": 7146693,
       "volume_5day_ago": 5958317,
@@ -736,6 +800,8 @@
       "consolidation_window": null
     },
     "SHRIRAMFIN": {
+      "month_high": 1019.0,
+      "month_low": 917.25,
       "four_week_high_close": 1011.8,
       "prev_day_volume": 3408806,
       "volume_5day_ago": 1976078,
@@ -758,6 +824,8 @@
       "consolidation_window": null
     },
     "MCX": {
+      "month_high": 3481.4,
+      "month_low": 3122.7,
       "four_week_high_close": 3427.7,
       "prev_day_volume": 1155788,
       "volume_5day_ago": 1699974,
@@ -780,6 +848,8 @@
       "consolidation_window": null
     },
     "BANKBARODA": {
+      "month_high": 239.4,
+      "month_low": 223.82,
       "four_week_high_close": 238.43,
       "prev_day_volume": 13633759,
       "volume_5day_ago": 3198227,
@@ -802,6 +872,8 @@
       "consolidation_window": null
     },
     "LODHA": {
+      "month_high": 1177.5,
+      "month_low": 1027.7,
       "four_week_high_close": 1165.0,
       "prev_day_volume": 805992,
       "volume_5day_ago": 871312,
@@ -824,6 +896,8 @@
       "consolidation_window": null
     },
     "HEROMOTOCO": {
+      "month_high": 5448.5,
+      "month_low": 4825.0,
       "four_week_high_close": 5419.0,
       "prev_day_volume": 366042,
       "volume_5day_ago": 318402,
@@ -846,6 +920,8 @@
       "consolidation_window": null
     },
     "UNOMINDA": {
+      "month_high": 1284.0,
+      "month_low": 1083.7,
       "four_week_high_close": 1227.5,
       "prev_day_volume": 168761,
       "volume_5day_ago": 381312,
@@ -874,6 +950,8 @@
       }
     },
     "SBILIFE": {
+      "month_high": 1791.4,
+      "month_low": 1634.5,
       "four_week_high_close": 1760.0,
       "prev_day_volume": 948959,
       "volume_5day_ago": 809692,
@@ -896,6 +974,8 @@
       "consolidation_window": null
     },
     "TATACONSUM": {
+      "month_high": 1018.7,
+      "month_low": 945.0,
       "four_week_high_close": 1000.6,
       "prev_day_volume": 546793,
       "volume_5day_ago": 716582,
@@ -918,6 +998,8 @@
       "consolidation_window": null
     },
     "BAJAJHLDNG": {
+      "month_high": 11449.0,
+      "month_low": 10415.0,
       "four_week_high_close": 11449.0,
       "prev_day_volume": 25967,
       "volume_5day_ago": 25285,
@@ -940,6 +1022,8 @@
       "consolidation_window": null
     },
     "ABCAPITAL": {
+      "month_high": 410.05,
+      "month_low": 367.8,
       "four_week_high_close": 403.4,
       "prev_day_volume": 1354690,
       "volume_5day_ago": 3567322,
@@ -962,6 +1046,8 @@
       "consolidation_window": null
     },
     "HINDPETRO": {
+      "month_high": 365.2,
+      "month_low": 323.25,
       "four_week_high_close": 360.7,
       "prev_day_volume": 3972010,
       "volume_5day_ago": 5155642,
@@ -984,6 +1070,8 @@
       "consolidation_window": null
     },
     "YESBANK": {
+      "month_high": 23.38,
+      "month_low": 16.81,
       "four_week_high_close": 23.24,
       "prev_day_volume": 206773668,
       "volume_5day_ago": 53091781,
@@ -1006,6 +1094,8 @@
       "consolidation_window": null
     },
     "OBEROIRLTY": {
+      "month_high": 1882.9,
+      "month_low": 1663.3,
       "four_week_high_close": 1858.5,
       "prev_day_volume": 256418,
       "volume_5day_ago": 402957,
@@ -1028,6 +1118,8 @@
       "consolidation_window": null
     },
     "ICICIPRULI": {
+      "month_high": 501.45,
+      "month_low": 435.05,
       "four_week_high_close": 493.0,
       "prev_day_volume": 1000580,
       "volume_5day_ago": 451502,
@@ -1050,6 +1142,8 @@
       "consolidation_window": null
     },
     "ASTRAL": {
+      "month_high": 1469.4,
+      "month_low": 1316.1,
       "four_week_high_close": 1443.3,
       "prev_day_volume": 243811,
       "volume_5day_ago": 459978,
@@ -1072,6 +1166,8 @@
       "consolidation_window": null
     },
     "SONACOMS": {
+      "month_high": 837.0,
+      "month_low": 774.5,
       "four_week_high_close": 833.0,
       "prev_day_volume": 1426449,
       "volume_5day_ago": 2043561,
@@ -1094,6 +1190,8 @@
       "consolidation_window": null
     },
     "TECHM": {
+      "month_high": 1797.0,
+      "month_low": 1442.5,
       "four_week_high_close": 1790.0,
       "prev_day_volume": 3946622,
       "volume_5day_ago": 4256937,
@@ -1116,6 +1214,8 @@
       "consolidation_window": null
     },
     "BRITANNIA": {
+      "month_high": 5030.5,
+      "month_low": 4703.9,
       "four_week_high_close": 5023.0,
       "prev_day_volume": 130763,
       "volume_5day_ago": 65623,
@@ -1138,6 +1238,8 @@
       "consolidation_window": null
     },
     "TRENT": {
+      "month_high": 3004.7,
+      "month_low": 2545.8,
       "four_week_high_close": 2987.8,
       "prev_day_volume": 813750,
       "volume_5day_ago": 636494,
@@ -1160,6 +1262,8 @@
       "consolidation_window": null
     },
     "CONCOR": {
+      "month_high": 504.55,
+      "month_low": 433.25,
       "four_week_high_close": 487.05,
       "prev_day_volume": 406198,
       "volume_5day_ago": 389985,
@@ -1188,6 +1292,8 @@
       }
     },
     "SBIN": {
+      "month_high": 1000.1,
+      "month_low": 937.5,
       "four_week_high_close": 996.0,
       "prev_day_volume": 15083265,
       "volume_5day_ago": 9306202,
@@ -1216,6 +1322,8 @@
       }
     },
     "TATASTEEL": {
+      "month_high": 191.8,
+      "month_low": 170.23,
       "four_week_high_close": 190.82,
       "prev_day_volume": 12638617,
       "volume_5day_ago": 27079930,
@@ -1238,6 +1346,8 @@
       "consolidation_window": null
     },
     "WIPRO": {
+      "month_high": 185.85,
+      "month_low": 156.79,
       "four_week_high_close": 184.4,
       "prev_day_volume": 15779196,
       "volume_5day_ago": 6207783,
@@ -1260,6 +1370,8 @@
       "consolidation_window": null
     },
     "LTF": {
+      "month_high": 314.3,
+      "month_low": 246.5,
       "four_week_high_close": 310.0,
       "prev_day_volume": 5032735,
       "volume_5day_ago": 2127416,
@@ -1282,6 +1394,8 @@
       "consolidation_window": null
     },
     "WAAREEENER": {
+      "month_high": 2576.3,
+      "month_low": 2281.8,
       "four_week_high_close": 2565.4,
       "prev_day_volume": 878281,
       "volume_5day_ago": 499868,
@@ -1304,6 +1418,8 @@
       "consolidation_window": null
     },
     "GODREJPROP": {
+      "month_high": 1732.0,
+      "month_low": 1530.0,
       "four_week_high_close": 1707.6,
       "prev_day_volume": 264019,
       "volume_5day_ago": 292802,
@@ -1326,6 +1442,8 @@
       "consolidation_window": null
     },
     "VEDL": {
+      "month_high": 271.35,
+      "month_low": 242.5,
       "four_week_high_close": 271.0,
       "prev_day_volume": 5411850,
       "volume_5day_ago": 10325784,
@@ -1348,6 +1466,8 @@
       "consolidation_window": null
     },
     "MAXHEALTH": {
+      "month_high": 1072.6,
+      "month_low": 828.6,
       "four_week_high_close": 1066.6,
       "prev_day_volume": 2042848,
       "volume_5day_ago": 2033396,
@@ -1370,6 +1490,8 @@
       "consolidation_window": null
     },
     "NAM-INDIA": {
+      "month_high": 1175.8,
+      "month_low": 1026.4,
       "four_week_high_close": 1165.0,
       "prev_day_volume": 387722,
       "volume_5day_ago": 419849,
@@ -1392,6 +1514,8 @@
       "consolidation_window": null
     },
     "CHOLAFIN": {
+      "month_high": 1806.0,
+      "month_low": 1543.1,
       "four_week_high_close": 1774.0,
       "prev_day_volume": 573647,
       "volume_5day_ago": 1163686,
@@ -1420,6 +1544,8 @@
       }
     },
     "TIINDIA": {
+      "month_high": 2637.8,
+      "month_low": 2136.5,
       "four_week_high_close": 2588.0,
       "prev_day_volume": 193264,
       "volume_5day_ago": 659603,
@@ -1442,6 +1568,8 @@
       "consolidation_window": null
     },
     "UNITDSPR": {
+      "month_high": 1442.0,
+      "month_low": 1308.1,
       "four_week_high_close": 1441.0,
       "prev_day_volume": 317558,
       "volume_5day_ago": 473799,
@@ -1464,6 +1592,8 @@
       "consolidation_window": null
     },
     "ADANIPORTS": {
+      "month_high": 1824.0,
+      "month_low": 1674.2,
       "four_week_high_close": 1822.0,
       "prev_day_volume": 2526448,
       "volume_5day_ago": 10901705,
@@ -1486,6 +1616,8 @@
       "consolidation_window": null
     },
     "VOLTAS": {
+      "month_high": 1158.8,
+      "month_low": 1012.5,
       "four_week_high_close": 1142.1,
       "prev_day_volume": 376832,
       "volume_5day_ago": 282434,
@@ -1508,6 +1640,8 @@
       "consolidation_window": null
     },
     "GRASIM": {
+      "month_high": 3217.3,
+      "month_low": 2843.4,
       "four_week_high_close": 3191.0,
       "prev_day_volume": 308699,
       "volume_5day_ago": 117363,
@@ -1530,6 +1664,8 @@
       "consolidation_window": null
     },
     "MUTHOOTFIN": {
+      "month_high": 2874.2,
+      "month_low": 2545.0,
       "four_week_high_close": 2856.5,
       "prev_day_volume": 354302,
       "volume_5day_ago": 333177,
@@ -1552,6 +1688,8 @@
       "consolidation_window": null
     },
     "LUPIN": {
+      "month_high": 2135.0,
+      "month_low": 1925.7,
       "four_week_high_close": 2135.0,
       "prev_day_volume": 602008,
       "volume_5day_ago": 418279,
@@ -1574,6 +1712,8 @@
       "consolidation_window": null
     },
     "IDEA": {
+      "month_high": 14.55,
+      "month_low": 12.22,
       "four_week_high_close": 14.52,
       "prev_day_volume": 323539893,
       "volume_5day_ago": 327681526,
@@ -1596,6 +1736,8 @@
       "consolidation_window": null
     },
     "NMDC": {
+      "month_high": 82.32,
+      "month_low": 70.1,
       "four_week_high_close": 82.0,
       "prev_day_volume": 9863444,
       "volume_5day_ago": 15649136,
@@ -1618,6 +1760,8 @@
       "consolidation_window": null
     },
     "PHOENIXLTD": {
+      "month_high": 2035.6,
+      "month_low": 1771.2,
       "four_week_high_close": 1993.2,
       "prev_day_volume": 423330,
       "volume_5day_ago": 517066,
@@ -1640,6 +1784,8 @@
       "consolidation_window": null
     },
     "INOXWIND": {
+      "month_high": 78.89,
+      "month_low": 62.43,
       "four_week_high_close": 77.9,
       "prev_day_volume": 8224708,
       "volume_5day_ago": 12219487,
@@ -1662,6 +1808,8 @@
       "consolidation_window": null
     },
     "ONGC": {
+      "month_high": 239.0,
+      "month_low": 218.53,
       "four_week_high_close": 239.0,
       "prev_day_volume": 5262091,
       "volume_5day_ago": 9218768,
@@ -1690,6 +1838,8 @@
       }
     },
     "ADANIENSOL": {
+      "month_high": 1436.5,
+      "month_low": 1241.2,
       "four_week_high_close": 1397.6,
       "prev_day_volume": 1303809,
       "volume_5day_ago": 789685,
@@ -1712,6 +1862,8 @@
       "consolidation_window": null
     },
     "COCHINSHIP": {
+      "month_high": 1411.0,
+      "month_low": 1200.0,
       "four_week_high_close": 1388.9,
       "prev_day_volume": 294423,
       "volume_5day_ago": 761099,
@@ -1734,6 +1886,8 @@
       "consolidation_window": null
     },
     "IRFC": {
+      "month_high": 81.7,
+      "month_low": 74.06,
       "four_week_high_close": 81.0,
       "prev_day_volume": 8414248,
       "volume_5day_ago": 17109967,
@@ -1756,6 +1910,8 @@
       "consolidation_window": null
     },
     "HDFCAMC": {
+      "month_high": 2458.7,
+      "month_low": 2223.3,
       "four_week_high_close": 2448.3,
       "prev_day_volume": 503541,
       "volume_5day_ago": 755157,
@@ -1778,6 +1934,8 @@
       "consolidation_window": null
     },
     "ATHERENERG": {
+      "month_high": 1640.0,
+      "month_low": 1368.6,
       "four_week_high_close": 1593.0,
       "prev_day_volume": 1929718,
       "volume_5day_ago": 3581450,
@@ -1800,6 +1958,8 @@
       "consolidation_window": null
     },
     "MPHASIS": {
+      "month_high": 2521.7,
+      "month_low": 2144.8,
       "four_week_high_close": 2500.0,
       "prev_day_volume": 765440,
       "volume_5day_ago": 363812,
@@ -1822,6 +1982,8 @@
       "consolidation_window": null
     },
     "NTPC": {
+      "month_high": 330.85,
+      "month_low": 305.7,
       "four_week_high_close": 327.8,
       "prev_day_volume": 7888611,
       "volume_5day_ago": 12834279,
@@ -1844,6 +2006,8 @@
       "consolidation_window": null
     },
     "ASIANPAINT": {
+      "month_high": 2475.1,
+      "month_low": 2310.0,
       "four_week_high_close": 2455.0,
       "prev_day_volume": 497488,
       "volume_5day_ago": 396380,
@@ -1872,6 +2036,8 @@
       }
     },
     "IEX": {
+      "month_high": 115.56,
+      "month_low": 103.05,
       "four_week_high_close": 113.82,
       "prev_day_volume": 1901670,
       "volume_5day_ago": 3305238,
@@ -1894,6 +2060,8 @@
       "consolidation_window": null
     },
     "ANANDRATHI": {
+      "month_high": 2268.4,
+      "month_low": 2007.0,
       "four_week_high_close": 2211.2,
       "prev_day_volume": 235630,
       "volume_5day_ago": 932366,
@@ -1916,6 +2084,8 @@
       "consolidation_window": null
     },
     "CAMS": {
+      "month_high": 725.05,
+      "month_low": 660.8,
       "four_week_high_close": 723.9,
       "prev_day_volume": 304532,
       "volume_5day_ago": 1251064,
@@ -1938,6 +2108,8 @@
       "consolidation_window": null
     },
     "APLAPOLLO": {
+      "month_high": 2270.1,
+      "month_low": 2026.2,
       "four_week_high_close": 2214.7,
       "prev_day_volume": 381848,
       "volume_5day_ago": 286344,
@@ -1960,6 +2132,8 @@
       "consolidation_window": null
     },
     "LICHSGFIN": {
+      "month_high": 576.7,
+      "month_low": 497.2,
       "four_week_high_close": 572.5,
       "prev_day_volume": 832228,
       "volume_5day_ago": 3553143,
@@ -1982,6 +2156,8 @@
       "consolidation_window": null
     },
     "NYKAA": {
+      "month_high": 348.4,
+      "month_low": 316.0,
       "four_week_high_close": 345.0,
       "prev_day_volume": 3892230,
       "volume_5day_ago": 2223568,
@@ -2010,6 +2186,8 @@
       }
     },
     "ABB": {
+      "month_high": 7405.5,
+      "month_low": 6575.0,
       "four_week_high_close": 7271.0,
       "prev_day_volume": 557390,
       "volume_5day_ago": 203395,
@@ -2032,6 +2210,8 @@
       "consolidation_window": null
     },
     "NESTLEIND": {
+      "month_high": 1392.9,
+      "month_low": 1238.5,
       "four_week_high_close": 1387.2,
       "prev_day_volume": 1187523,
       "volume_5day_ago": 1351575,
@@ -2054,6 +2234,8 @@
       "consolidation_window": null
     },
     "APOLLOHOSP": {
+      "month_high": 9070.5,
+      "month_low": 7607.5,
       "four_week_high_close": 9069.0,
       "prev_day_volume": 422465,
       "volume_5day_ago": 990813,
@@ -2076,6 +2258,8 @@
       "consolidation_window": null
     },
     "TATAPOWER": {
+      "month_high": 374.8,
+      "month_low": 333.6,
       "four_week_high_close": 369.0,
       "prev_day_volume": 3247837,
       "volume_5day_ago": 3408910,
@@ -2098,6 +2282,8 @@
       "consolidation_window": null
     },
     "MARICO": {
+      "month_high": 833.2,
+      "month_low": 766.25,
       "four_week_high_close": 832.3,
       "prev_day_volume": 1297998,
       "volume_5day_ago": 1039988,
@@ -2126,6 +2312,8 @@
       }
     },
     "INDUSTOWER": {
+      "month_high": 392.3,
+      "month_low": 355.55,
       "four_week_high_close": 389.1,
       "prev_day_volume": 4693865,
       "volume_5day_ago": 5835701,
@@ -2148,6 +2336,8 @@
       "consolidation_window": null
     },
     "INDHOTEL": {
+      "month_high": 776.15,
+      "month_low": 704.6,
       "four_week_high_close": 772.1,
       "prev_day_volume": 3712637,
       "volume_5day_ago": 2159163,
@@ -2170,6 +2360,8 @@
       "consolidation_window": null
     },
     "JSWSTEEL": {
+      "month_high": 1304.0,
+      "month_low": 1158.0,
       "four_week_high_close": 1297.8,
       "prev_day_volume": 3320243,
       "volume_5day_ago": 973895,
@@ -2192,6 +2384,8 @@
       "consolidation_window": null
     },
     "COALINDIA": {
+      "month_high": 432.9,
+      "month_low": 402.1,
       "four_week_high_close": 428.0,
       "prev_day_volume": 3094405,
       "volume_5day_ago": 10160155,
@@ -2214,6 +2408,8 @@
       "consolidation_window": null
     },
     "JSWENERGY": {
+      "month_high": 526.0,
+      "month_low": 457.5,
       "four_week_high_close": 521.0,
       "prev_day_volume": 1408997,
       "volume_5day_ago": 1556832,
@@ -2236,6 +2432,8 @@
       "consolidation_window": null
     },
     "BAJFINANCE": {
+      "month_high": 1043.2,
+      "month_low": 937.3,
       "four_week_high_close": 1043.2,
       "prev_day_volume": 8308852,
       "volume_5day_ago": 5044925,
@@ -2264,6 +2462,8 @@
       }
     },
     "NBCC": {
+      "month_high": 84.28,
+      "month_low": 73.5,
       "four_week_high_close": 83.99,
       "prev_day_volume": 3369427,
       "volume_5day_ago": 4956073,
@@ -2286,6 +2486,8 @@
       "consolidation_window": null
     },
     "HAL": {
+      "month_high": 5012.0,
+      "month_low": 4549.3,
       "four_week_high_close": 4989.0,
       "prev_day_volume": 583323,
       "volume_5day_ago": 527818,
@@ -2308,6 +2510,8 @@
       "consolidation_window": null
     },
     "TCS": {
+      "month_high": 2497.0,
+      "month_low": 2032.4,
       "four_week_high_close": 2465.0,
       "prev_day_volume": 8676373,
       "volume_5day_ago": 3540523,
@@ -2330,6 +2534,8 @@
       "consolidation_window": null
     },
     "AMBUJACEM": {
+      "month_high": 396.0,
+      "month_low": 341.0,
       "four_week_high_close": 392.75,
       "prev_day_volume": 1571724,
       "volume_5day_ago": 2236843,
@@ -2352,6 +2558,8 @@
       "consolidation_window": null
     },
     "RELIANCE": {
+      "month_high": 1252.8,
+      "month_low": 1152.2,
       "four_week_high_close": 1248.0,
       "prev_day_volume": 15572554,
       "volume_5day_ago": 11338332,
@@ -2374,6 +2582,8 @@
       "consolidation_window": null
     },
     "LICI": {
+      "month_high": 417.8,
+      "month_low": 378.2,
       "four_week_high_close": 409.05,
       "prev_day_volume": 5725234,
       "volume_5day_ago": 3574282,
@@ -2396,6 +2606,8 @@
       "consolidation_window": null
     },
     "GODFRYPHLP": {
+      "month_high": 2019.1,
+      "month_low": 1770.0,
       "four_week_high_close": 2003.0,
       "prev_day_volume": 107848,
       "volume_5day_ago": 219747,
@@ -2418,6 +2630,8 @@
       "consolidation_window": null
     },
     "PGEL": {
+      "month_high": 541.45,
+      "month_low": 476.1,
       "four_week_high_close": 536.55,
       "prev_day_volume": 878350,
       "volume_5day_ago": 1695763,
@@ -2440,6 +2654,8 @@
       "consolidation_window": null
     },
     "CROMPTON": {
+      "month_high": 227.12,
+      "month_low": 201.1,
       "four_week_high_close": 225.05,
       "prev_day_volume": 8047666,
       "volume_5day_ago": 2878166,
@@ -2462,6 +2678,8 @@
       "consolidation_window": null
     },
     "HDFCBANK": {
+      "month_high": 749.3,
+      "month_low": 690.5,
       "four_week_high_close": 739.5,
       "prev_day_volume": 33524133,
       "volume_5day_ago": 18197879,
@@ -2484,6 +2702,8 @@
       "consolidation_window": null
     },
     "GVT&D": {
+      "month_high": 4513.5,
+      "month_low": 3877.1,
       "four_week_high_close": 4417.0,
       "prev_day_volume": 390489,
       "volume_5day_ago": 213022,
@@ -2506,6 +2726,8 @@
       "consolidation_window": null
     },
     "AMBER": {
+      "month_high": 7214.5,
+      "month_low": 6380.0,
       "four_week_high_close": 7098.0,
       "prev_day_volume": 67193,
       "volume_5day_ago": 139786,
@@ -2528,6 +2750,8 @@
       "consolidation_window": null
     },
     "PIIND": {
+      "month_high": 2428.7,
+      "month_low": 2100.0,
       "four_week_high_close": 2410.0,
       "prev_day_volume": 325681,
       "volume_5day_ago": 75514,
@@ -2550,6 +2774,8 @@
       "consolidation_window": null
     },
     "IREDA": {
+      "month_high": 117.39,
+      "month_low": 103.41,
       "four_week_high_close": 114.82,
       "prev_day_volume": 4513745,
       "volume_5day_ago": 3593549,
@@ -2572,6 +2798,8 @@
       "consolidation_window": null
     },
     "NAUKRI": {
+      "month_high": 1322.7,
+      "month_low": 1180.3,
       "four_week_high_close": 1304.0,
       "prev_day_volume": 750602,
       "volume_5day_ago": 689819,
@@ -2594,6 +2822,8 @@
       "consolidation_window": null
     },
     "EICHERMOT": {
+      "month_high": 7569.5,
+      "month_low": 6767.5,
       "four_week_high_close": 7512.5,
       "prev_day_volume": 490129,
       "volume_5day_ago": 377241,
@@ -2616,6 +2846,8 @@
       "consolidation_window": null
     },
     "POWERGRID": {
+      "month_high": 270.9,
+      "month_low": 244.65,
       "four_week_high_close": 270.2,
       "prev_day_volume": 8908653,
       "volume_5day_ago": 6205671,
@@ -2638,6 +2870,8 @@
       "consolidation_window": null
     },
     "PIDILITIND": {
+      "month_high": 1598.9,
+      "month_low": 1456.8,
       "four_week_high_close": 1588.1,
       "prev_day_volume": 413687,
       "volume_5day_ago": 533424,
@@ -2666,6 +2900,8 @@
       }
     },
     "UJJIVANSFB": {
+      "month_high": 68.3,
+      "month_low": 61.1,
       "four_week_high_close": 67.5,
       "prev_day_volume": 20990086,
       "volume_5day_ago": 15602671,
@@ -2688,6 +2924,8 @@
       "consolidation_window": null
     },
     "DLF": {
+      "month_high": 685.85,
+      "month_low": 634.15,
       "four_week_high_close": 683.0,
       "prev_day_volume": 2504625,
       "volume_5day_ago": 2254441,
@@ -2710,6 +2948,8 @@
       "consolidation_window": null
     },
     "LAURUSLABS": {
+      "month_high": 2089.0,
+      "month_low": 1952.1,
       "four_week_high_close": 2069.2,
       "prev_day_volume": 1133053,
       "volume_5day_ago": 1417097,
@@ -2732,6 +2972,8 @@
       "consolidation_window": null
     },
     "BAJAJFINSV": {
+      "month_high": 1872.6,
+      "month_low": 1694.0,
       "four_week_high_close": 1849.8,
       "prev_day_volume": 969243,
       "volume_5day_ago": 565062,
@@ -2760,6 +3002,8 @@
       }
     },
     "JIOFIN": {
+      "month_high": 234.0,
+      "month_low": 208.5,
       "four_week_high_close": 232.15,
       "prev_day_volume": 9223615,
       "volume_5day_ago": 7646522,
@@ -2782,6 +3026,8 @@
       "consolidation_window": null
     },
     "DRREDDY": {
+      "month_high": 1252.8,
+      "month_low": 1167.2,
       "four_week_high_close": 1251.9,
       "prev_day_volume": 1023837,
       "volume_5day_ago": 1756682,
@@ -2804,6 +3050,8 @@
       "consolidation_window": null
     },
     "NHPC": {
+      "month_high": 76.95,
+      "month_low": 70.25,
       "four_week_high_close": 76.74,
       "prev_day_volume": 8894570,
       "volume_5day_ago": 4112974,
@@ -2832,6 +3080,8 @@
       }
     },
     "PAYTM": {
+      "month_high": 1849.9,
+      "month_low": 1558.8,
       "four_week_high_close": 1814.4,
       "prev_day_volume": 1374419,
       "volume_5day_ago": 2236195,
@@ -2854,6 +3104,8 @@
       "consolidation_window": null
     },
     "PAGEIND": {
+      "month_high": 38465.0,
+      "month_low": 34900.0,
       "four_week_high_close": 37970.0,
       "prev_day_volume": 8744,
       "volume_5day_ago": 6358,
@@ -2876,6 +3128,8 @@
       "consolidation_window": null
     },
     "FORCEMOT": {
+      "month_high": 17953.0,
+      "month_low": 16520.0,
       "four_week_high_close": 17700.0,
       "prev_day_volume": 48020,
       "volume_5day_ago": 38264,
@@ -2898,6 +3152,8 @@
       "consolidation_window": null
     },
     "TVSMOTOR": {
+      "month_high": 4208.1,
+      "month_low": 3741.9,
       "four_week_high_close": 4157.3,
       "prev_day_volume": 472084,
       "volume_5day_ago": 690998,
@@ -2920,6 +3176,8 @@
       "consolidation_window": null
     },
     "INDIGO": {
+      "month_high": 5069.5,
+      "month_low": 4615.0,
       "four_week_high_close": 5050.5,
       "prev_day_volume": 576282,
       "volume_5day_ago": 774970,
@@ -2942,6 +3200,8 @@
       "consolidation_window": null
     },
     "HYUNDAI": {
+      "month_high": 2208.8,
+      "month_low": 1897.2,
       "four_week_high_close": 2144.0,
       "prev_day_volume": 487177,
       "volume_5day_ago": 364329,
@@ -2964,6 +3224,8 @@
       "consolidation_window": null
     },
     "ZYDUSLIFE": {
+      "month_high": 1232.1,
+      "month_low": 1105.4,
       "four_week_high_close": 1215.0,
       "prev_day_volume": 253448,
       "volume_5day_ago": 789716,
@@ -2986,6 +3248,8 @@
       "consolidation_window": null
     },
     "MANKIND": {
+      "month_high": 2559.0,
+      "month_low": 2246.0,
       "four_week_high_close": 2545.0,
       "prev_day_volume": 1228705,
       "volume_5day_ago": 205896,
@@ -3008,6 +3272,8 @@
       "consolidation_window": null
     },
     "BHARTIARTL": {
+      "month_high": 1929.6,
+      "month_low": 1726.3,
       "four_week_high_close": 1905.0,
       "prev_day_volume": 8586339,
       "volume_5day_ago": 4819377,
@@ -3030,6 +3296,8 @@
       "consolidation_window": null
     },
     "DMART": {
+      "month_high": 3880.0,
+      "month_low": 3296.0,
       "four_week_high_close": 3834.8,
       "prev_day_volume": 421181,
       "volume_5day_ago": 3131384,
@@ -3052,6 +3320,8 @@
       "consolidation_window": null
     },
     "MOTHERSON": {
+      "month_high": 166.22,
+      "month_low": 151.37,
       "four_week_high_close": 165.71,
       "prev_day_volume": 9408721,
       "volume_5day_ago": 7845512,
@@ -3074,6 +3344,8 @@
       "consolidation_window": null
     },
     "CIPLA": {
+      "month_high": 1421.0,
+      "month_low": 1292.0,
       "four_week_high_close": 1399.7,
       "prev_day_volume": 1387215,
       "volume_5day_ago": 666122,
@@ -3102,6 +3374,8 @@
       }
     },
     "ANGELONE": {
+      "month_high": 321.9,
+      "month_low": 267.8,
       "four_week_high_close": 313.0,
       "prev_day_volume": 6096648,
       "volume_5day_ago": 6496974,
@@ -3124,6 +3398,8 @@
       "consolidation_window": null
     },
     "KFINTECH": {
+      "month_high": 930.0,
+      "month_low": 815.7,
       "four_week_high_close": 911.95,
       "prev_day_volume": 384352,
       "volume_5day_ago": 596173,
@@ -3146,6 +3422,8 @@
       "consolidation_window": null
     },
     "JUBLFOOD": {
+      "month_high": 503.6,
+      "month_low": 412.0,
       "four_week_high_close": 491.1,
       "prev_day_volume": 795567,
       "volume_5day_ago": 1564264,
@@ -3168,6 +3446,8 @@
       "consolidation_window": null
     },
     "AUBANK": {
+      "month_high": 1058.6,
+      "month_low": 968.7,
       "four_week_high_close": 1053.0,
       "prev_day_volume": 1493862,
       "volume_5day_ago": 1073816,
@@ -3190,6 +3470,8 @@
       "consolidation_window": null
     },
     "OFSS": {
+      "month_high": 11896.0,
+      "month_low": 10102.0,
       "four_week_high_close": 10989.0,
       "prev_day_volume": 119668,
       "volume_5day_ago": 262535,
@@ -3212,6 +3494,8 @@
       "consolidation_window": null
     },
     "MFSL": {
+      "month_high": 1591.8,
+      "month_low": 1262.6,
       "four_week_high_close": 1569.0,
       "prev_day_volume": 911205,
       "volume_5day_ago": 442492,
@@ -3234,6 +3518,8 @@
       "consolidation_window": null
     },
     "HDFCLIFE": {
+      "month_high": 567.4,
+      "month_low": 513.4,
       "four_week_high_close": 561.5,
       "prev_day_volume": 1519939,
       "volume_5day_ago": 1704385,
@@ -3256,6 +3542,8 @@
       "consolidation_window": null
     },
     "TITAN": {
+      "month_high": 4982.0,
+      "month_low": 4335.6,
       "four_week_high_close": 4928.5,
       "prev_day_volume": 651506,
       "volume_5day_ago": 724353,
@@ -3278,6 +3566,8 @@
       "consolidation_window": null
     },
     "CUMMINSIND": {
+      "month_high": 5135.0,
+      "month_low": 4586.9,
       "four_week_high_close": 5067.0,
       "prev_day_volume": 218940,
       "volume_5day_ago": 274337,
@@ -3300,6 +3590,8 @@
       "consolidation_window": null
     },
     "TMPV": {
+      "month_high": 310.0,
+      "month_low": 272.2,
       "four_week_high_close": 301.65,
       "prev_day_volume": 5268186,
       "volume_5day_ago": 9423664,
@@ -3322,6 +3614,8 @@
       "consolidation_window": null
     },
     "PNBHOUSING": {
+      "month_high": 1224.8,
+      "month_low": 1065.4,
       "four_week_high_close": 1224.8,
       "prev_day_volume": 352954,
       "volume_5day_ago": 1808660,
@@ -3344,6 +3638,8 @@
       "consolidation_window": null
     },
     "OIL": {
+      "month_high": 482.8,
+      "month_low": 434.65,
       "four_week_high_close": 479.0,
       "prev_day_volume": 925310,
       "volume_5day_ago": 1029528,
@@ -3372,6 +3668,8 @@
       }
     },
     "INDUSINDBK": {
+      "month_high": 970.8,
+      "month_low": 845.7,
       "four_week_high_close": 959.3,
       "prev_day_volume": 1283832,
       "volume_5day_ago": 5115608,
@@ -3394,6 +3692,8 @@
       "consolidation_window": null
     },
     "RADICO": {
+      "month_high": 4614.1,
+      "month_low": 4234.8,
       "four_week_high_close": 4601.9,
       "prev_day_volume": 143055,
       "volume_5day_ago": 216671,
@@ -3416,6 +3716,8 @@
       "consolidation_window": null
     },
     "INDIANB": {
+      "month_high": 874.65,
+      "month_low": 786.85,
       "four_week_high_close": 856.85,
       "prev_day_volume": 1105179,
       "volume_5day_ago": 711958,
@@ -3438,6 +3740,8 @@
       "consolidation_window": null
     },
     "SUPREMEIND": {
+      "month_high": 3653.0,
+      "month_low": 3286.9,
       "four_week_high_close": 3620.7,
       "prev_day_volume": 174317,
       "volume_5day_ago": 218939,
@@ -3460,6 +3764,8 @@
       "consolidation_window": null
     },
     "BSE": {
+      "month_high": 3455.0,
+      "month_low": 3000.0,
       "four_week_high_close": 3428.0,
       "prev_day_volume": 1702894,
       "volume_5day_ago": 3342319,
@@ -3482,6 +3788,8 @@
       "consolidation_window": null
     },
     "ADANIGREEN": {
+      "month_high": 1377.8,
+      "month_low": 1208.0,
       "four_week_high_close": 1341.4,
       "prev_day_volume": 965167,
       "volume_5day_ago": 1529818,
@@ -3504,6 +3812,8 @@
       "consolidation_window": null
     },
     "AXISBANK": {
+      "month_high": 1293.8,
+      "month_low": 1175.0,
       "four_week_high_close": 1290.0,
       "prev_day_volume": 12762071,
       "volume_5day_ago": 5684910,
@@ -3526,6 +3836,8 @@
       "consolidation_window": null
     },
     "SUNPHARMA": {
+      "month_high": 1891.5,
+      "month_low": 1725.5,
       "four_week_high_close": 1868.9,
       "prev_day_volume": 829445,
       "volume_5day_ago": 1141685,
@@ -3554,6 +3866,8 @@
       }
     },
     "MOTILALOFS": {
+      "month_high": 1090.25,
+      "month_low": 965.05,
       "four_week_high_close": 1081.15,
       "prev_day_volume": 957323,
       "volume_5day_ago": 953453,
@@ -3576,6 +3890,8 @@
       "consolidation_window": null
     },
     "DIXON": {
+      "month_high": 13766.0,
+      "month_low": 12084.0,
       "four_week_high_close": 13640.0,
       "prev_day_volume": 310831,
       "volume_5day_ago": 172532,
@@ -3598,6 +3914,8 @@
       "consolidation_window": null
     },
     "IOC": {
+      "month_high": 139.3,
+      "month_low": 124.92,
       "four_week_high_close": 138.15,
       "prev_day_volume": 4567989,
       "volume_5day_ago": 10605346,
@@ -3620,6 +3938,8 @@
       "consolidation_window": null
     },
     "UNIONBANK": {
+      "month_high": 182.99,
+      "month_low": 164.81,
       "four_week_high_close": 180.7,
       "prev_day_volume": 45883930,
       "volume_5day_ago": 4401142,
@@ -3642,6 +3962,8 @@
       "consolidation_window": null
     },
     "HINDALCO": {
+      "month_high": 1003.8,
+      "month_low": 857.15,
       "four_week_high_close": 1003.8,
       "prev_day_volume": 2007016,
       "volume_5day_ago": 2605830,
@@ -3664,6 +3986,8 @@
       "consolidation_window": null
     },
     "KPITTECH": {
+      "month_high": 559.5,
+      "month_low": 470.1,
       "four_week_high_close": 555.0,
       "prev_day_volume": 1570789,
       "volume_5day_ago": 1514282,
@@ -3686,6 +4010,8 @@
       "consolidation_window": null
     },
     "FORTIS": {
+      "month_high": 908.8,
+      "month_low": 731.8,
       "four_week_high_close": 896.55,
       "prev_day_volume": 1076545,
       "volume_5day_ago": 998167,
@@ -3708,6 +4034,8 @@
       "consolidation_window": null
     },
     "BEL": {
+      "month_high": 400.65,
+      "month_low": 360.5,
       "four_week_high_close": 398.5,
       "prev_day_volume": 5419051,
       "volume_5day_ago": 8428541,
@@ -3730,6 +4058,8 @@
       "consolidation_window": null
     },
     "RECLTD": {
+      "month_high": 314.95,
+      "month_low": 286.2,
       "four_week_high_close": 312.95,
       "prev_day_volume": 3558062,
       "volume_5day_ago": 6909261,
@@ -3752,6 +4082,8 @@
       "consolidation_window": null
     },
     "TORNTPHARM": {
+      "month_high": 5010.0,
+      "month_low": 4532.4,
       "four_week_high_close": 4988.5,
       "prev_day_volume": 250305,
       "volume_5day_ago": 420840,
@@ -3774,6 +4106,8 @@
       "consolidation_window": null
     },
     "SRF": {
+      "month_high": 2569.9,
+      "month_low": 2415.1,
       "four_week_high_close": 2550.0,
       "prev_day_volume": 215333,
       "volume_5day_ago": 156201,
@@ -3802,6 +4136,8 @@
       }
     },
     "HCLTECH": {
+      "month_high": 1399.5,
+      "month_low": 1172.8,
       "four_week_high_close": 1380.0,
       "prev_day_volume": 3994293,
       "volume_5day_ago": 2511247,
@@ -3824,6 +4160,8 @@
       "consolidation_window": null
     },
     "PREMIERENE": {
+      "month_high": 931.6,
+      "month_low": 853.6,
       "four_week_high_close": 923.0,
       "prev_day_volume": 1561240,
       "volume_5day_ago": 1272550,
@@ -3846,6 +4184,8 @@
       "consolidation_window": null
     },
     "SWIGGY": {
+      "month_high": 289.65,
+      "month_low": 228.45,
       "four_week_high_close": 284.05,
       "prev_day_volume": 4800001,
       "volume_5day_ago": 5526494,
@@ -3868,6 +4208,8 @@
       "consolidation_window": null
     },
     "MAHABANK": {
+      "month_high": 84.88,
+      "month_low": 78.66,
       "four_week_high_close": 84.88,
       "prev_day_volume": 14565080,
       "volume_5day_ago": 10916983,
@@ -3890,6 +4232,8 @@
       "consolidation_window": null
     },
     "FEDERALBNK": {
+      "month_high": 355.5,
+      "month_low": 313.75,
       "four_week_high_close": 348.85,
       "prev_day_volume": 31072948,
       "volume_5day_ago": 5094276,
@@ -3912,6 +4256,8 @@
       "consolidation_window": null
     },
     "RBLBANK": {
+      "month_high": 429.6,
+      "month_low": 373.35,
       "four_week_high_close": 428.0,
       "prev_day_volume": 2253293,
       "volume_5day_ago": 3453163,
@@ -3934,6 +4280,8 @@
       "consolidation_window": null
     },
     "PERSISTENT": {
+      "month_high": 6078.0,
+      "month_low": 5162.0,
       "four_week_high_close": 5988.0,
       "prev_day_volume": 1277186,
       "volume_5day_ago": 332431,
@@ -3956,6 +4304,8 @@
       "consolidation_window": null
     },
     "BANKINDIA": {
+      "month_high": 140.0,
+      "month_low": 126.73,
       "four_week_high_close": 139.65,
       "prev_day_volume": 14616945,
       "volume_5day_ago": 6324408,
@@ -3978,6 +4328,8 @@
       "consolidation_window": null
     },
     "SBICARD": {
+      "month_high": 651.15,
+      "month_low": 547.65,
       "four_week_high_close": 637.0,
       "prev_day_volume": 1501957,
       "volume_5day_ago": 373734,
@@ -4000,6 +4352,8 @@
       "consolidation_window": null
     },
     "GMRAIRPORT": {
+      "month_high": 101.28,
+      "month_low": 87.68,
       "four_week_high_close": 99.14,
       "prev_day_volume": 6633009,
       "volume_5day_ago": 17800127,
@@ -4022,6 +4376,8 @@
       "consolidation_window": null
     },
     "KEI": {
+      "month_high": 4760.0,
+      "month_low": 4420.6,
       "four_week_high_close": 4722.5,
       "prev_day_volume": 210454,
       "volume_5day_ago": 230372,
@@ -4044,6 +4400,8 @@
       "consolidation_window": null
     },
     "POLICYBZR": {
+      "month_high": 1904.9,
+      "month_low": 945.1,
       "four_week_high_close": 1886.3,
       "prev_day_volume": 1591356,
       "volume_5day_ago": 2985015,
@@ -4066,6 +4424,8 @@
       "consolidation_window": null
     },
     "RVNL": {
+      "month_high": 214.29,
+      "month_low": 186.9,
       "four_week_high_close": 211.77,
       "prev_day_volume": 1970644,
       "volume_5day_ago": 3633357,
@@ -4088,6 +4448,8 @@
       "consolidation_window": null
     },
     "LTM": {
+      "month_high": 4419.5,
+      "month_low": 3905.6,
       "four_week_high_close": 4390.0,
       "prev_day_volume": 850775,
       "volume_5day_ago": 240633,
@@ -4110,6 +4472,8 @@
       "consolidation_window": null
     },
     "HAVELLS": {
+      "month_high": 1138.7,
+      "month_low": 1015.1,
       "four_week_high_close": 1121.0,
       "prev_day_volume": 314312,
       "volume_5day_ago": 397891,
@@ -4132,6 +4496,8 @@
       "consolidation_window": null
     },
     "BOSCHLTD": {
+      "month_high": 48650.0,
+      "month_low": 42675.0,
       "four_week_high_close": 48290.0,
       "prev_day_volume": 10241,
       "volume_5day_ago": 20332,
@@ -4154,6 +4520,8 @@
       "consolidation_window": null
     },
     "BANDHANBNK": {
+      "month_high": 193.0,
+      "month_low": 153.79,
       "four_week_high_close": 191.38,
       "prev_day_volume": 4983682,
       "volume_5day_ago": 6411439,
@@ -4176,6 +4544,8 @@
       "consolidation_window": null
     },
     "MAZDOCK": {
+      "month_high": 2280.0,
+      "month_low": 1987.7,
       "four_week_high_close": 2232.0,
       "prev_day_volume": 290592,
       "volume_5day_ago": 588340,
@@ -4198,6 +4568,8 @@
       "consolidation_window": null
     },
     "SOLARINDS": {
+      "month_high": 20398.0,
+      "month_low": 18555.0,
       "four_week_high_close": 20334.0,
       "prev_day_volume": 91543,
       "volume_5day_ago": 127193,
@@ -4226,6 +4598,8 @@
       }
     },
     "ETERNAL": {
+      "month_high": 344.4,
+      "month_low": 308.1,
       "four_week_high_close": 342.65,
       "prev_day_volume": 17850721,
       "volume_5day_ago": 12225670,
@@ -4248,6 +4622,8 @@
       "consolidation_window": null
     },
     "ITC": {
+      "month_high": 271.05,
+      "month_low": 253.15,
       "four_week_high_close": 270.15,
       "prev_day_volume": 11528925,
       "volume_5day_ago": 14895734,
@@ -4270,6 +4646,8 @@
       "consolidation_window": null
     },
     "POLYCAB": {
+      "month_high": 8469.0,
+      "month_low": 7842.0,
       "four_week_high_close": 8417.0,
       "prev_day_volume": 294308,
       "volume_5day_ago": 456246,
@@ -4292,6 +4670,8 @@
       "consolidation_window": null
     },
     "AUROPHARMA": {
+      "month_high": 1740.0,
+      "month_low": 1615.6,
       "four_week_high_close": 1721.5,
       "prev_day_volume": 736433,
       "volume_5day_ago": 1190866,
@@ -4314,6 +4694,8 @@
       "consolidation_window": null
     },
     "M&M": {
+      "month_high": 3098.2,
+      "month_low": 2744.3,
       "four_week_high_close": 3055.3,
       "prev_day_volume": 2142503,
       "volume_5day_ago": 1907713,
@@ -4336,6 +4718,8 @@
       "consolidation_window": null
     },
     "ASHOKLEY": {
+      "month_high": 164.2,
+      "month_low": 143.5,
       "four_week_high_close": 162.89,
       "prev_day_volume": 8502677,
       "volume_5day_ago": 12509977,
@@ -4358,6 +4742,8 @@
       "consolidation_window": null
     },
     "KALYANKJIL": {
+      "month_high": 590.95,
+      "month_low": 522.5,
       "four_week_high_close": 584.25,
       "prev_day_volume": 2293449,
       "volume_5day_ago": 5100358,
@@ -4380,6 +4766,8 @@
       "consolidation_window": null
     },
     "DELHIVERY": {
+      "month_high": 437.6,
+      "month_low": 393.0,
       "four_week_high_close": 435.0,
       "prev_day_volume": 1220263,
       "volume_5day_ago": 10532034,
@@ -4402,6 +4790,8 @@
       "consolidation_window": null
     },
     "BLUESTARCO": {
+      "month_high": 1624.0,
+      "month_low": 1444.0,
       "four_week_high_close": 1614.0,
       "prev_day_volume": 194246,
       "volume_5day_ago": 190203,
@@ -4424,6 +4814,8 @@
       "consolidation_window": null
     },
     "SUZLON": {
+      "month_high": 44.22,
+      "month_low": 36.31,
       "four_week_high_close": 43.34,
       "prev_day_volume": 65237716,
       "volume_5day_ago": 141845798,
@@ -4446,6 +4838,8 @@
       "consolidation_window": null
     },
     "ICICIBANK": {
+      "month_high": 1411.8,
+      "month_low": 1291.0,
       "four_week_high_close": 1397.0,
       "prev_day_volume": 25149396,
       "volume_5day_ago": 8605258,
@@ -4468,6 +4862,8 @@
       "consolidation_window": null
     },
     "LT": {
+      "month_high": 3945.0,
+      "month_low": 3592.9,
       "four_week_high_close": 3929.9,
       "prev_day_volume": 2331147,
       "volume_5day_ago": 1177475,
@@ -4496,6 +4892,8 @@
       }
     },
     "UPL": {
+      "month_high": 580.0,
+      "month_low": 476.45,
       "four_week_high_close": 559.9,
       "prev_day_volume": 598405,
       "volume_5day_ago": 3084920,
@@ -4518,6 +4916,8 @@
       "consolidation_window": null
     },
     "IDFCFIRSTB": {
+      "month_high": 89.61,
+      "month_low": 76.24,
       "four_week_high_close": 87.9,
       "prev_day_volume": 11815153,
       "volume_5day_ago": 14611979,
@@ -4540,6 +4940,8 @@
       "consolidation_window": null
     },
     "PETRONET": {
+      "month_high": 299.6,
+      "month_low": 280.3,
       "four_week_high_close": 297.5,
       "prev_day_volume": 1333698,
       "volume_5day_ago": 1341069,
@@ -4568,6 +4970,8 @@
       }
     },
     "CGPOWER": {
+      "month_high": 926.1,
+      "month_low": 808.55,
       "four_week_high_close": 912.0,
       "prev_day_volume": 3963727,
       "volume_5day_ago": 1507658,
@@ -4590,6 +4994,8 @@
       "consolidation_window": null
     },
     "ADANIENT": {
+      "month_high": 3026.1,
+      "month_low": 2547.0,
       "four_week_high_close": 2997.0,
       "prev_day_volume": 854302,
       "volume_5day_ago": 1112869,
@@ -4612,6 +5018,8 @@
       "consolidation_window": null
     },
     "COLPAL": {
+      "month_high": 1917.8,
+      "month_low": 1716.1,
       "four_week_high_close": 1892.0,
       "prev_day_volume": 527783,
       "volume_5day_ago": 769210,
@@ -4634,6 +5042,8 @@
       "consolidation_window": null
     },
     "POWERINDIA": {
+      "month_high": 32700.0,
+      "month_low": 28400.0,
       "four_week_high_close": 31870.0,
       "prev_day_volume": 49179,
       "volume_5day_ago": 64189,
@@ -4656,6 +5066,8 @@
       "consolidation_window": null
     },
     "ICICIGI": {
+      "month_high": 1786.0,
+      "month_low": 1458.1,
       "four_week_high_close": 1713.0,
       "prev_day_volume": 510963,
       "volume_5day_ago": 748749,
@@ -4678,6 +5090,8 @@
       "consolidation_window": null
     },
     "BHEL": {
+      "month_high": 464.0,
+      "month_low": 402.6,
       "four_week_high_close": 464.0,
       "prev_day_volume": 8639491,
       "volume_5day_ago": 8403722,
@@ -4700,6 +5114,8 @@
       "consolidation_window": null
     },
     "GAIL": {
+      "month_high": 174.71,
+      "month_low": 165.87,
       "four_week_high_close": 173.85,
       "prev_day_volume": 3179082,
       "volume_5day_ago": 8839150,
@@ -4728,6 +5144,8 @@
       }
     },
     "ULTRACEMCO": {
+      "month_high": 11219.0,
+      "month_low": 10426.0,
       "four_week_high_close": 11155.0,
       "prev_day_volume": 609128,
       "volume_5day_ago": 220407,
@@ -4750,6 +5168,8 @@
       "consolidation_window": null
     },
     "SAIL": {
+      "month_high": 191.36,
+      "month_low": 165.76,
       "four_week_high_close": 185.44,
       "prev_day_volume": 4231992,
       "volume_5day_ago": 27545534,
@@ -4772,6 +5192,8 @@
       "consolidation_window": null
     },
     "GLENMARK": {
+      "month_high": 2482.6,
+      "month_low": 2181.2,
       "four_week_high_close": 2475.0,
       "prev_day_volume": 285702,
       "volume_5day_ago": 695528,
@@ -4794,6 +5216,8 @@
       "consolidation_window": null
     },
     "SIEMENS": {
+      "month_high": 3954.3,
+      "month_low": 3502.0,
       "four_week_high_close": 3887.0,
       "prev_day_volume": 113112,
       "volume_5day_ago": 212247,
@@ -4816,6 +5240,8 @@
       "consolidation_window": null
     },
     "BPCL": {
+      "month_high": 318.2,
+      "month_low": 282.95,
       "four_week_high_close": 315.75,
       "prev_day_volume": 2432283,
       "volume_5day_ago": 4312619,
@@ -4838,6 +5264,8 @@
       "consolidation_window": null
     },
     "TATAELXSI": {
+      "month_high": 3867.2,
+      "month_low": 2996.0,
       "four_week_high_close": 3850.1,
       "prev_day_volume": 477758,
       "volume_5day_ago": 794936,
@@ -4860,6 +5288,8 @@
       "consolidation_window": null
     },
     "VBL": {
+      "month_high": 444.35,
+      "month_low": 415.35,
       "four_week_high_close": 442.65,
       "prev_day_volume": 4711070,
       "volume_5day_ago": 4053889,
@@ -4882,6 +5312,8 @@
       "consolidation_window": null
     },
     "DABUR": {
+      "month_high": 395.45,
+      "month_low": 372.8,
       "four_week_high_close": 388.9,
       "prev_day_volume": 1103124,
       "volume_5day_ago": 1816189,
@@ -4904,6 +5336,8 @@
       "consolidation_window": null
     },
     "GOLD": {
+      "month_high": 125189.0,
+      "month_low": 116560.0,
       "four_week_high_close": 124258.0,
       "prev_day_volume": 5515,
       "volume_5day_ago": 7562,
@@ -4925,6 +5359,8 @@
       }
     },
     "SILVER": {
+      "month_high": 2415.0,
+      "month_low": 2067.0,
       "four_week_high_close": 2385.0,
       "prev_day_volume": 15024,
       "volume_5day_ago": 20837,
@@ -4939,6 +5375,8 @@
       "consolidation_window": null
     },
     "CRUDEOIL": {
+      "month_high": 9493.0,
+      "month_low": 8314.0,
       "four_week_high_close": 9456.0,
       "prev_day_volume": 36033,
       "volume_5day_ago": 8964,
@@ -4952,6 +5390,8 @@
       "consolidation_window": null
     },
     "TARIL": {
+      "month_high": 360.8,
+      "month_low": 266.6,
       "four_week_high_close": 349.5,
       "prev_day_volume": 3544760,
       "volume_5day_ago": 2034325,
@@ -4974,6 +5414,8 @@
       "consolidation_window": null
     },
     "DALBHARAT": {
+      "month_high": 1814.4,
+      "month_low": 1580.0,
       "four_week_high_close": 1764.4,
       "prev_day_volume": 45206,
       "volume_5day_ago": 41783,
@@ -4996,6 +5438,8 @@
       "consolidation_window": null
     },
     "TMCV": {
+      "month_high": 456.05,
+      "month_low": 401.05,
       "four_week_high_close": 450.2,
       "prev_day_volume": 2192941,
       "volume_5day_ago": 5578370,
@@ -5018,6 +5462,8 @@
       "consolidation_window": null
     },
     "KIRLOSENG": {
+      "month_high": 2444.0,
+      "month_low": 1962.1,
       "four_week_high_close": 2402.0,
       "prev_day_volume": 282596,
       "volume_5day_ago": 235007,
@@ -5040,6 +5486,8 @@
       "consolidation_window": null
     },
     "LEMONTREE": {
+      "month_high": 117.9,
+      "month_low": 102.0,
       "four_week_high_close": 113.42,
       "prev_day_volume": 1750386,
       "volume_5day_ago": 2099242,
@@ -5062,6 +5510,8 @@
       "consolidation_window": null
     },
     "ANANTRAJ": {
+      "month_high": 636.0,
+      "month_low": 496.0,
       "four_week_high_close": 631.8,
       "prev_day_volume": 2141048,
       "volume_5day_ago": 870332,
@@ -5084,6 +5534,8 @@
       "consolidation_window": null
     },
     "AADHARHFC": {
+      "month_high": 470.7,
+      "month_low": 427.3,
       "four_week_high_close": 466.05,
       "prev_day_volume": 139321,
       "volume_5day_ago": 111570,
@@ -5106,6 +5558,8 @@
       "consolidation_window": null
     },
     "SIGNATURE": {
+      "month_high": 828.0,
+      "month_low": 695.0,
       "four_week_high_close": 788.85,
       "prev_day_volume": 225731,
       "volume_5day_ago": 211087,
@@ -5128,6 +5582,8 @@
       "consolidation_window": null
     },
     "EMMVEE": {
+      "month_high": 354.8,
+      "month_low": 266.55,
       "four_week_high_close": 340.6,
       "prev_day_volume": 2555697,
       "volume_5day_ago": 1302208,
@@ -5150,6 +5606,8 @@
       "consolidation_window": null
     },
     "PARADEEP": {
+      "month_high": 158.4,
+      "month_low": 136.55,
       "four_week_high_close": 156.76,
       "prev_day_volume": 783988,
       "volume_5day_ago": 3477814,
@@ -5172,6 +5630,8 @@
       "consolidation_window": null
     },
     "LALPATHLAB": {
+      "month_high": 2027.6,
+      "month_low": 1828.4,
       "four_week_high_close": 2005.1,
       "prev_day_volume": 190469,
       "volume_5day_ago": 191545,
@@ -5194,6 +5654,8 @@
       "consolidation_window": null
     },
     "NAVINFLUOR": {
+      "month_high": 8682.5,
+      "month_low": 8035.0,
       "four_week_high_close": 8584.5,
       "prev_day_volume": 39470,
       "volume_5day_ago": 72793,
@@ -5216,6 +5678,8 @@
       "consolidation_window": null
     },
     "VEDPOWER": {
+      "month_high": 34.8,
+      "month_low": 29.9,
       "four_week_high_close": 34.25,
       "prev_day_volume": 8281374,
       "volume_5day_ago": 8360640,
@@ -5230,6 +5694,8 @@
       "consolidation_window": null
     },
     "IRCON": {
+      "month_high": 122.96,
+      "month_low": 101.6,
       "four_week_high_close": 117.09,
       "prev_day_volume": 1640229,
       "volume_5day_ago": 2400485,
@@ -5252,6 +5718,8 @@
       "consolidation_window": null
     },
     "VOGL": {
+      "month_high": 36.39,
+      "month_low": 29.12,
       "four_week_high_close": 35.86,
       "prev_day_volume": 7592852,
       "volume_5day_ago": 8851685,
@@ -5266,6 +5734,8 @@
       "consolidation_window": null
     },
     "BBOX": {
+      "month_high": 952.0,
+      "month_low": 764.55,
       "four_week_high_close": 935.8,
       "prev_day_volume": 632927,
       "volume_5day_ago": 1459449,
@@ -5288,6 +5758,8 @@
       "consolidation_window": null
     },
     "NLCINDIA": {
+      "month_high": 269.8,
+      "month_low": 239.5,
       "four_week_high_close": 267.1,
       "prev_day_volume": 575935,
       "volume_5day_ago": 523306,
@@ -5310,6 +5782,8 @@
       "consolidation_window": null
     },
     "BERGEPAINT": {
+      "month_high": 482.35,
+      "month_low": 441.1,
       "four_week_high_close": 476.05,
       "prev_day_volume": 114310,
       "volume_5day_ago": 189606,
@@ -5332,6 +5806,8 @@
       "consolidation_window": null
     },
     "CLEANMAX": {
+      "month_high": 1481.0,
+      "month_low": 1221.5,
       "four_week_high_close": 1457.5,
       "prev_day_volume": 164541,
       "volume_5day_ago": 696916,
@@ -5348,6 +5824,8 @@
       "consolidation_window": null
     },
     "ZEEL": {
+      "month_high": 79.97,
+      "month_low": 68.1,
       "four_week_high_close": 78.21,
       "prev_day_volume": 11642458,
       "volume_5day_ago": 28295269,
@@ -5370,6 +5848,8 @@
       "consolidation_window": null
     },
     "ACMESOLAR": {
+      "month_high": 476.9,
+      "month_low": 398.0,
       "four_week_high_close": 458.65,
       "prev_day_volume": 1532890,
       "volume_5day_ago": 499491,
@@ -5392,6 +5872,8 @@
       "consolidation_window": null
     },
     "EIDPARRY": {
+      "month_high": 717.45,
+      "month_low": 671.0,
       "four_week_high_close": 706.85,
       "prev_day_volume": 272669,
       "volume_5day_ago": 207687,
@@ -5414,6 +5896,8 @@
       "consolidation_window": null
     },
     "CEATLTD": {
+      "month_high": 3529.0,
+      "month_low": 3186.7,
       "four_week_high_close": 3432.2,
       "prev_day_volume": 59862,
       "volume_5day_ago": 41537,
@@ -5436,6 +5920,8 @@
       "consolidation_window": null
     },
     "TEGA": {
+      "month_high": 2198.0,
+      "month_low": 1854.1,
       "four_week_high_close": 2129.0,
       "prev_day_volume": 126165,
       "volume_5day_ago": 298852,
@@ -5458,6 +5944,8 @@
       "consolidation_window": null
     },
     "TTML": {
+      "month_high": 37.9,
+      "month_low": 32.63,
       "four_week_high_close": 36.19,
       "prev_day_volume": 871621,
       "volume_5day_ago": 1846145,
@@ -5480,6 +5968,8 @@
       "consolidation_window": null
     },
     "SARDAEN": {
+      "month_high": 513.6,
+      "month_low": 462.0,
       "four_week_high_close": 505.95,
       "prev_day_volume": 211107,
       "volume_5day_ago": 188405,
@@ -5502,6 +5992,8 @@
       "consolidation_window": null
     },
     "DEVYANI": {
+      "month_high": 145.4,
+      "month_low": 117.8,
       "four_week_high_close": 144.51,
       "prev_day_volume": 569778,
       "volume_5day_ago": 879725,
@@ -5524,6 +6016,8 @@
       "consolidation_window": null
     },
     "UCOBANK": {
+      "month_high": 24.8,
+      "month_low": 22.81,
       "four_week_high_close": 24.04,
       "prev_day_volume": 5390426,
       "volume_5day_ago": 2096635,
@@ -5546,6 +6040,8 @@
       "consolidation_window": null
     },
     "ENGINERSIN": {
+      "month_high": 321.4,
+      "month_low": 263.5,
       "four_week_high_close": 315.65,
       "prev_day_volume": 2296228,
       "volume_5day_ago": 2771985,
@@ -5568,6 +6064,8 @@
       "consolidation_window": null
     },
     "ANTHEM": {
+      "month_high": 952.9,
+      "month_low": 802.85,
       "four_week_high_close": 917.45,
       "prev_day_volume": 360867,
       "volume_5day_ago": 321651,
@@ -5590,6 +6088,8 @@
       "consolidation_window": null
     },
     "ANURAS": {
+      "month_high": 1219.0,
+      "month_low": 1082.3,
       "four_week_high_close": 1197.9,
       "prev_day_volume": 667051,
       "volume_5day_ago": 316217,
@@ -5612,6 +6112,8 @@
       "consolidation_window": null
     },
     "IFCI": {
+      "month_high": 80.07,
+      "month_low": 63.3,
       "four_week_high_close": 79.49,
       "prev_day_volume": 13645218,
       "volume_5day_ago": 91786988,
@@ -5634,6 +6136,8 @@
       "consolidation_window": null
     },
     "ASTERDM": {
+      "month_high": 780.0,
+      "month_low": 664.8,
       "four_week_high_close": 768.65,
       "prev_day_volume": 413105,
       "volume_5day_ago": 1153010,
@@ -5656,6 +6160,8 @@
       "consolidation_window": null
     },
     "HINDCOPPER": {
+      "month_high": 521.7,
+      "month_low": 438.1,
       "four_week_high_close": 513.0,
       "prev_day_volume": 4249459,
       "volume_5day_ago": 2194676,
@@ -5678,6 +6184,8 @@
       "consolidation_window": null
     },
     "SAILIFE": {
+      "month_high": 1649.8,
+      "month_low": 1370.4,
       "four_week_high_close": 1609.6,
       "prev_day_volume": 290389,
       "volume_5day_ago": 380927,
@@ -5700,6 +6208,8 @@
       "consolidation_window": null
     },
     "RRKABEL": {
+      "month_high": 2806.8,
+      "month_low": 2326.0,
       "four_week_high_close": 2789.7,
       "prev_day_volume": 436615,
       "volume_5day_ago": 211756,
@@ -5722,6 +6232,8 @@
       "consolidation_window": null
     },
     "THANGAMAYL": {
+      "month_high": 5349.5,
+      "month_low": 4666.0,
       "four_week_high_close": 5317.0,
       "prev_day_volume": 44639,
       "volume_5day_ago": 45816,
@@ -5744,6 +6256,8 @@
       "consolidation_window": null
     },
     "TATACAP": {
+      "month_high": 355.0,
+      "month_low": 311.5,
       "four_week_high_close": 350.05,
       "prev_day_volume": 1737179,
       "volume_5day_ago": 2249705,
@@ -5766,6 +6280,8 @@
       "consolidation_window": null
     },
     "SYNGENE": {
+      "month_high": 402.0,
+      "month_low": 344.45,
       "four_week_high_close": 397.5,
       "prev_day_volume": 1709879,
       "volume_5day_ago": 3710843,
@@ -5788,6 +6304,8 @@
       "consolidation_window": null
     },
     "GRAPHITE": {
+      "month_high": 861.5,
+      "month_low": 740.0,
       "four_week_high_close": 851.2,
       "prev_day_volume": 500790,
       "volume_5day_ago": 621214,
@@ -5810,6 +6328,8 @@
       "consolidation_window": null
     },
     "MEESHO": {
+      "month_high": 245.5,
+      "month_low": 208.16,
       "four_week_high_close": 240.67,
       "prev_day_volume": 6964195,
       "volume_5day_ago": 37477517,
@@ -5832,6 +6352,8 @@
       "consolidation_window": null
     },
     "ITI": {
+      "month_high": 261.9,
+      "month_low": 236.15,
       "four_week_high_close": 257.2,
       "prev_day_volume": 134639,
       "volume_5day_ago": 96745,
@@ -5854,6 +6376,8 @@
       "consolidation_window": null
     },
     "AVANTIFEED": {
+      "month_high": 784.75,
+      "month_low": 694.25,
       "four_week_high_close": 767.2,
       "prev_day_volume": 287078,
       "volume_5day_ago": 131081,
@@ -5876,6 +6400,8 @@
       "consolidation_window": null
     },
     "NUVAMA": {
+      "month_high": 1886.5,
+      "month_low": 1605.1,
       "four_week_high_close": 1868.8,
       "prev_day_volume": 169113,
       "volume_5day_ago": 726457,
@@ -5898,6 +6424,8 @@
       "consolidation_window": null
     },
     "NH": {
+      "month_high": 1940.0,
+      "month_low": 1663.5,
       "four_week_high_close": 1919.3,
       "prev_day_volume": 100860,
       "volume_5day_ago": 128153,
@@ -5926,6 +6454,8 @@
       }
     },
     "ICICIAMC": {
+      "month_high": 3287.0,
+      "month_low": 2752.5,
       "four_week_high_close": 3233.0,
       "prev_day_volume": 484366,
       "volume_5day_ago": 367181,
@@ -5948,6 +6478,8 @@
       "consolidation_window": null
     },
     "TATATECH": {
+      "month_high": 807.55,
+      "month_low": 683.7,
       "four_week_high_close": 745.55,
       "prev_day_volume": 407426,
       "volume_5day_ago": 554736,
@@ -5970,6 +6502,8 @@
       "consolidation_window": null
     },
     "KARURVYSYA": {
+      "month_high": 376.25,
+      "month_low": 311.4,
       "four_week_high_close": 370.05,
       "prev_day_volume": 13858311,
       "volume_5day_ago": 2260026,
@@ -5992,6 +6526,8 @@
       "consolidation_window": null
     },
     "ARE&M": {
+      "month_high": 815.0,
+      "month_low": 715.0,
       "four_week_high_close": 812.85,
       "prev_day_volume": 256665,
       "volume_5day_ago": 254475,
@@ -6020,6 +6556,8 @@
       }
     },
     "INOXINDIA": {
+      "month_high": 2202.2,
+      "month_low": 1978.0,
       "four_week_high_close": 2168.9,
       "prev_day_volume": 122029,
       "volume_5day_ago": 81013,
@@ -6042,6 +6580,8 @@
       "consolidation_window": null
     },
     "COROMANDEL": {
+      "month_high": 2019.9,
+      "month_low": 1651.1,
       "four_week_high_close": 1963.9,
       "prev_day_volume": 95818,
       "volume_5day_ago": 81273,
@@ -6064,6 +6604,8 @@
       "consolidation_window": null
     },
     "FINCABLES": {
+      "month_high": 1499.0,
+      "month_low": 1268.1,
       "four_week_high_close": 1483.5,
       "prev_day_volume": 1225139,
       "volume_5day_ago": 427159,
@@ -6086,6 +6628,8 @@
       "consolidation_window": null
     },
     "GILLETTE": {
+      "month_high": 7340.0,
+      "month_low": 6860.0,
       "four_week_high_close": 7264.0,
       "prev_day_volume": 9875,
       "volume_5day_ago": 10332,
@@ -6108,6 +6652,8 @@
       "consolidation_window": null
     },
     "AETHER": {
+      "month_high": 1814.1,
+      "month_low": 1492.3,
       "four_week_high_close": 1799.8,
       "prev_day_volume": 349750,
       "volume_5day_ago": 193201,
@@ -6130,6 +6676,8 @@
       "consolidation_window": null
     },
     "MGL": {
+      "month_high": 1112.0,
+      "month_low": 1012.2,
       "four_week_high_close": 1092.8,
       "prev_day_volume": 54238,
       "volume_5day_ago": 126669,
@@ -6158,6 +6706,8 @@
       }
     },
     "CGCL": {
+      "month_high": 276.6,
+      "month_low": 238.71,
       "four_week_high_close": 268.85,
       "prev_day_volume": 24609198,
       "volume_5day_ago": 2651964,
@@ -6180,6 +6730,8 @@
       "consolidation_window": null
     },
     "FIVESTAR": {
+      "month_high": 552.0,
+      "month_low": 491.0,
       "four_week_high_close": 549.7,
       "prev_day_volume": 327111,
       "volume_5day_ago": 349657,
@@ -6202,6 +6754,8 @@
       "consolidation_window": null
     },
     "TATAINVEST": {
+      "month_high": 707.85,
+      "month_low": 595.05,
       "four_week_high_close": 682.25,
       "prev_day_volume": 200455,
       "volume_5day_ago": 717574,
@@ -6224,6 +6778,8 @@
       "consolidation_window": null
     },
     "AAVAS": {
+      "month_high": 1342.6,
+      "month_low": 1165.0,
       "four_week_high_close": 1321.2,
       "prev_day_volume": 63168,
       "volume_5day_ago": 79124,
@@ -6246,6 +6802,8 @@
       "consolidation_window": null
     },
     "KPIL": {
+      "month_high": 1490.0,
+      "month_low": 1340.0,
       "four_week_high_close": 1458.4,
       "prev_day_volume": 84429,
       "volume_5day_ago": 93522,
@@ -6268,6 +6826,8 @@
       "consolidation_window": null
     },
     "CRISIL": {
+      "month_high": 4706.2,
+      "month_low": 4345.0,
       "four_week_high_close": 4650.6,
       "prev_day_volume": 12480,
       "volume_5day_ago": 17245,
@@ -6290,6 +6850,8 @@
       "consolidation_window": null
     },
     "VAML": {
+      "month_high": 479.0,
+      "month_low": 356.0,
       "four_week_high_close": 436.3,
       "prev_day_volume": 4389105,
       "volume_5day_ago": 3109104,
@@ -6304,6 +6866,8 @@
       "consolidation_window": null
     },
     "MRF": {
+      "month_high": 126500.0,
+      "month_low": 121310.0,
       "four_week_high_close": 125280.0,
       "prev_day_volume": 2209,
       "volume_5day_ago": 1351,
@@ -6332,6 +6896,8 @@
       }
     },
     "AEGISVOPAK": {
+      "month_high": 320.95,
+      "month_low": 259.85,
       "four_week_high_close": 318.3,
       "prev_day_volume": 989281,
       "volume_5day_ago": 591456,
@@ -6354,6 +6920,8 @@
       "consolidation_window": null
     },
     "FACT": {
+      "month_high": 822.35,
+      "month_low": 715.1,
       "four_week_high_close": 801.75,
       "prev_day_volume": 31628,
       "volume_5day_ago": 33929,
@@ -6376,6 +6944,8 @@
       "consolidation_window": null
     },
     "PFOCUS": {
+      "month_high": 362.8,
+      "month_low": 257.65,
       "four_week_high_close": 357.45,
       "prev_day_volume": 4068337,
       "volume_5day_ago": 19806640,
@@ -6398,6 +6968,8 @@
       "consolidation_window": null
     },
     "GRANULES": {
+      "month_high": 890.4,
+      "month_low": 782.05,
       "four_week_high_close": 875.15,
       "prev_day_volume": 874275,
       "volume_5day_ago": 624704,
@@ -6420,6 +6992,8 @@
       "consolidation_window": null
     },
     "AIAENG": {
+      "month_high": 4039.8,
+      "month_low": 3603.1,
       "four_week_high_close": 3970.0,
       "prev_day_volume": 33135,
       "volume_5day_ago": 14862,
@@ -6442,6 +7016,8 @@
       "consolidation_window": null
     },
     "KIMS": {
+      "month_high": 819.0,
+      "month_low": 667.9,
       "four_week_high_close": 800.45,
       "prev_day_volume": 399573,
       "volume_5day_ago": 185527,
@@ -6464,6 +7040,8 @@
       "consolidation_window": null
     },
     "SANSERA": {
+      "month_high": 4743.5,
+      "month_low": 4000.0,
       "four_week_high_close": 4662.4,
       "prev_day_volume": 125922,
       "volume_5day_ago": 137803,
@@ -6486,6 +7064,8 @@
       "consolidation_window": null
     },
     "TEJASNET": {
+      "month_high": 527.7,
+      "month_low": 445.7,
       "four_week_high_close": 521.55,
       "prev_day_volume": 1299689,
       "volume_5day_ago": 1735980,
@@ -6508,6 +7088,8 @@
       "consolidation_window": null
     },
     "MEDANTA": {
+      "month_high": 1527.0,
+      "month_low": 1230.0,
       "four_week_high_close": 1508.1,
       "prev_day_volume": 114325,
       "volume_5day_ago": 109033,
@@ -6530,6 +7112,8 @@
       "consolidation_window": null
     },
     "TDPOWERSYS": {
+      "month_high": 856.1,
+      "month_low": 711.15,
       "four_week_high_close": 825.65,
       "prev_day_volume": 1734801,
       "volume_5day_ago": 5152173,
@@ -6552,6 +7136,8 @@
       "consolidation_window": null
     },
     "JSL": {
+      "month_high": 766.85,
+      "month_low": 700.6,
       "four_week_high_close": 758.55,
       "prev_day_volume": 884801,
       "volume_5day_ago": 330854,
@@ -6574,6 +7160,8 @@
       "consolidation_window": null
     },
     "NETWEB": {
+      "month_high": 5130.0,
+      "month_low": 4453.0,
       "four_week_high_close": 5067.7,
       "prev_day_volume": 752958,
       "volume_5day_ago": 2319078,
@@ -6596,6 +7184,8 @@
       "consolidation_window": null
     },
     "SCHNEIDER": {
+      "month_high": 1318.8,
+      "month_low": 1124.0,
       "four_week_high_close": 1275.4,
       "prev_day_volume": 105906,
       "volume_5day_ago": 104091,
@@ -6618,6 +7208,8 @@
       "consolidation_window": null
     },
     "HBLENGINE": {
+      "month_high": 842.0,
+      "month_low": 701.0,
       "four_week_high_close": 833.15,
       "prev_day_volume": 5497271,
       "volume_5day_ago": 849484,
@@ -6640,6 +7232,8 @@
       "consolidation_window": null
     },
     "CHAMBLFERT": {
+      "month_high": 423.5,
+      "month_low": 371.25,
       "four_week_high_close": 419.6,
       "prev_day_volume": 288999,
       "volume_5day_ago": 470255,
@@ -6662,6 +7256,8 @@
       "consolidation_window": null
     },
     "BSOFT": {
+      "month_high": 320.95,
+      "month_low": 267.05,
       "four_week_high_close": 318.2,
       "prev_day_volume": 1302001,
       "volume_5day_ago": 1662803,
@@ -6684,6 +7280,8 @@
       "consolidation_window": null
     },
     "BELRISE": {
+      "month_high": 254.28,
+      "month_low": 225.01,
       "four_week_high_close": 249.78,
       "prev_day_volume": 1181565,
       "volume_5day_ago": 1545911,
@@ -6706,6 +7304,8 @@
       "consolidation_window": null
     },
     "HFCL": {
+      "month_high": 275.91,
+      "month_low": 199.0,
       "four_week_high_close": 271.9,
       "prev_day_volume": 15114857,
       "volume_5day_ago": 5513432,
@@ -6728,6 +7328,8 @@
       "consolidation_window": null
     },
     "DEEPAKFERT": {
+      "month_high": 1421.0,
+      "month_low": 1230.0,
       "four_week_high_close": 1415.4,
       "prev_day_volume": 1210959,
       "volume_5day_ago": 155980,
@@ -6750,6 +7352,8 @@
       "consolidation_window": null
     },
     "RHIM": {
+      "month_high": 401.0,
+      "month_low": 360.8,
       "four_week_high_close": 393.2,
       "prev_day_volume": 272327,
       "volume_5day_ago": 133344,
@@ -6772,6 +7376,8 @@
       "consolidation_window": null
     },
     "JINDALSAW": {
+      "month_high": 312.5,
+      "month_low": 260.6,
       "four_week_high_close": 301.55,
       "prev_day_volume": 3510549,
       "volume_5day_ago": 1716265,
@@ -6794,6 +7400,8 @@
       "consolidation_window": null
     },
     "TORNTPOWER": {
+      "month_high": 1285.7,
+      "month_low": 1165.0,
       "four_week_high_close": 1262.0,
       "prev_day_volume": 118498,
       "volume_5day_ago": 388539,
@@ -6816,6 +7424,8 @@
       "consolidation_window": null
     },
     "JSWINFRA": {
+      "month_high": 375.5,
+      "month_low": 326.1,
       "four_week_high_close": 367.6,
       "prev_day_volume": 871673,
       "volume_5day_ago": 2184598,
@@ -6838,6 +7448,8 @@
       "consolidation_window": null
     },
     "ABBOTINDIA": {
+      "month_high": 27850.0,
+      "month_low": 25475.0,
       "four_week_high_close": 27270.0,
       "prev_day_volume": 2009,
       "volume_5day_ago": 2659,
@@ -6866,6 +7478,8 @@
       }
     },
     "CIEINDIA": {
+      "month_high": 398.1,
+      "month_low": 368.3,
       "four_week_high_close": 395.15,
       "prev_day_volume": 130615,
       "volume_5day_ago": 143513,
@@ -6894,6 +7508,8 @@
       }
     },
     "NCC": {
+      "month_high": 139.42,
+      "month_low": 119.01,
       "four_week_high_close": 136.05,
       "prev_day_volume": 3270723,
       "volume_5day_ago": 1423053,
@@ -6916,6 +7532,8 @@
       "consolidation_window": null
     },
     "VTL": {
+      "month_high": 596.6,
+      "month_low": 512.95,
       "four_week_high_close": 563.6,
       "prev_day_volume": 302820,
       "volume_5day_ago": 145855,
@@ -6938,6 +7556,8 @@
       "consolidation_window": null
     },
     "MSUMI": {
+      "month_high": 36.2,
+      "month_low": 32.7,
       "four_week_high_close": 35.6,
       "prev_day_volume": 6781634,
       "volume_5day_ago": 12630692,
@@ -6960,6 +7580,8 @@
       "consolidation_window": null
     },
     "CASTROLIND": {
+      "month_high": 203.4,
+      "month_low": 190.1,
       "four_week_high_close": 201.67,
       "prev_day_volume": 2266126,
       "volume_5day_ago": 1197571,
@@ -6988,6 +7610,8 @@
       }
     },
     "IRCTC": {
+      "month_high": 480.0,
+      "month_low": 446.8,
       "four_week_high_close": 477.1,
       "prev_day_volume": 561197,
       "volume_5day_ago": 785057,
@@ -7010,6 +7634,8 @@
       "consolidation_window": null
     },
     "NAVA": {
+      "month_high": 583.9,
+      "month_low": 534.5,
       "four_week_high_close": 575.0,
       "prev_day_volume": 120624,
       "volume_5day_ago": 201249,
@@ -7032,6 +7658,8 @@
       "consolidation_window": null
     },
     "AFFLE": {
+      "month_high": 1623.5,
+      "month_low": 1388.1,
       "four_week_high_close": 1600.2,
       "prev_day_volume": 117092,
       "volume_5day_ago": 88115,
@@ -7054,6 +7682,8 @@
       "consolidation_window": null
     },
     "HONAUT": {
+      "month_high": 36485.0,
+      "month_low": 31515.0,
       "four_week_high_close": 34685.0,
       "prev_day_volume": 2022,
       "volume_5day_ago": 755,
@@ -7076,6 +7706,8 @@
       "consolidation_window": null
     },
     "IPCALAB": {
+      "month_high": 2038.0,
+      "month_low": 1797.0,
       "four_week_high_close": 2008.2,
       "prev_day_volume": 167626,
       "volume_5day_ago": 175831,
@@ -7098,6 +7730,8 @@
       "consolidation_window": null
     },
     "EIHOTEL": {
+      "month_high": 321.15,
+      "month_low": 285.1,
       "four_week_high_close": 309.0,
       "prev_day_volume": 309104,
       "volume_5day_ago": 60626,
@@ -7120,6 +7754,8 @@
       "consolidation_window": null
     },
     "IOB": {
+      "month_high": 32.4,
+      "month_low": 30.06,
       "four_week_high_close": 32.13,
       "prev_day_volume": 2479843,
       "volume_5day_ago": 1671115,
@@ -7142,6 +7778,8 @@
       "consolidation_window": null
     },
     "VISL": {
+      "month_high": 34.49,
+      "month_low": 27.9,
       "four_week_high_close": 33.82,
       "prev_day_volume": 6884103,
       "volume_5day_ago": 14003797,
@@ -7156,6 +7794,8 @@
       "consolidation_window": null
     },
     "CAPLIPOINT": {
+      "month_high": 2990.0,
+      "month_low": 2248.1,
       "four_week_high_close": 2867.4,
       "prev_day_volume": 70397,
       "volume_5day_ago": 228285,
@@ -7178,6 +7818,8 @@
       "consolidation_window": null
     },
     "GESHIP": {
+      "month_high": 1583.0,
+      "month_low": 1413.7,
       "four_week_high_close": 1567.9,
       "prev_day_volume": 439944,
       "volume_5day_ago": 569940,
@@ -7200,6 +7842,8 @@
       "consolidation_window": null
     },
     "JYOTICNC": {
+      "month_high": 1134.6,
+      "month_low": 971.5,
       "four_week_high_close": 1113.85,
       "prev_day_volume": 186078,
       "volume_5day_ago": 478131,
@@ -7222,6 +7866,8 @@
       "consolidation_window": null
     },
     "FSL": {
+      "month_high": 300.0,
+      "month_low": 247.0,
       "four_week_high_close": 291.75,
       "prev_day_volume": 508601,
       "volume_5day_ago": 1678015,
@@ -7244,6 +7890,8 @@
       "consolidation_window": null
     },
     "ONESOURCE": {
+      "month_high": 1643.0,
+      "month_low": 1352.3,
       "four_week_high_close": 1602.6,
       "prev_day_volume": 92387,
       "volume_5day_ago": 167234,
@@ -7266,6 +7914,8 @@
       "consolidation_window": null
     },
     "DEEPAKNTR": {
+      "month_high": 1667.8,
+      "month_low": 1473.1,
       "four_week_high_close": 1645.4,
       "prev_day_volume": 81731,
       "volume_5day_ago": 215599,
@@ -7288,6 +7938,8 @@
       "consolidation_window": null
     },
     "USHAMART": {
+      "month_high": 542.6,
+      "month_low": 477.15,
       "four_week_high_close": 535.05,
       "prev_day_volume": 481055,
       "volume_5day_ago": 731681,
@@ -7310,6 +7962,8 @@
       "consolidation_window": null
     },
     "JBMA": {
+      "month_high": 610.35,
+      "month_low": 523.25,
       "four_week_high_close": 601.8,
       "prev_day_volume": 111655,
       "volume_5day_ago": 279677,
@@ -7332,6 +7986,8 @@
       "consolidation_window": null
     },
     "SWANCORP": {
+      "month_high": 311.0,
+      "month_low": 254.1,
       "four_week_high_close": 302.75,
       "prev_day_volume": 363742,
       "volume_5day_ago": 943806,
@@ -7354,6 +8010,8 @@
       "consolidation_window": null
     },
     "CONCORDBIO": {
+      "month_high": 1592.0,
+      "month_low": 1276.1,
       "four_week_high_close": 1579.4,
       "prev_day_volume": 79842,
       "volume_5day_ago": 53163,
@@ -7376,6 +8034,8 @@
       "consolidation_window": null
     },
     "TRITURBINE": {
+      "month_high": 572.2,
+      "month_low": 483.0,
       "four_week_high_close": 562.1,
       "prev_day_volume": 316631,
       "volume_5day_ago": 326725,
@@ -7398,6 +8058,8 @@
       "consolidation_window": null
     },
     "ATUL": {
+      "month_high": 6302.5,
+      "month_low": 5798.0,
       "four_week_high_close": 6197.0,
       "prev_day_volume": 11282,
       "volume_5day_ago": 53069,
@@ -7420,6 +8082,8 @@
       "consolidation_window": null
     },
     "KEC": {
+      "month_high": 409.15,
+      "month_low": 342.6,
       "four_week_high_close": 403.3,
       "prev_day_volume": 948088,
       "volume_5day_ago": 3044220,
@@ -7442,6 +8106,8 @@
       "consolidation_window": null
     },
     "ABREL": {
+      "month_high": 1288.7,
+      "month_low": 1002.3,
       "four_week_high_close": 1237.1,
       "prev_day_volume": 59459,
       "volume_5day_ago": 414821,
@@ -7464,6 +8130,8 @@
       "consolidation_window": null
     },
     "GRAVITA": {
+      "month_high": 1636.0,
+      "month_low": 1388.0,
       "four_week_high_close": 1580.0,
       "prev_day_volume": 147047,
       "volume_5day_ago": 380224,
@@ -7486,6 +8154,8 @@
       "consolidation_window": null
     },
     "ATGL": {
+      "month_high": 674.8,
+      "month_low": 560.0,
       "four_week_high_close": 638.4,
       "prev_day_volume": 325938,
       "volume_5day_ago": 388693,
@@ -7508,6 +8178,8 @@
       "consolidation_window": null
     },
     "TITAGARH": {
+      "month_high": 857.0,
+      "month_low": 735.65,
       "four_week_high_close": 842.05,
       "prev_day_volume": 146388,
       "volume_5day_ago": 272594,
@@ -7530,6 +8202,8 @@
       "consolidation_window": null
     },
     "HEXT": {
+      "month_high": 587.9,
+      "month_low": 476.25,
       "four_week_high_close": 582.75,
       "prev_day_volume": 222727,
       "volume_5day_ago": 1745043,
@@ -7552,6 +8226,8 @@
       "consolidation_window": null
     },
     "DATAPATTNS": {
+      "month_high": 4640.0,
+      "month_low": 4017.8,
       "four_week_high_close": 4511.8,
       "prev_day_volume": 162574,
       "volume_5day_ago": 255691,
@@ -7574,6 +8250,8 @@
       "consolidation_window": null
     },
     "TATACOMM": {
+      "month_high": 1866.0,
+      "month_low": 1617.5,
       "four_week_high_close": 1763.7,
       "prev_day_volume": 446691,
       "volume_5day_ago": 222160,
@@ -7596,6 +8274,8 @@
       "consolidation_window": null
     },
     "GRSE": {
+      "month_high": 2459.2,
+      "month_low": 2000.0,
       "four_week_high_close": 2399.7,
       "prev_day_volume": 207103,
       "volume_5day_ago": 551916,
@@ -7618,6 +8298,8 @@
       "consolidation_window": null
     },
     "RAINBOW": {
+      "month_high": 1494.9,
+      "month_low": 1196.8,
       "four_week_high_close": 1439.6,
       "prev_day_volume": 59031,
       "volume_5day_ago": 211303,
@@ -7640,6 +8322,8 @@
       "consolidation_window": null
     },
     "IGL": {
+      "month_high": 151.79,
+      "month_low": 139.2,
       "four_week_high_close": 148.85,
       "prev_day_volume": 599141,
       "volume_5day_ago": 766381,
@@ -7662,6 +8346,8 @@
       "consolidation_window": null
     },
     "SCI": {
+      "month_high": 293.8,
+      "month_low": 261.15,
       "four_week_high_close": 290.6,
       "prev_day_volume": 1366053,
       "volume_5day_ago": 1207523,
@@ -7684,6 +8370,8 @@
       "consolidation_window": null
     },
     "JKTYRE": {
+      "month_high": 358.3,
+      "month_low": 327.0,
       "four_week_high_close": 355.35,
       "prev_day_volume": 202730,
       "volume_5day_ago": 248427,
@@ -7712,6 +8400,8 @@
       }
     },
     "HDBFS": {
+      "month_high": 701.55,
+      "month_low": 504.1,
       "four_week_high_close": 680.95,
       "prev_day_volume": 1655913,
       "volume_5day_ago": 436919,
@@ -7734,6 +8424,8 @@
       "consolidation_window": null
     },
     "BLS": {
+      "month_high": 240.0,
+      "month_low": 212.0,
       "four_week_high_close": 232.54,
       "prev_day_volume": 616731,
       "volume_5day_ago": 485752,
@@ -7756,6 +8448,8 @@
       "consolidation_window": null
     },
     "LINDEINDIA": {
+      "month_high": 6479.5,
+      "month_low": 5925.5,
       "four_week_high_close": 6323.0,
       "prev_day_volume": 12236,
       "volume_5day_ago": 6252,
@@ -7778,6 +8472,8 @@
       "consolidation_window": null
     },
     "BEML": {
+      "month_high": 2155.0,
+      "month_low": 1875.6,
       "four_week_high_close": 2097.9,
       "prev_day_volume": 176296,
       "volume_5day_ago": 153860,
@@ -7800,6 +8496,8 @@
       "consolidation_window": null
     },
     "NTPCGREEN": {
+      "month_high": 95.98,
+      "month_low": 86.91,
       "four_week_high_close": 95.43,
       "prev_day_volume": 2200335,
       "volume_5day_ago": 3841340,
@@ -7822,6 +8520,8 @@
       "consolidation_window": null
     },
     "CHOLAHLDNG": {
+      "month_high": 1541.0,
+      "month_low": 1330.1,
       "four_week_high_close": 1474.8,
       "prev_day_volume": 97923,
       "volume_5day_ago": 47662,
@@ -7844,6 +8544,8 @@
       "consolidation_window": null
     },
     "WELSPUNLIV": {
+      "month_high": 245.5,
+      "month_low": 211.46,
       "four_week_high_close": 239.17,
       "prev_day_volume": 3321852,
       "volume_5day_ago": 1253535,
@@ -7866,6 +8568,8 @@
       "consolidation_window": null
     },
     "JSWCEMENT": {
+      "month_high": 119.75,
+      "month_low": 109.62,
       "four_week_high_close": 118.18,
       "prev_day_volume": 1870290,
       "volume_5day_ago": 966269,
@@ -7888,6 +8592,8 @@
       "consolidation_window": null
     },
     "CMPDI": {
+      "month_high": 218.76,
+      "month_low": 196.0,
       "four_week_high_close": 213.53,
       "prev_day_volume": 589004,
       "volume_5day_ago": 487254,
@@ -7904,6 +8610,8 @@
       "consolidation_window": null
     },
     "GALLANTT": {
+      "month_high": 678.85,
+      "month_low": 500.0,
       "four_week_high_close": 628.15,
       "prev_day_volume": 17327902,
       "volume_5day_ago": 23263167,
@@ -7926,6 +8634,8 @@
       "consolidation_window": null
     },
     "PWL": {
+      "month_high": 144.9,
+      "month_low": 117.71,
       "four_week_high_close": 143.69,
       "prev_day_volume": 3063106,
       "volume_5day_ago": 11397741,
@@ -7948,6 +8658,8 @@
       "consolidation_window": null
     },
     "CESC": {
+      "month_high": 144.33,
+      "month_low": 128.31,
       "four_week_high_close": 143.47,
       "prev_day_volume": 903439,
       "volume_5day_ago": 2066813,
@@ -7970,6 +8682,8 @@
       "consolidation_window": null
     },
     "ELECON": {
+      "month_high": 509.6,
+      "month_low": 407.2,
       "four_week_high_close": 493.05,
       "prev_day_volume": 552547,
       "volume_5day_ago": 751520,
@@ -7992,6 +8706,8 @@
       "consolidation_window": null
     },
     "HOMEFIRST": {
+      "month_high": 1273.9,
+      "month_low": 1052.0,
       "four_week_high_close": 1257.7,
       "prev_day_volume": 326033,
       "volume_5day_ago": 73662,
@@ -8014,6 +8730,8 @@
       "consolidation_window": null
     },
     "RKFORGE": {
+      "month_high": 741.0,
+      "month_low": 675.0,
       "four_week_high_close": 732.65,
       "prev_day_volume": 375986,
       "volume_5day_ago": 273053,
@@ -8036,6 +8754,8 @@
       "consolidation_window": null
     },
     "AEGISLOG": {
+      "month_high": 1528.7,
+      "month_low": 1279.8,
       "four_week_high_close": 1489.1,
       "prev_day_volume": 548822,
       "volume_5day_ago": 724454,
@@ -8058,6 +8778,8 @@
       "consolidation_window": null
     },
     "ZENSARTECH": {
+      "month_high": 523.7,
+      "month_low": 416.15,
       "four_week_high_close": 513.15,
       "prev_day_volume": 1621882,
       "volume_5day_ago": 475471,
@@ -8080,6 +8802,8 @@
       "consolidation_window": null
     },
     "CCL": {
+      "month_high": 1106.5,
+      "month_low": 975.0,
       "four_week_high_close": 1100.6,
       "prev_day_volume": 249871,
       "volume_5day_ago": 88708,
@@ -8102,6 +8826,8 @@
       "consolidation_window": null
     },
     "LTFOODS": {
+      "month_high": 433.85,
+      "month_low": 389.1,
       "four_week_high_close": 430.8,
       "prev_day_volume": 701850,
       "volume_5day_ago": 271176,
@@ -8124,6 +8850,8 @@
       "consolidation_window": null
     },
     "INTELLECT": {
+      "month_high": 674.35,
+      "month_low": 564.05,
       "four_week_high_close": 668.05,
       "prev_day_volume": 306219,
       "volume_5day_ago": 229879,
@@ -8146,6 +8874,8 @@
       "consolidation_window": null
     },
     "ESCORTS": {
+      "month_high": 2888.4,
+      "month_low": 2550.1,
       "four_week_high_close": 2855.7,
       "prev_day_volume": 44680,
       "volume_5day_ago": 49759,
@@ -8168,6 +8898,8 @@
       "consolidation_window": null
     },
     "BATAINDIA": {
+      "month_high": 656.0,
+      "month_low": 599.6,
       "four_week_high_close": 638.65,
       "prev_day_volume": 139806,
       "volume_5day_ago": 158102,
@@ -8190,6 +8922,8 @@
       "consolidation_window": null
     },
     "ENDURANCE": {
+      "month_high": 2780.0,
+      "month_low": 2350.1,
       "four_week_high_close": 2756.4,
       "prev_day_volume": 63784,
       "volume_5day_ago": 42255,
@@ -8212,6 +8946,8 @@
       "consolidation_window": null
     },
     "TRIDENT": {
+      "month_high": 24.01,
+      "month_low": 21.6,
       "four_week_high_close": 23.42,
       "prev_day_volume": 2430716,
       "volume_5day_ago": 2053777,
@@ -8234,6 +8970,8 @@
       "consolidation_window": null
     },
     "ZENTEC": {
+      "month_high": 1729.9,
+      "month_low": 1479.2,
       "four_week_high_close": 1695.0,
       "prev_day_volume": 153731,
       "volume_5day_ago": 452056,
@@ -8256,6 +8994,8 @@
       "consolidation_window": null
     },
     "TECHNOE": {
+      "month_high": 1057.25,
+      "month_low": 931.5,
       "four_week_high_close": 1012.25,
       "prev_day_volume": 48731,
       "volume_5day_ago": 62009,
@@ -8278,6 +9018,8 @@
       "consolidation_window": null
     },
     "SHRIPISTON": {
+      "month_high": 4843.0,
+      "month_low": 4227.3,
       "four_week_high_close": 4749.2,
       "prev_day_volume": 108810,
       "volume_5day_ago": 62591,
@@ -8300,6 +9042,8 @@
       "consolidation_window": null
     },
     "STARHEALTH": {
+      "month_high": 572.55,
+      "month_low": 513.0,
       "four_week_high_close": 563.2,
       "prev_day_volume": 69243,
       "volume_5day_ago": 341424,
@@ -8322,6 +9066,8 @@
       "consolidation_window": null
     },
     "ZYDUSWELL": {
+      "month_high": 552.9,
+      "month_low": 482.0,
       "four_week_high_close": 531.0,
       "prev_day_volume": 61362,
       "volume_5day_ago": 105722,
@@ -8344,6 +9090,8 @@
       "consolidation_window": null
     },
     "APTUS": {
+      "month_high": 253.23,
+      "month_low": 212.5,
       "four_week_high_close": 251.33,
       "prev_day_volume": 1143337,
       "volume_5day_ago": 1332263,
@@ -8366,6 +9114,8 @@
       "consolidation_window": null
     },
     "CEMPRO": {
+      "month_high": 1344.6,
+      "month_low": 1101.3,
       "four_week_high_close": 1319.3,
       "prev_day_volume": 411014,
       "volume_5day_ago": 990424,
@@ -8388,6 +9138,8 @@
       "consolidation_window": null
     },
     "HEGAM": {
+      "month_high": 256.47,
+      "month_low": 218.0,
       "four_week_high_close": 252.21,
       "prev_day_volume": 382401,
       "volume_5day_ago": 724058,
@@ -8410,6 +9162,8 @@
       "consolidation_window": null
     },
     "POLYMED": {
+      "month_high": 1772.0,
+      "month_low": 1543.0,
       "four_week_high_close": 1726.6,
       "prev_day_volume": 55799,
       "volume_5day_ago": 54472,
@@ -8432,6 +9186,8 @@
       "consolidation_window": null
     },
     "ZFCVINDIA": {
+      "month_high": 2451.4,
+      "month_low": 2075.0,
       "four_week_high_close": 2362.6,
       "prev_day_volume": 103856,
       "volume_5day_ago": 63151,
@@ -8454,6 +9210,8 @@
       "consolidation_window": null
     },
     "TBOTEK": {
+      "month_high": 1772.5,
+      "month_low": 1601.0,
       "four_week_high_close": 1704.9,
       "prev_day_volume": 90084,
       "volume_5day_ago": 86929,
@@ -8476,6 +9234,8 @@
       "consolidation_window": null
     },
     "TENNIND": {
+      "month_high": 541.7,
+      "month_low": 448.0,
       "four_week_high_close": 532.75,
       "prev_day_volume": 349872,
       "volume_5day_ago": 467260,
@@ -8498,6 +9258,8 @@
       "consolidation_window": null
     },
     "EXIDEIND": {
+      "month_high": 444.7,
+      "month_low": 358.45,
       "four_week_high_close": 434.5,
       "prev_day_volume": 1599353,
       "volume_5day_ago": 1487685,
@@ -8520,6 +9282,8 @@
       "consolidation_window": null
     },
     "JUBLINGREA": {
+      "month_high": 677.4,
+      "month_low": 612.0,
       "four_week_high_close": 656.1,
       "prev_day_volume": 119235,
       "volume_5day_ago": 101423,
@@ -8542,6 +9306,8 @@
       "consolidation_window": null
     },
     "FRACTAL": {
+      "month_high": 775.0,
+      "month_low": 696.3,
       "four_week_high_close": 761.65,
       "prev_day_volume": 225125,
       "volume_5day_ago": 183116,
@@ -8558,6 +9324,8 @@
       "consolidation_window": null
     },
     "JPPOWER": {
+      "month_high": 17.49,
+      "month_low": 14.12,
       "four_week_high_close": 16.48,
       "prev_day_volume": 45542589,
       "volume_5day_ago": 33787610,
@@ -8580,6 +9348,8 @@
       "consolidation_window": null
     },
     "SHYAMMETL": {
+      "month_high": 1240.5,
+      "month_low": 1015.0,
       "four_week_high_close": 1226.6,
       "prev_day_volume": 765369,
       "volume_5day_ago": 268135,
@@ -8602,6 +9372,8 @@
       "consolidation_window": null
     },
     "WELCORP": {
+      "month_high": 2900.0,
+      "month_low": 2450.0,
       "four_week_high_close": 2842.0,
       "prev_day_volume": 1023721,
       "volume_5day_ago": 1963676,
@@ -8624,6 +9396,8 @@
       "consolidation_window": null
     },
     "UBL": {
+      "month_high": 1289.7,
+      "month_low": 1140.3,
       "four_week_high_close": 1270.2,
       "prev_day_volume": 557500,
       "volume_5day_ago": 1611295,
@@ -8646,6 +9420,8 @@
       "consolidation_window": null
     },
     "JAINREC": {
+      "month_high": 308.3,
+      "month_low": 271.0,
       "four_week_high_close": 302.95,
       "prev_day_volume": 709296,
       "volume_5day_ago": 306549,
@@ -8668,6 +9444,8 @@
       "consolidation_window": null
     },
     "IDBI": {
+      "month_high": 93.6,
+      "month_low": 81.04,
       "four_week_high_close": 90.39,
       "prev_day_volume": 9907175,
       "volume_5day_ago": 3617146,
@@ -8690,6 +9468,8 @@
       "consolidation_window": null
     },
     "PIRAMALFIN": {
+      "month_high": 2324.5,
+      "month_low": 1781.2,
       "four_week_high_close": 2226.5,
       "prev_day_volume": 197162,
       "volume_5day_ago": 82479,
@@ -8712,6 +9492,8 @@
       "consolidation_window": null
     },
     "MMTC": {
+      "month_high": 61.0,
+      "month_low": 52.5,
       "four_week_high_close": 60.47,
       "prev_day_volume": 1065503,
       "volume_5day_ago": 782326,
@@ -8734,6 +9516,8 @@
       "consolidation_window": null
     },
     "DOMS": {
+      "month_high": 2169.3,
+      "month_low": 2020.0,
       "four_week_high_close": 2141.5,
       "prev_day_volume": 8027,
       "volume_5day_ago": 6528,
@@ -8756,6 +9540,8 @@
       "consolidation_window": null
     },
     "INDIAMART": {
+      "month_high": 1667.0,
+      "month_low": 1565.1,
       "four_week_high_close": 1652.4,
       "prev_day_volume": 40168,
       "volume_5day_ago": 30804,
@@ -8784,6 +9570,8 @@
       }
     },
     "AZAD": {
+      "month_high": 3127.9,
+      "month_low": 2605.3,
       "four_week_high_close": 3062.6,
       "prev_day_volume": 332566,
       "volume_5day_ago": 554193,
@@ -8806,6 +9594,8 @@
       "consolidation_window": null
     },
     "URBANCO": {
+      "month_high": 177.77,
+      "month_low": 141.0,
       "four_week_high_close": 174.21,
       "prev_day_volume": 22133536,
       "volume_5day_ago": 3444668,
@@ -8828,6 +9618,8 @@
       "consolidation_window": null
     },
     "SUNDARMFIN": {
+      "month_high": 4873.7,
+      "month_low": 4095.3,
       "four_week_high_close": 4751.9,
       "prev_day_volume": 29378,
       "volume_5day_ago": 54064,
@@ -8850,6 +9642,8 @@
       "consolidation_window": null
     },
     "COHANCE": {
+      "month_high": 482.25,
+      "month_low": 427.5,
       "four_week_high_close": 464.05,
       "prev_day_volume": 354458,
       "volume_5day_ago": 280792,
@@ -8872,6 +9666,8 @@
       "consolidation_window": null
     },
     "BIRET": {
+      "month_high": 340.8,
+      "month_low": 317.99,
       "four_week_high_close": 339.1,
       "prev_day_volume": 398416,
       "volume_5day_ago": 307688,
@@ -8900,6 +9696,8 @@
       }
     },
     "BAJAJHFL": {
+      "month_high": 86.45,
+      "month_low": 80.66,
       "four_week_high_close": 84.55,
       "prev_day_volume": 5243607,
       "volume_5day_ago": 2038185,
@@ -8922,6 +9720,8 @@
       "consolidation_window": null
     },
     "EMCURE": {
+      "month_high": 2100.7,
+      "month_low": 1746.5,
       "four_week_high_close": 2009.3,
       "prev_day_volume": 108214,
       "volume_5day_ago": 70731,
@@ -8944,6 +9744,8 @@
       "consolidation_window": null
     },
     "BHARTIHEXA": {
+      "month_high": 1665.0,
+      "month_low": 1359.2,
       "four_week_high_close": 1650.5,
       "prev_day_volume": 164332,
       "volume_5day_ago": 150763,
@@ -8966,6 +9768,8 @@
       "consolidation_window": null
     },
     "GICRE": {
+      "month_high": 353.25,
+      "month_low": 308.0,
       "four_week_high_close": 346.2,
       "prev_day_volume": 398690,
       "volume_5day_ago": 661036,
@@ -8988,6 +9792,8 @@
       "consolidation_window": null
     },
     "CHOICEIN": {
+      "month_high": 799.0,
+      "month_low": 706.75,
       "four_week_high_close": 782.05,
       "prev_day_volume": 238330,
       "volume_5day_ago": 392157,
@@ -9010,6 +9816,8 @@
       "consolidation_window": null
     },
     "ASAHIINDIA": {
+      "month_high": 994.9,
+      "month_low": 909.0,
       "four_week_high_close": 976.25,
       "prev_day_volume": 34206,
       "volume_5day_ago": 33116,
@@ -9032,6 +9840,8 @@
       "consolidation_window": null
     },
     "RUBICON": {
+      "month_high": 1827.5,
+      "month_low": 1450.5,
       "four_week_high_close": 1732.6,
       "prev_day_volume": 109636,
       "volume_5day_ago": 120700,
@@ -9054,6 +9864,8 @@
       "consolidation_window": null
     },
     "SAMMAANCAP": {
+      "month_high": 146.29,
+      "month_low": 124.1,
       "four_week_high_close": 144.48,
       "prev_day_volume": 10256705,
       "volume_5day_ago": 5108157,
@@ -9076,6 +9888,8 @@
       "consolidation_window": null
     },
     "NUVOCO": {
+      "month_high": 353.5,
+      "month_low": 312.2,
       "four_week_high_close": 344.75,
       "prev_day_volume": 924467,
       "volume_5day_ago": 88374,
@@ -9098,6 +9912,8 @@
       "consolidation_window": null
     },
     "JKCEMENT": {
+      "month_high": 5229.0,
+      "month_low": 4693.0,
       "four_week_high_close": 5184.5,
       "prev_day_volume": 19845,
       "volume_5day_ago": 32070,
@@ -9120,6 +9936,8 @@
       "consolidation_window": null
     },
     "NATCOPHARM": {
+      "month_high": 857.85,
+      "month_low": 779.0,
       "four_week_high_close": 843.1,
       "prev_day_volume": 768065,
       "volume_5day_ago": 501242,
@@ -9142,6 +9960,8 @@
       "consolidation_window": null
     },
     "CLEAN": {
+      "month_high": 872.85,
+      "month_low": 754.15,
       "four_week_high_close": 836.6,
       "prev_day_volume": 213700,
       "volume_5day_ago": 111703,
@@ -9164,6 +9984,8 @@
       "consolidation_window": null
     },
     "WHIRLPOOL": {
+      "month_high": 960.0,
+      "month_low": 706.0,
       "four_week_high_close": 918.9,
       "prev_day_volume": 246469,
       "volume_5day_ago": 466476,
@@ -9186,6 +10008,8 @@
       "consolidation_window": null
     },
     "GABRIEL": {
+      "month_high": 1557.8,
+      "month_low": 1281.6,
       "four_week_high_close": 1486.1,
       "prev_day_volume": 2631119,
       "volume_5day_ago": 309507,
@@ -9208,6 +10032,8 @@
       "consolidation_window": null
     },
     "NIACL": {
+      "month_high": 196.76,
+      "month_low": 155.55,
       "four_week_high_close": 191.38,
       "prev_day_volume": 969941,
       "volume_5day_ago": 91136023,
@@ -9230,6 +10056,8 @@
       "consolidation_window": null
     },
     "AARTIIND": {
+      "month_high": 508.35,
+      "month_low": 459.3,
       "four_week_high_close": 505.05,
       "prev_day_volume": 554747,
       "volume_5day_ago": 504143,
@@ -9252,6 +10080,8 @@
       "consolidation_window": null
     },
     "BALRAMCHIN": {
+      "month_high": 736.0,
+      "month_low": 638.0,
       "four_week_high_close": 726.0,
       "prev_day_volume": 970774,
       "volume_5day_ago": 1140300,
@@ -9274,6 +10104,8 @@
       "consolidation_window": null
     },
     "SUMICHEM": {
+      "month_high": 469.0,
+      "month_low": 391.0,
       "four_week_high_close": 464.2,
       "prev_day_volume": 159012,
       "volume_5day_ago": 737707,
@@ -9296,6 +10128,8 @@
       "consolidation_window": null
     },
     "KPRMILL": {
+      "month_high": 1154.4,
+      "month_low": 1027.4,
       "four_week_high_close": 1136.7,
       "prev_day_volume": 142637,
       "volume_5day_ago": 205149,
@@ -9318,6 +10152,8 @@
       "consolidation_window": null
     },
     "CANHLIFE": {
+      "month_high": 156.25,
+      "month_low": 125.9,
       "four_week_high_close": 153.4,
       "prev_day_volume": 1621211,
       "volume_5day_ago": 2716785,
@@ -9340,6 +10176,8 @@
       "consolidation_window": null
     },
     "RPOWER": {
+      "month_high": 21.82,
+      "month_low": 17.65,
       "four_week_high_close": 21.03,
       "prev_day_volume": 20467940,
       "volume_5day_ago": 21557018,
@@ -9362,6 +10200,8 @@
       "consolidation_window": null
     },
     "APARINDS": {
+      "month_high": 19265.0,
+      "month_low": 15601.0,
       "four_week_high_close": 18945.0,
       "prev_day_volume": 152027,
       "volume_5day_ago": 102420,
@@ -9384,6 +10224,8 @@
       "consolidation_window": null
     },
     "ACUTAAS": {
+      "month_high": 3509.9,
+      "month_low": 3031.1,
       "four_week_high_close": 3425.7,
       "prev_day_volume": 557451,
       "volume_5day_ago": 129650,
@@ -9406,6 +10248,8 @@
       "consolidation_window": null
     },
     "PRIVISCL": {
+      "month_high": 3705.0,
+      "month_low": 3266.0,
       "four_week_high_close": 3605.5,
       "prev_day_volume": 54122,
       "volume_5day_ago": 68782,
@@ -9428,6 +10272,8 @@
       "consolidation_window": null
     },
     "FIRSTCRY": {
+      "month_high": 195.3,
+      "month_low": 163.37,
       "four_week_high_close": 184.72,
       "prev_day_volume": 836270,
       "volume_5day_ago": 892956,
@@ -9450,6 +10296,8 @@
       "consolidation_window": null
     },
     "ELGIEQUIP": {
+      "month_high": 623.9,
+      "month_low": 542.1,
       "four_week_high_close": 614.7,
       "prev_day_volume": 260373,
       "volume_5day_ago": 148019,
@@ -9472,6 +10320,8 @@
       "consolidation_window": null
     },
     "INDIACEM": {
+      "month_high": 356.15,
+      "month_low": 286.5,
       "four_week_high_close": 345.0,
       "prev_day_volume": 2107356,
       "volume_5day_ago": 196072,
@@ -9494,6 +10344,8 @@
       "consolidation_window": null
     },
     "NSLNISP": {
+      "month_high": 44.62,
+      "month_low": 38.86,
       "four_week_high_close": 43.95,
       "prev_day_volume": 2774515,
       "volume_5day_ago": 1943012,
@@ -9516,6 +10368,8 @@
       "consolidation_window": null
     },
     "LLOYDSME": {
+      "month_high": 1918.8,
+      "month_low": 1764.0,
       "four_week_high_close": 1902.2,
       "prev_day_volume": 304034,
       "volume_5day_ago": 254412,
@@ -9538,6 +10392,8 @@
       "consolidation_window": null
     },
     "ACC": {
+      "month_high": 1279.9,
+      "month_low": 1123.0,
       "four_week_high_close": 1256.3,
       "prev_day_volume": 138695,
       "volume_5day_ago": 99381,
@@ -9560,6 +10416,8 @@
       "consolidation_window": null
     },
     "BHARATCOAL": {
+      "month_high": 33.67,
+      "month_low": 30.6,
       "four_week_high_close": 33.5,
       "prev_day_volume": 1802537,
       "volume_5day_ago": 3375979,
@@ -9576,6 +10434,8 @@
       "consolidation_window": null
     },
     "FLUOROCHEM": {
+      "month_high": 4680.0,
+      "month_low": 4225.4,
       "four_week_high_close": 4632.1,
       "prev_day_volume": 130457,
       "volume_5day_ago": 72035,
@@ -9598,6 +10458,8 @@
       "consolidation_window": null
     },
     "SCHAEFFLER": {
+      "month_high": 4260.0,
+      "month_low": 3568.0,
       "four_week_high_close": 4118.2,
       "prev_day_volume": 57628,
       "volume_5day_ago": 38765,
@@ -9620,6 +10482,8 @@
       "consolidation_window": null
     },
     "JMFINANCIL": {
+      "month_high": 129.65,
+      "month_low": 116.78,
       "four_week_high_close": 129.02,
       "prev_day_volume": 1723566,
       "volume_5day_ago": 935055,
@@ -9642,6 +10506,8 @@
       "consolidation_window": null
     },
     "CENTRALBK": {
+      "month_high": 32.4,
+      "month_low": 29.76,
       "four_week_high_close": 31.63,
       "prev_day_volume": 11474831,
       "volume_5day_ago": 3359535,
@@ -9664,6 +10530,8 @@
       "consolidation_window": null
     },
     "CYIENT": {
+      "month_high": 1224.4,
+      "month_low": 1032.0,
       "four_week_high_close": 1195.4,
       "prev_day_volume": 300722,
       "volume_5day_ago": 426281,
@@ -9686,6 +10554,8 @@
       "consolidation_window": null
     },
     "WOCKPHARMA": {
+      "month_high": 2360.0,
+      "month_low": 1900.6,
       "four_week_high_close": 2329.7,
       "prev_day_volume": 360528,
       "volume_5day_ago": 881944,
@@ -9708,6 +10578,8 @@
       "consolidation_window": null
     },
     "ABDL": {
+      "month_high": 766.9,
+      "month_low": 631.7,
       "four_week_high_close": 748.65,
       "prev_day_volume": 346823,
       "volume_5day_ago": 732714,
@@ -9730,6 +10602,8 @@
       "consolidation_window": null
     },
     "VIJAYA": {
+      "month_high": 1593.6,
+      "month_low": 1354.2,
       "four_week_high_close": 1570.7,
       "prev_day_volume": 184487,
       "volume_5day_ago": 72392,
@@ -9752,6 +10626,8 @@
       "consolidation_window": null
     },
     "AFCONS": {
+      "month_high": 264.4,
+      "month_low": 238.0,
       "four_week_high_close": 260.35,
       "prev_day_volume": 387769,
       "volume_5day_ago": 524928,
@@ -9780,6 +10656,8 @@
       }
     },
     "JWL": {
+      "month_high": 244.8,
+      "month_low": 195.6,
       "four_week_high_close": 233.16,
       "prev_day_volume": 1324579,
       "volume_5day_ago": 688534,
@@ -9802,6 +10680,8 @@
       "consolidation_window": null
     },
     "ITCHOTELS": {
+      "month_high": 165.4,
+      "month_low": 152.85,
       "four_week_high_close": 164.13,
       "prev_day_volume": 1136523,
       "volume_5day_ago": 836405,
@@ -9824,6 +10704,8 @@
       "consolidation_window": null
     },
     "J&KBANK": {
+      "month_high": 149.7,
+      "month_low": 133.7,
       "four_week_high_close": 149.25,
       "prev_day_volume": 2900382,
       "volume_5day_ago": 1538724,
@@ -9846,6 +10728,8 @@
       "consolidation_window": null
     },
     "PINELABS": {
+      "month_high": 204.95,
+      "month_low": 154.42,
       "four_week_high_close": 197.58,
       "prev_day_volume": 4377111,
       "volume_5day_ago": 8293575,
@@ -9868,6 +10752,8 @@
       "consolidation_window": null
     },
     "GPIL": {
+      "month_high": 239.6,
+      "month_low": 203.82,
       "four_week_high_close": 236.8,
       "prev_day_volume": 512824,
       "volume_5day_ago": 641723,
@@ -9890,6 +10776,8 @@
       "consolidation_window": null
     },
     "MTARTECH": {
+      "month_high": 8186.5,
+      "month_low": 6750.0,
       "four_week_high_close": 7864.5,
       "prev_day_volume": 208287,
       "volume_5day_ago": 61415,
@@ -9912,6 +10800,8 @@
       "consolidation_window": null
     },
     "SJVN": {
+      "month_high": 65.23,
+      "month_low": 51.0,
       "four_week_high_close": 63.35,
       "prev_day_volume": 8920563,
       "volume_5day_ago": 2329770,
@@ -9934,6 +10824,8 @@
       "consolidation_window": null
     },
     "HUDCO": {
+      "month_high": 179.2,
+      "month_low": 155.5,
       "four_week_high_close": 177.92,
       "prev_day_volume": 2260383,
       "volume_5day_ago": 1977774,
@@ -9956,6 +10848,8 @@
       "consolidation_window": null
     },
     "PPLPHARMA": {
+      "month_high": 216.7,
+      "month_low": 191.41,
       "four_week_high_close": 214.66,
       "prev_day_volume": 1318209,
       "volume_5day_ago": 1479408,
@@ -9978,6 +10872,8 @@
       "consolidation_window": null
     },
     "GMDCLTD": {
+      "month_high": 565.95,
+      "month_low": 456.0,
       "four_week_high_close": 563.65,
       "prev_day_volume": 456655,
       "volume_5day_ago": 629889,
@@ -10000,6 +10896,8 @@
       "consolidation_window": null
     },
     "CANFINHOME": {
+      "month_high": 787.6,
+      "month_low": 700.0,
       "four_week_high_close": 769.9,
       "prev_day_volume": 91683,
       "volume_5day_ago": 789846,
@@ -10022,6 +10920,8 @@
       "consolidation_window": null
     },
     "LTTS": {
+      "month_high": 3785.0,
+      "month_low": 3051.8,
       "four_week_high_close": 3714.6,
       "prev_day_volume": 104714,
       "volume_5day_ago": 47757,
@@ -10044,6 +10944,8 @@
       "consolidation_window": null
     },
     "CARBORUNIV": {
+      "month_high": 1368.9,
+      "month_low": 1078.4,
       "four_week_high_close": 1296.5,
       "prev_day_volume": 207116,
       "volume_5day_ago": 83860,
@@ -10066,6 +10968,8 @@
       "consolidation_window": null
     },
     "CUB": {
+      "month_high": 238.95,
+      "month_low": 210.69,
       "four_week_high_close": 234.94,
       "prev_day_volume": 1115071,
       "volume_5day_ago": 1774758,
@@ -10088,6 +10992,8 @@
       "consolidation_window": null
     },
     "BAGMANE": {
+      "month_high": 111.94,
+      "month_low": 105.2,
       "four_week_high_close": 111.2,
       "prev_day_volume": 241776,
       "volume_5day_ago": 504366,
@@ -10109,6 +11015,8 @@
       }
     },
     "CHENNPETRO": {
+      "month_high": 1628.7,
+      "month_low": 1325.1,
       "four_week_high_close": 1612.3,
       "prev_day_volume": 2109928,
       "volume_5day_ago": 1355720,
@@ -10131,6 +11039,8 @@
       "consolidation_window": null
     },
     "LENSKART": {
+      "month_high": 725.0,
+      "month_low": 635.15,
       "four_week_high_close": 692.75,
       "prev_day_volume": 1787720,
       "volume_5day_ago": 20368124,
@@ -10153,6 +11063,8 @@
       "consolidation_window": null
     },
     "REDINGTON": {
+      "month_high": 419.5,
+      "month_low": 366.2,
       "four_week_high_close": 412.75,
       "prev_day_volume": 4118778,
       "volume_5day_ago": 2810088,
@@ -10175,6 +11087,8 @@
       "consolidation_window": null
     },
     "SOBHA": {
+      "month_high": 1260.0,
+      "month_low": 1145.0,
       "four_week_high_close": 1243.8,
       "prev_day_volume": 164715,
       "volume_5day_ago": 693071,
@@ -10197,6 +11111,8 @@
       "consolidation_window": null
     },
     "CPPLUS": {
+      "month_high": 4620.0,
+      "month_low": 3321.0,
       "four_week_high_close": 4440.3,
       "prev_day_volume": 176227,
       "volume_5day_ago": 648296,
@@ -10219,6 +11135,8 @@
       "consolidation_window": null
     },
     "KAJARIACER": {
+      "month_high": 1265.9,
+      "month_low": 1167.0,
       "four_week_high_close": 1235.1,
       "prev_day_volume": 154450,
       "volume_5day_ago": 129180,
@@ -10247,6 +11165,8 @@
       }
     },
     "CREDITACC": {
+      "month_high": 1409.8,
+      "month_low": 1209.1,
       "four_week_high_close": 1393.0,
       "prev_day_volume": 76818,
       "volume_5day_ago": 362981,
@@ -10269,6 +11189,8 @@
       "consolidation_window": null
     },
     "OLAELEC": {
+      "month_high": 44.55,
+      "month_low": 32.7,
       "four_week_high_close": 42.52,
       "prev_day_volume": 16366468,
       "volume_5day_ago": 48601535,
@@ -10291,6 +11213,8 @@
       "consolidation_window": null
     },
     "TIMKEN": {
+      "month_high": 3315.0,
+      "month_low": 2837.9,
       "four_week_high_close": 3287.9,
       "prev_day_volume": 39667,
       "volume_5day_ago": 23669,
@@ -10313,6 +11237,8 @@
       "consolidation_window": null
     },
     "IKS": {
+      "month_high": 1970.0,
+      "month_low": 1678.0,
       "four_week_high_close": 1937.8,
       "prev_day_volume": 68271,
       "volume_5day_ago": 97619,
@@ -10335,6 +11261,8 @@
       "consolidation_window": null
     },
     "PCBL": {
+      "month_high": 356.0,
+      "month_low": 301.55,
       "four_week_high_close": 347.75,
       "prev_day_volume": 444566,
       "volume_5day_ago": 691885,
@@ -10357,6 +11285,8 @@
       "consolidation_window": null
     },
     "GLAND": {
+      "month_high": 3171.0,
+      "month_low": 2841.1,
       "four_week_high_close": 3150.6,
       "prev_day_volume": 167122,
       "volume_5day_ago": 211881,
@@ -10379,6 +11309,8 @@
       "consolidation_window": null
     },
     "BRIGADE": {
+      "month_high": 636.05,
+      "month_low": 540.2,
       "four_week_high_close": 616.55,
       "prev_day_volume": 108944,
       "volume_5day_ago": 684061,
@@ -10401,6 +11333,8 @@
       "consolidation_window": null
     },
     "IRB": {
+      "month_high": 18.99,
+      "month_low": 16.75,
       "four_week_high_close": 18.1,
       "prev_day_volume": 4146675,
       "volume_5day_ago": 19529656,
@@ -10423,6 +11357,8 @@
       "consolidation_window": null
     },
     "RITES": {
+      "month_high": 219.0,
+      "month_low": 191.25,
       "four_week_high_close": 214.27,
       "prev_day_volume": 479711,
       "volume_5day_ago": 473640,
@@ -10445,6 +11381,8 @@
       "consolidation_window": null
     },
     "EMAMILTD": {
+      "month_high": 407.65,
+      "month_low": 362.0,
       "four_week_high_close": 391.45,
       "prev_day_volume": 414526,
       "volume_5day_ago": 320105,
@@ -10467,6 +11405,8 @@
       "consolidation_window": null
     },
     "THERMAX": {
+      "month_high": 3615.0,
+      "month_low": 3125.1,
       "four_week_high_close": 3578.2,
       "prev_day_volume": 125590,
       "volume_5day_ago": 147340,
@@ -10489,6 +11429,8 @@
       "consolidation_window": null
     },
     "POONAWALLA": {
+      "month_high": 492.0,
+      "month_low": 427.1,
       "four_week_high_close": 478.85,
       "prev_day_volume": 1052168,
       "volume_5day_ago": 28015919,
@@ -10511,6 +11453,8 @@
       "consolidation_window": null
     },
     "CARTRADE": {
+      "month_high": 3253.2,
+      "month_low": 2739.8,
       "four_week_high_close": 3191.3,
       "prev_day_volume": 249070,
       "volume_5day_ago": 1395231,
@@ -10533,6 +11477,8 @@
       "consolidation_window": null
     },
     "ABSLAMC": {
+      "month_high": 1107.9,
+      "month_low": 942.5,
       "four_week_high_close": 1034.3,
       "prev_day_volume": 104739,
       "volume_5day_ago": 159315,
@@ -10555,6 +11501,8 @@
       "consolidation_window": null
     },
     "RAILTEL": {
+      "month_high": 281.0,
+      "month_low": 246.45,
       "four_week_high_close": 268.75,
       "prev_day_volume": 643903,
       "volume_5day_ago": 563837,
@@ -10577,6 +11525,8 @@
       "consolidation_window": null
     },
     "KIRLOSBROS": {
+      "month_high": 1936.1,
+      "month_low": 1640.0,
       "four_week_high_close": 1848.3,
       "prev_day_volume": 42937,
       "volume_5day_ago": 27476,
@@ -10599,6 +11549,8 @@
       "consolidation_window": null
     },
     "PVRINOX": {
+      "month_high": 1432.0,
+      "month_low": 1181.2,
       "four_week_high_close": 1404.5,
       "prev_day_volume": 541403,
       "volume_5day_ago": 1150779,
@@ -10621,6 +11573,8 @@
       "consolidation_window": null
     },
     "UTIAMC": {
+      "month_high": 935.95,
+      "month_low": 863.35,
       "four_week_high_close": 924.8,
       "prev_day_volume": 50232,
       "volume_5day_ago": 33488,
@@ -10649,6 +11603,8 @@
       }
     },
     "IIFL": {
+      "month_high": 638.25,
+      "month_low": 566.3,
       "four_week_high_close": 633.3,
       "prev_day_volume": 1788198,
       "volume_5day_ago": 1417498,
@@ -10671,6 +11627,8 @@
       "consolidation_window": null
     },
     "GLAXO": {
+      "month_high": 2987.0,
+      "month_low": 2473.3,
       "four_week_high_close": 2896.4,
       "prev_day_volume": 21147,
       "volume_5day_ago": 28359,
@@ -10693,6 +11651,8 @@
       "consolidation_window": null
     },
     "BALKRISIND": {
+      "month_high": 2296.0,
+      "month_low": 1964.7,
       "four_week_high_close": 2216.9,
       "prev_day_volume": 187143,
       "volume_5day_ago": 123221,
@@ -10715,6 +11675,8 @@
       "consolidation_window": null
     },
     "RAMCOCEM": {
+      "month_high": 898.0,
+      "month_low": 779.5,
       "four_week_high_close": 885.1,
       "prev_day_volume": 90228,
       "volume_5day_ago": 92358,
@@ -10737,6 +11699,8 @@
       "consolidation_window": null
     },
     "EMBASSY": {
+      "month_high": 446.6,
+      "month_low": 425.35,
       "four_week_high_close": 440.97,
       "prev_day_volume": 328743,
       "volume_5day_ago": 693576,
@@ -10765,6 +11729,8 @@
       }
     },
     "KSB": {
+      "month_high": 900.0,
+      "month_low": 750.0,
       "four_week_high_close": 856.1,
       "prev_day_volume": 123727,
       "volume_5day_ago": 57410,
@@ -10787,6 +11753,8 @@
       "consolidation_window": null
     },
     "MRPL": {
+      "month_high": 191.49,
+      "month_low": 161.5,
       "four_week_high_close": 185.26,
       "prev_day_volume": 9487154,
       "volume_5day_ago": 5432966,
@@ -10809,6 +11777,8 @@
       "consolidation_window": null
     },
     "APOLLOTYRE": {
+      "month_high": 438.45,
+      "month_low": 386.3,
       "four_week_high_close": 416.75,
       "prev_day_volume": 538860,
       "volume_5day_ago": 209132,
@@ -10831,6 +11801,8 @@
       "consolidation_window": null
     },
     "OLECTRA": {
+      "month_high": 1295.2,
+      "month_low": 1033.9,
       "four_week_high_close": 1275.9,
       "prev_day_volume": 137464,
       "volume_5day_ago": 161777,
@@ -10853,6 +11825,8 @@
       "consolidation_window": null
     },
     "LGEINDIA": {
+      "month_high": 1825.0,
+      "month_low": 1649.0,
       "four_week_high_close": 1780.3,
       "prev_day_volume": 218787,
       "volume_5day_ago": 251964,
@@ -10875,6 +11849,8 @@
       "consolidation_window": null
     },
     "M&MFIN": {
+      "month_high": 357.0,
+      "month_low": 302.0,
       "four_week_high_close": 354.7,
       "prev_day_volume": 2332226,
       "volume_5day_ago": 933698,
@@ -10897,6 +11873,8 @@
       "consolidation_window": null
     },
     "NEULANDLAB": {
+      "month_high": 23050.0,
+      "month_low": 19135.0,
       "four_week_high_close": 22610.0,
       "prev_day_volume": 31501,
       "volume_5day_ago": 28229,
@@ -10919,6 +11897,8 @@
       "consolidation_window": null
     },
     "AIIL": {
+      "month_high": 575.25,
+      "month_low": 527.2,
       "four_week_high_close": 571.9,
       "prev_day_volume": 112278,
       "volume_5day_ago": 87579,
@@ -10941,6 +11921,8 @@
       "consolidation_window": null
     },
     "SUNTV": {
+      "month_high": 673.95,
+      "month_low": 447.2,
       "four_week_high_close": 653.1,
       "prev_day_volume": 340908,
       "volume_5day_ago": 494623,
@@ -10963,6 +11945,8 @@
       "consolidation_window": null
     },
     "MINDACORP": {
+      "month_high": 698.15,
+      "month_low": 629.0,
       "four_week_high_close": 692.85,
       "prev_day_volume": 133294,
       "volume_5day_ago": 207852,
@@ -10985,6 +11969,8 @@
       "consolidation_window": null
     },
     "HSCL": {
+      "month_high": 692.8,
+      "month_low": 599.3,
       "four_week_high_close": 678.75,
       "prev_day_volume": 5755200,
       "volume_5day_ago": 876705,
@@ -11007,6 +11993,8 @@
       "consolidation_window": null
     },
     "ACE": {
+      "month_high": 1268.0,
+      "month_low": 1100.1,
       "four_week_high_close": 1253.9,
       "prev_day_volume": 312883,
       "volume_5day_ago": 230661,
@@ -11029,6 +12017,8 @@
       "consolidation_window": null
     },
     "CUPID": {
+      "month_high": 368.95,
+      "month_low": 246.0,
       "four_week_high_close": 366.1,
       "prev_day_volume": 22680452,
       "volume_5day_ago": 19394567,
@@ -11051,6 +12041,8 @@
       "consolidation_window": null
     },
     "AWL": {
+      "month_high": 198.5,
+      "month_low": 172.6,
       "four_week_high_close": 190.54,
       "prev_day_volume": 5057477,
       "volume_5day_ago": 1813449,
@@ -11073,6 +12065,8 @@
       "consolidation_window": null
     },
     "GODREJIND": {
+      "month_high": 1146.0,
+      "month_low": 974.5,
       "four_week_high_close": 1106.0,
       "prev_day_volume": 48562,
       "volume_5day_ago": 25852,
@@ -11095,6 +12089,8 @@
       "consolidation_window": null
     },
     "AJANTPHARM": {
+      "month_high": 3758.9,
+      "month_low": 3269.9,
       "four_week_high_close": 3620.8,
       "prev_day_volume": 36644,
       "volume_5day_ago": 92290,
@@ -11117,6 +12113,8 @@
       "consolidation_window": null
     },
     "TATACHEM": {
+      "month_high": 741.35,
+      "month_low": 586.45,
       "four_week_high_close": 694.7,
       "prev_day_volume": 2236583,
       "volume_5day_ago": 9766733,
@@ -11139,6 +12137,8 @@
       "consolidation_window": null
     },
     "SYRMA": {
+      "month_high": 1822.6,
+      "month_low": 1540.3,
       "four_week_high_close": 1782.9,
       "prev_day_volume": 838862,
       "volume_5day_ago": 844353,
@@ -11161,6 +12161,8 @@
       "consolidation_window": null
     },
     "ECLERX": {
+      "month_high": 2022.6,
+      "month_low": 1762.0,
       "four_week_high_close": 1998.2,
       "prev_day_volume": 102677,
       "volume_5day_ago": 52449,
@@ -11183,6 +12185,8 @@
       "consolidation_window": null
     },
     "STLTECH": {
+      "month_high": 1051.1,
+      "month_low": 783.35,
       "four_week_high_close": 1016.8,
       "prev_day_volume": 2359894,
       "volume_5day_ago": 877882,
@@ -11205,6 +12209,8 @@
       "consolidation_window": null
     },
     "CRAFTSMAN": {
+      "month_high": 11442.0,
+      "month_low": 9980.0,
       "four_week_high_close": 11158.0,
       "prev_day_volume": 36306,
       "volume_5day_ago": 80554,
@@ -11227,6 +12233,8 @@
       "consolidation_window": null
     },
     "HONASA": {
+      "month_high": 493.0,
+      "month_low": 413.85,
       "four_week_high_close": 484.9,
       "prev_day_volume": 926253,
       "volume_5day_ago": 717255,
@@ -11249,6 +12257,8 @@
       "consolidation_window": null
     },
     "IGIL": {
+      "month_high": 337.9,
+      "month_low": 304.1,
       "four_week_high_close": 331.65,
       "prev_day_volume": 609258,
       "volume_5day_ago": 333321,
@@ -11271,6 +12281,8 @@
       "consolidation_window": null
     },
     "GROWW": {
+      "month_high": 204.0,
+      "month_low": 178.01,
       "four_week_high_close": 200.85,
       "prev_day_volume": 20901514,
       "volume_5day_ago": 19275942,
@@ -11293,6 +12305,8 @@
       "consolidation_window": null
     },
     "PTCIL": {
+      "month_high": 26085.0,
+      "month_low": 21510.0,
       "four_week_high_close": 25715.0,
       "prev_day_volume": 31661,
       "volume_5day_ago": 52365,
