@@ -174,13 +174,16 @@ IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 
 # Stock / index cash-market session (NSE).
 STOCK_SESSION_START = dt.time(9, 15)
-STOCK_SESSION_END = dt.time(15, 30)
+# 15:40 not 15:30 (2026-10-21): the 15:15-15:30 candle closes AT 15:30:00 and the
+# cron run for it only starts a minute or two later, so a 15:30 cutoff skipped
+# the last candle of the day for every stock.
+STOCK_SESSION_END = dt.time(15, 40)
 
 # Commodity (MCX) session — MCX's evening session actually runs until
 # 11:30 PM IST (was incorrectly set to 23:00 here, which cut off the
 # last 30 minutes of commodity scanning/alerting every day).
 COMMODITY_SESSION_START = dt.time(9, 15)
-COMMODITY_SESSION_END = dt.time(23, 30)
+COMMODITY_SESSION_END = dt.time(23, 40)   # same reason: the 23:15-23:30 candle needs a late-starting run
 
 
 def _now_ist():
@@ -2513,6 +2516,13 @@ def run_fo_scan(now_ist, index_only=False):
                 # 1st 15-min / 75-min / 1-month position lines (ADDED,
                 # 2026-10-19) — see strategy.compute_position_info.
                 signal["positions"] = compute_position_info(df15, df75, signal, mv)
+                # EMA 9/20 cross — informational, on 15-min and 75-min (2026-10-21)
+                for _k, _d in (("ema920_15", df15), ("ema920_75", df75)):
+                    try:
+                        signal[_k] = get_3min_trend_info(_d, symbol, ema_fast=config.EMA_FAST, ema_slow=config.EMA_SLOW) if _d is not None else None
+                    except Exception as _e:
+                        print(f"EMA9/20 info failed for {symbol}: {_e}")
+                        signal[_k] = None
 
                 if symbol not in non_stock_symbols:
                     signal["is_fno"] = symbol.upper() in fno_underlyings
@@ -3092,6 +3102,13 @@ def run_nifty500_scan(now_ist):
                 # 1st 15-min / 75-min / 1-month position lines (ADDED,
                 # 2026-10-19) — see strategy.compute_position_info.
                 signal["positions"] = compute_position_info(df15, df75, signal, mv)
+                # EMA 9/20 cross — informational, on 15-min and 75-min (2026-10-21)
+                for _k, _d in (("ema920_15", df15), ("ema920_75", df75)):
+                    try:
+                        signal[_k] = get_3min_trend_info(_d, symbol, ema_fast=config.EMA_FAST, ema_slow=config.EMA_SLOW) if _d is not None else None
+                    except Exception as _e:
+                        print(f"EMA9/20 info failed for {symbol}: {_e}")
+                        signal[_k] = None
 
                 signal["is_fno"] = symbol.upper() in fno_underlyings
 
