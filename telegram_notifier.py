@@ -96,40 +96,15 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-def _ema920_line(info15, info75):
-    """'EMA 9/20' cross info (informational): bias on 15-min and 75-min, and
-    how long ago it last crossed (None = no cross in the lookback window)."""
-    def one(tag, info):
-        if not info:
-            return None
-        icon = "📈" if info.get("bias") == "BULLISH" else "📉"
-        n = info.get("candles_since_cross")
-        if n is None:
-            cross = "no recent cross"
-        elif n == 0:
-            cross = "crossed just now"
-        else:
-            ct = str(info.get("cross_time") or "")
-            hhmm = f" ({ct.split(' ')[1][:5]})" if " " in ct else ""
-            cross = f"crossed {n} candle{'s' if n != 1 else ''} ago{hhmm}"
-        return f"{tag} {info['bias'].title()} {icon} · {cross}"
-    parts = [p for p in (one("15-min", info15), one("75-min", info75)) if p]
-    if not parts:
-        return ""
-    fast = (info15 or info75).get("ema_fast_period", 9)
-    slow = (info15 or info75).get("ema_slow_period", 20)
-    return f"EMA {fast}/{slow}: " + "  |  ".join(parts) + "\n"
-
-
 def _build_compact_alert_text(signal):
     """
-    SHORT MACD+RSI alert (rewritten 2026-10-21 — "message ta short koro, baki
-    tap khole"). What is visible without tapping is only:
-        header · F&O · links · time | close | day change · MACD / RSI · strength
-    Everything else sits in two tap-to-open blocks:
-        tap 1 — positions (1st 15-min, 75-min EMA50, 1-month), EMA 9/20 cross,
-                last-day volume and delivery vs 1M average
-        tap 2 — the strength checks (✅/❌) + VWAP / candle volume
+    The short MACD+RSI alert (2026-10-19). Same skeleton as the old
+    message — header, F&O flag, chart/screener links, date | close, day
+    change, then expandable blocks — but only the lines asked for:
+
+      visible:     1st 15-min position, 75-min position, 1-month position
+      tap 1:       volume (last day vs 1M avg), delivery % (last day vs 1M avg)
+      tap 2:       what triggered it (MACD, RSI) + VWAP / candle volume
     Any line whose data isn't available is left out, never shown empty.
     """
     direction = signal["direction"]
@@ -143,72 +118,84 @@ def _build_compact_alert_text(signal):
     is_fno = signal.get("is_fno")
     fno_line = "F&O: Yes ✅\n" if is_fno is True else ("F&O: No (Cash only) 💵\n" if is_fno is False else "")
 
-    links = []
     chart_link = signal.get("chart_link")
-    if chart_link:
-        links.append(f'📈 <a href="{chart_link}">Chart ({_chart_app_label(chart_link)})</a>')
+    chart_line = f'📈 <a href="{chart_link}">Open Chart ({_chart_app_label(chart_link)})</a>\n' if chart_link else ""
     screener_link = signal.get("screener_link")
-    if screener_link:
-        links.append(f'📊 <a href="{screener_link}">Screener.in</a>')
-    link_line = ("  ·  ".join(links) + "\n") if links else ""
+    screener_line = f'📊 <a href="{screener_link}">Quarterly Results (Screener.in)</a>\n' if screener_link else ""
 
     dc = signal.get("day_change_pct")
-    dc_part = f" | Day: {dc:+.2f}% {'🟢' if dc >= 0 else '🔴'}" if dc is not None else ""
+    day_change_line = f"Day Change: {dc:+.2f}% {'🟢' if dc >= 0 else '🔴'}\n" if dc is not None else ""
 
-    ml, ms, rsi = signal.get("macd_line"), signal.get("macd_signal"), signal.get("rsi")
+    pos = signal.get("positions") or {}
+    position_block = (
+        _position_line("1st 15-min", pos.get("first15"), direction, close)
+        + _position_line("75-min (prev bar)" if getattr(config, "POSITION_75MIN_REFERENCE", "previous") != "first" else "1st 75-min", pos.get("first75"), direction, close)
+        + _ema75_line(pos.get("ema75"), direction)
+        + _position_line("1-month", pos.get("month"), direction, close, kind="month")
+    )
+
+    # Tap 1 — volume + delivery, each "last completed day vs its own 1-month avg"
+    vol_lines = ""
+    pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
+    cmp_v = _vs_avg(pdv, avg_v)
+    if cmp_v:
+        vol_lines += f"Volume (last day): {pdv:,} vs 1M avg {avg_v:,.0f} → {cmp_v}\n"
+    dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
+    cmp_d = _vs_avg(dp, avg_d)
+    if cmp_d:
+        vol_lines += f"Delivery % (last day): {dp}% vs 1M avg {avg_d:.1f}% → {cmp_d}\n"
+    elif dp is not None:
+        vol_lines += f"Delivery % (last day): {dp}%\n"
+    vol_tap = f"<blockquote expandable>{vol_lines.rstrip()}</blockquote>\n" if vol_lines else ""
+
+    # Tap 2 — the trigger itself, plus the old gates now shown as info
+    det = ""
+    ml, ms = signal.get("macd_line"), signal.get("macd_signal")
+    cross_word = "crossed UP ↑" if direction == "BULLISH" else "crossed DOWN ↓"
+    if ml is not None and ms is not None:
+        det += f"MACD {cross_word}\n"
+    rsi = signal.get("rsi")
+    if rsi is not None:
+        lim = config.ALERT_RSI_BULLISH_MIN if direction == "BULLISH" else config.ALERT_RSI_BEARISH_MAX
+        sym = ">" if direction == "BULLISH" else "<"
+        det += f"RSI(14) condition: {sym} {lim} ✔\n"
+    if signal.get("vwap") is not None and signal.get("vwap_note"):
+        det += f"VWAP: {signal['vwap']} ({signal['vwap_note']})\n"
+    vc = signal.get("vol_change_pct")
+    if vc is not None:
+        det += f"Candle volume: {signal.get('volume', 0):,} ({vc:+.1f}% vs previous)\n"
+    det_tap = f"<blockquote expandable>{det.rstrip()}</blockquote>" if det else ""
+
+    # MACD / RSI values — shown openly (not in a tap block), per request 2026-10-20
     macd_rsi_line = ""
     if ml is not None and ms is not None:
-        macd_rsi_line += f"MACD {ml} / {ms}"
+        macd_rsi_line += f"MACD: {ml} / Signal: {ms}"
     if rsi is not None:
-        macd_rsi_line += (" | " if macd_rsi_line else "") + f"RSI {rsi}"
-    macd_rsi_line = (macd_rsi_line + "\n") if macd_rsi_line else ""
+        macd_rsi_line += (" | " if macd_rsi_line else "") + f"RSI: {rsi}"
+    if macd_rsi_line:
+        macd_rsi_line += "\n"
 
+    # Signal strength: one visible line, per-check detail in the tap block
     st = signal.get("strength")
     strength_line = ""
     if st and st.get("total"):
         icon = {"STRONG": "🔥", "MEDIUM": "🟡", "WEAK": "⚠️"}.get(st["label"], "")
-        strength_line = f"💪 <b>{st['passed']}/{st['total']} {st['label']}</b> {icon}\n"
-
-    # ---- tap 1: where price sits + EMA 9/20 + volume/delivery ----
-    pos = signal.get("positions") or {}
-    t1 = (
-        _position_line("1st 15-min", pos.get("first15"), direction, close)
-        + _ema75_line(pos.get("ema75"), direction)
-        + _position_line("1-month", pos.get("month"), direction, close, kind="month")
-        + _ema920_line(signal.get("ema920_15"), signal.get("ema920_75"))
-    )
-    pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
-    cmp_v = _vs_avg(pdv, avg_v)
-    if cmp_v:
-        t1 += f"Volume (last day): {pdv:,} vs 1M avg {avg_v:,.0f} → {cmp_v}\n"
-    dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
-    cmp_d = _vs_avg(dp, avg_d)
-    if cmp_d:
-        t1 += f"Delivery % (last day): {dp}% vs 1M avg {avg_d:.1f}% → {cmp_d}\n"
-    elif dp is not None:
-        t1 += f"Delivery % (last day): {dp}%\n"
-    tap1 = f"<blockquote expandable>{t1.rstrip()}</blockquote>\n" if t1 else ""
-
-    # ---- tap 2: strength checks + the raw trigger numbers ----
-    t2 = ""
-    if st and st.get("checks"):
-        t2 += "\n".join(("✅ " if ok else "❌ ") + name for name, ok, w in st["checks"]) + "\n"
-    if signal.get("vwap") is not None and signal.get("vwap_note"):
-        t2 += f"VWAP: {signal['vwap']} ({signal['vwap_note']})\n"
-    vc = signal.get("vol_change_pct")
-    if vc is not None:
-        t2 += f"Candle volume: {signal.get('volume', 0):,} ({vc:+.1f}% vs previous)\n"
-    tap2 = f"<blockquote expandable>{t2.rstrip()}</blockquote>" if t2 else ""
+        strength_line = f"💪 <b>Strength:</b> {st['passed']}/{st['total']} checks — {st['label']} {icon}\n"
+        det = "\n".join(("✅ " if ok else "❌ ") + name + (f" (+{w})" if w > 1 else "") for name, ok, w in st["checks"]) + ("\n" + det if det else "")
+        det_tap = f"<blockquote expandable>{det.rstrip()}</blockquote>"
 
     return (
-        f"{arrow} <b>{signal['symbol']}</b> — {direction} MACD+RSI ({timeframe_label})\n"
+        f"{arrow} <b>{signal['symbol']}</b> — {direction} MACD+RSI Alert ({timeframe_label})\n"
         f"{fno_line}"
-        f"{link_line}"
-        f"{date_part} {time_part} | Close: {_p(close)}{dc_part}\n"
+        f"{chart_line}"
+        f"{screener_line}"
+        f"{date_part} {time_part} | Close: {_p(close)}\n"
+        f"{day_change_line}"
         f"{macd_rsi_line}"
         f"{strength_line}"
-        f"{tap1}"
-        f"{tap2}"
+        f"{position_block}"
+        f"{vol_tap}"
+        f"{det_tap}"
     ).rstrip()
 
 
