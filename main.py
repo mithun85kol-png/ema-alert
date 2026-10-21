@@ -174,13 +174,16 @@ IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 
 # Stock / index cash-market session (NSE).
 STOCK_SESSION_START = dt.time(9, 15)
-STOCK_SESSION_END = dt.time(15, 30)
+# 15:40 not 15:30 (2026-10-21): the 15:15-15:30 candle closes AT 15:30:00 and the
+# cron run for it only starts a minute or two later, so a 15:30 cutoff skipped
+# the last candle of the day for every stock.
+STOCK_SESSION_END = dt.time(15, 40)
 
 # Commodity (MCX) session — MCX's evening session actually runs until
 # 11:30 PM IST (was incorrectly set to 23:00 here, which cut off the
 # last 30 minutes of commodity scanning/alerting every day).
 COMMODITY_SESSION_START = dt.time(9, 15)
-COMMODITY_SESSION_END = dt.time(23, 30)
+COMMODITY_SESSION_END = dt.time(23, 40)   # same reason: the 23:15-23:30 candle needs a late-starting run
 
 
 def _now_ist():
