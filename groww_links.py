@@ -220,6 +220,6 @@ def get_url(symbol, company_name=None):
 
     with _lock:
         _failed_this_run.add(symbol)
-    print(f"[groww-link] no Groww page found for {symbol} -> TradingView fallback; "
+    print(f"[groww-link] no Groww page found for {symbol} -> Groww search link; "
           f"add it to config.GROWW_SYMBOL_OVERRIDES (slug = last part of its groww.in/stocks/... URL)")
     return None

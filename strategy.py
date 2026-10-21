@@ -895,7 +895,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
 def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_confirmation=True, prev_close=None,
                    ema_fast=None, ema_slow=None, require_volume_increase=False, require_strong_candle=False,
                    require_macd_cross=False, require_rsi_confirmation=False,
-                   require_vwap_confirmation=False, require_macd_divergence=False):
+                   require_vwap_confirmation=False, require_macd_divergence=False, today=None):
     """
     Scans the last `lookback` closed candles (default:
     config.CROSS_LOOKBACK_CANDLES) for a genuine MACD line/signal-line
@@ -978,7 +978,13 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
     signals = []
     n = len(df)
     start = max(1, n - lookback)
+    last_macd_diff = float(df["macd_line"].iloc[-1] - df["macd_signal"].iloc[-1])
     for idx in range(start, n):
+        # FIX 2026-10-21 (JAINREC alert at 09:38 for a 19-Oct 14:30 candle): the
+        # catch-up window must never reach back into an earlier trading day —
+        # a 2-day-old cross is not an alert.
+        if today is not None and df["timestamp"].iloc[idx].date() != today:
+            continue
         sig = _evaluate_candle(
             df, idx, symbol, r3, s3,
             require_trend_confirmation=require_trend_confirmation,
@@ -992,8 +998,86 @@ def check_signals(df, symbol, r3=None, s3=None, lookback=None, require_trend_con
             require_macd_divergence=require_macd_divergence,
         )
         if sig is not None:
+            # Catch-up crosses (not the latest candle) are dropped if the MACD has
+            # already flipped back since — the cross no longer exists.
+            if getattr(config, "ALERT_REQUIRE_STILL_VALID", True) and idx < n - 1:
+                if sig["direction"] == "BULLISH" and last_macd_diff <= 0:
+                    continue
+                if sig["direction"] == "BEARISH" and last_macd_diff >= 0:
+                    continue
             signals.append(sig)
     return signals
+
+
+def compute_alert_strength(signal):
+    """
+    How strongly the MACD+RSI cross is confirmed (ADDED 2026-10-21,
+    weighted 2026-10-21 — "MACD cross ke 3 point dao"). Each check is
+    direction-aware and SKIPPED when its data is missing, so the ratio is
+    points-passed / points-of-checks-that-could-be-made. Weights come from
+    config.ALERT_STRENGTH_WEIGHTS (MACD zero-line check = 3 points, rest 1).
+    Returns {"passed", "total", "ratio", "label", "checks": [(name, ok, weight)]}
+    — passed/total are POINTS.
+    """
+    bull = signal.get("direction") == "BULLISH"
+    pos = signal.get("positions") or {}
+    W = getattr(config, "ALERT_STRENGTH_WEIGHTS", {})
+    checks = []
+    mandatory = set(getattr(config, "ALERT_MANDATORY_CHECKS", ()))
+    mandatory_failed = []
+    keys = []
+
+    def add(key, name, ok):
+        keys.append(key)
+        checks.append((name, bool(ok), int(W.get(key, 1))))
+        if key in mandatory and not ok:
+            mandatory_failed.append(name)
+
+    ml = signal.get("macd_line")
+    if ml is not None:
+        add("macd_zero", "MACD " + ("above" if bull else "below") + " zero line", ml > 0 if bull else ml < 0)
+
+    rsi = signal.get("rsi")
+    if rsi is not None:
+        lim = config.ALERT_STRONG_RSI_BULLISH if bull else config.ALERT_STRONG_RSI_BEARISH
+        add("rsi", f"RSI {'≥' if bull else '≤'} {lim}", rsi >= lim if bull else rsi <= lim)
+
+    e75 = pos.get("ema75")
+    if e75:
+        add("ema75", "75-min EMA50 " + ("above" if bull else "below"), (e75["state"] == "ABOVE") == bull)
+
+    note = signal.get("vwap_note") or ""
+    if note:
+        add("vwap", "VWAP " + ("above" if bull else "below"), note.startswith("Above") == bull)
+
+    f15 = pos.get("first15")
+    if f15 and f15.get("state") in ("ABOVE", "BELOW", "INSIDE"):
+        add("first15", "1st 15-min " + ("above high" if bull else "below low"), f15["state"] == ("ABOVE" if bull else "BELOW"))
+
+    pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
+    if pdv is not None and avg_v:
+        add("volume", "Last-day volume > 1M avg", pdv > avg_v)
+
+    dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
+    if dp is not None and avg_d:
+        add("delivery", "Last-day delivery > 1M avg", dp > avg_d)
+
+    vc = signal.get("vol_change_pct")
+    if vc is not None:
+        add("candle_volume", "Candle volume up vs previous", vc > 0)
+
+    others = [(n, ok, w) for (n, ok, w), k in zip(checks, keys) if k not in mandatory]
+    others_total = sum(w for _, _, w in others)
+    others_passed = sum(w for _, ok, w in others if ok)
+    others_ratio = others_passed / others_total if others_total else 1.0
+    total = sum(w for _, _, w in checks)
+    passed = sum(w for _, ok, w in checks if ok)
+    ratio = passed / total if total else 1.0
+    label = "STRONG" if ratio >= 0.75 else ("MEDIUM" if ratio >= 0.5 else "WEAK")
+    return {"passed": passed, "total": total, "ratio": round(ratio, 2), "label": label,
+            "checks": checks, "mandatory_failed": mandatory_failed,
+            "others_passed": others_passed, "others_total": others_total,
+            "others_ratio": round(others_ratio, 2)}
 
 
 def check_signal(df, symbol, r3=None, s3=None):

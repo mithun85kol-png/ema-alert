@@ -13,6 +13,8 @@ def _chart_app_label(url):
     label has to match whichever link actually ended up in the
     message, not stay hardcoded to one app.
     """
+    if url and "groww.in/search" in url:
+        return "Groww search"
     return "Groww" if url and "groww.in" in url else "TradingView"
 
 
@@ -173,6 +175,15 @@ def _build_compact_alert_text(signal):
     if macd_rsi_line:
         macd_rsi_line += "\n"
 
+    # Signal strength: one visible line, per-check detail in the tap block
+    st = signal.get("strength")
+    strength_line = ""
+    if st and st.get("total"):
+        icon = {"STRONG": "🔥", "MEDIUM": "🟡", "WEAK": "⚠️"}.get(st["label"], "")
+        strength_line = f"💪 <b>Strength:</b> {st['passed']}/{st['total']} checks — {st['label']} {icon}\n"
+        det = "\n".join(("✅ " if ok else "❌ ") + name + (f" (+{w})" if w > 1 else "") for name, ok, w in st["checks"]) + ("\n" + det if det else "")
+        det_tap = f"<blockquote expandable>{det.rstrip()}</blockquote>"
+
     return (
         f"{arrow} <b>{signal['symbol']}</b> — {direction} MACD+RSI Alert ({timeframe_label})\n"
         f"{fno_line}"
@@ -181,6 +192,7 @@ def _build_compact_alert_text(signal):
         f"{date_part} {time_part} | Close: {_p(close)}\n"
         f"{day_change_line}"
         f"{macd_rsi_line}"
+        f"{strength_line}"
         f"{position_block}"
         f"{vol_tap}"
         f"{det_tap}"

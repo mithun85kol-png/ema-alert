@@ -948,3 +948,32 @@ CORPORATE_ACTIONS_ALERT_ENABLED = False
 # already default to off through ENABLED_SCAN_MODES above; this just makes it explicit.
 DAILY_EMA50_SCAN_ENABLED = False
 BREAKOUT_SCAN_ENABLED = False
+
+
+# ---------- Signal strength / false-signal filter (ADDED 2026-10-21) ----------
+# Every MACD+RSI cross is scored on up to 8 weighted confirmations (points, see ALERT_STRENGTH_WEIGHTS) (see
+# strategy.compute_alert_strength): MACD vs zero line, RSI strong, 75-min EMA50,
+# VWAP, 1st 15-min position, last-day volume, last-day delivery, candle volume.
+# Alert is sent only if passed/total >= ALERT_MIN_STRENGTH_RATIO.
+#   0    = send every cross (strength still shown)
+#   0.5  = MEDIUM and above     0.7 = (default) 70% of the available points    0.75 = STRONG only
+ALERT_MIN_STRENGTH_RATIO = 0     # (unused since 2026-10-21 — see ALERT_MIN_OTHERS_RATIO)
+ALERT_STRONG_RSI_BULLISH = 55   # mandatory RSI check (BULLISH): RSI >= this
+ALERT_STRONG_RSI_BEARISH = 45   # mandatory RSI check (BEARISH): RSI <= this
+# A catch-up cross (not on the latest candle) is dropped if MACD has already flipped back.
+ALERT_REQUIRE_STILL_VALID = True
+# Points per strength check (default 1). MACD zero-line check = 2 and RSI = 2
+# (per request 2026-10-21 — "Macd 2 RSI 2"); the other 6 checks 1 each = 10 total.
+ALERT_STRENGTH_WEIGHTS = {
+    "macd_zero": 1, "rsi": 1, "ema75": 1, "vwap": 1, "first15": 1,
+    "volume": 1, "delivery": 1, "candle_volume": 1,
+}
+# These checks MUST pass or no alert is sent, whatever the other points add up to
+# (per request 2026-10-21 — "MACD RSI lagbei"). A check whose data is missing never blocks.
+# Keys are the ALERT_STRENGTH_WEIGHTS keys. Set to () to make everything points-only.
+ALERT_MANDATORY_CHECKS = ("macd_zero",)   # MACD must (+ the MACD cross trigger itself). Others below are counted, not individually required.
+# Alert rule (2026-10-21, "MACD must ar nicher mot 50% match korle alert asbe"):
+# the MACD check is mandatory; of ALL THE OTHER checks (RSI, 75-min EMA50, VWAP,
+# 1st 15-min, last-day volume, last-day delivery, candle volume — only those whose
+# data exists) at least this share must agree. 0.5 = half.
+ALERT_MIN_OTHERS_RATIO = 0.5

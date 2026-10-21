@@ -111,6 +111,7 @@ is visible instead of only living in the GitHub Actions log.
 
 import sys
 import os
+import urllib.parse
 import json
 import time
 import random
@@ -140,7 +141,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan, compute_alert_strength
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
@@ -238,8 +239,10 @@ def build_chart_link(symbol, timeframe_label=None):
     if url:
         return url
 
-    tv_symbol = config.TRADINGVIEW_SYMBOL_OVERRIDES.get(symbol, f"NSE:{symbol}")
-    return f"https://www.tradingview.com/chart/?symbol={tv_symbol}&interval=15"
+    # Last resort (per request 2026-10-20 — "sob chart groww te koro"): still a
+    # Groww page (its search), never TradingView. Add the stock to
+    # config.GROWW_SYMBOL_OVERRIDES to make it open the chart directly.
+    return "https://groww.in/search?q=" + urllib.parse.quote(symbol)
 
 
 # ---------------------------------------------------------------------
@@ -1536,6 +1539,33 @@ def run_ema_cross_report_evening(now_ist):
     send_ema_cross_report(crosses, now_ist, period_label="Today's Close")
 
 
+def _opening_candle_reliable(df15, now_ist):
+    """True only if today's 1st 15-min candle is complete enough to judge
+    Open==Low / Open==High: it exists for TODAY (not a stale yesterday row),
+    starts at 09:15, its 1-min data starts at 09:15 (so the open is the real
+    open) and runs to at least 09:28 (so the high/low are not missing the
+    last minutes of the candle because of data lag)."""
+    try:
+        if df15 is None or df15.empty:
+            return False
+        today = now_ist.date()
+        rows = df15[df15["timestamp"].dt.date == today]
+        if rows.empty:
+            return False
+        t0 = rows.iloc[0]["timestamp"]
+        if (t0.hour, t0.minute) != (9, 15):
+            return False
+        fm = df15.attrs.get("first_minute")
+        lm = df15.attrs.get("last_minute")
+        if fm is not None and (fm.hour, fm.minute) != (9, 15):
+            return False
+        if lm is not None and (lm.hour, lm.minute) < (9, 28):
+            return False
+        return True
+    except Exception:
+        return False
+
+
 def build_todays_opening_bias_list(now_ist):
     """
     NEW (per request) — the "dala"/consolidated list of every F&O stock
@@ -1580,7 +1610,7 @@ def build_todays_opening_bias_list(now_ist):
             no_data.append(symbol)
             continue
         _df5, _df75, df15 = dfs[symbol]
-        if df15 is None:
+        if df15 is None or not _opening_candle_reliable(df15, now_ist):
             no_data.append(symbol)
             continue
         bias = get_opening_candle_bias(df15, symbol)
@@ -1631,8 +1661,15 @@ def run_opening_bias_report(now_ist):
         print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — opening-bias report skipping.", flush=True)
         return
     bullish, bearish, no_data, pct_changes = build_todays_opening_bias_list(now_ist)
+    if len(no_data) >= 10:
+        # Upstox usually just hasn't published the last minutes of the candle
+        # yet — wait a little and look once more rather than report a wrong list.
+        print(f"{len(no_data)} symbols not ready at {now_ist.strftime('%H:%M:%S')} — retrying once in 25s.", flush=True)
+        time.sleep(25)
+        now_ist = _now_ist()
+        bullish, bearish, no_data, pct_changes = build_todays_opening_bias_list(now_ist)
 
-    # Chart links (added, per request) — same TradingView 15-min deep
+    # Chart links (added, per request) — same Groww chart link
     # link every other alert type already gets (see build_chart_link).
     # Built here (not inside build_todays_opening_bias_list) since
     # build_chart_link lives in main.py, not strategy.py/telegram_
@@ -1840,6 +1877,17 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     # gets, so it's available from the first alert of the day.
     df15 = resample_15min(combined_75)
     df15 = drop_unclosed_candle(df15, now_ist, candle_minutes=15)
+
+    # Remember which 1-min bars today's data really starts/ends with, so the
+    # 1st-15-min Open=High/Open=Low check can refuse to judge a candle that is
+    # missing its 09:15 minute or its last minutes (Upstox publish lag).
+    try:
+        _last_day = raw["timestamp"].iloc[-1].date()
+        _today_raw = raw[raw["timestamp"].dt.date == _last_day]
+        df15.attrs["first_minute"] = _today_raw["timestamp"].iloc[0]
+        df15.attrs["last_minute"] = _today_raw["timestamp"].iloc[-1]
+    except Exception:
+        pass
 
     df75 = resample_75min(combined_75)
     df75 = drop_unclosed_candle(df75, now_ist, candle_minutes=75)
@@ -2152,6 +2200,7 @@ def run_fo_scan(now_ist, index_only=False):
                     require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
                     require_vwap_confirmation=config.REQUIRE_VWAP_CONFIRMATION,
                     require_macd_divergence=config.REQUIRE_MACD_DIVERGENCE,
+                    today=now_ist.date(),
                 )
                 for sig in signals:
                     sig["timeframe"] = "15-min"
@@ -2247,6 +2296,7 @@ def run_fo_scan(now_ist, index_only=False):
                     require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
                     require_vwap_confirmation=config.REQUIRE_VWAP_CONFIRMATION,
                     require_macd_divergence=config.REQUIRE_MACD_DIVERGENCE,
+                    today=now_ist.date(),
                 )
                 for sig in signals:
                     sig["timeframe"] = primary_label
@@ -2618,6 +2668,15 @@ def run_fo_scan(now_ist, index_only=False):
                         continue
                     signal["alert_gate_reasons"] = gate_reasons
 
+                # Signal STRENGTH (2026-10-21, "false signal na ase") — counts how many
+                # independent confirmations agree with the cross; weak ones are dropped
+                # (not marked alerted). config.ALERT_MIN_STRENGTH_RATIO = 0 sends all.
+                signal["strength"] = compute_alert_strength(signal)
+                if signal["strength"]["mandatory_failed"] or signal["strength"]["others_ratio"] < config.ALERT_MIN_OTHERS_RATIO:
+                    print(f"[strength] {symbol} {signal['direction']} {signal['candle_time']} skipped "
+                          f"(others {signal['strength']['others_passed']}/{signal['strength']['others_total']}, missing: {signal['strength']['mandatory_failed']})", flush=True)
+                    continue
+
                 # Same-direction cooldown (added, per request) — blocks
                 # only if this exact (symbol, direction) already
                 # alerted within config.SAME_DIRECTION_COOLDOWN_MINUTES,
@@ -2861,6 +2920,7 @@ def run_nifty500_scan(now_ist):
                 require_rsi_confirmation=config.REQUIRE_RSI_CONFIRMATION,
                 require_vwap_confirmation=config.REQUIRE_VWAP_CONFIRMATION,
                 require_macd_divergence=config.REQUIRE_MACD_DIVERGENCE,
+                today=now_ist.date(),
             )
             for sig in signals:
                 sig["timeframe"] = primary_label
@@ -3100,6 +3160,15 @@ def run_nifty500_scan(now_ist):
                     if not gate_passed:
                         continue
                     signal["alert_gate_reasons"] = gate_reasons
+
+                # Signal STRENGTH (2026-10-21, "false signal na ase") — counts how many
+                # independent confirmations agree with the cross; weak ones are dropped
+                # (not marked alerted). config.ALERT_MIN_STRENGTH_RATIO = 0 sends all.
+                signal["strength"] = compute_alert_strength(signal)
+                if signal["strength"]["mandatory_failed"] or signal["strength"]["others_ratio"] < config.ALERT_MIN_OTHERS_RATIO:
+                    print(f"[strength] {symbol} {signal['direction']} {signal['candle_time']} skipped "
+                          f"(others {signal['strength']['others_passed']}/{signal['strength']['others_total']}, missing: {signal['strength']['mandatory_failed']})", flush=True)
+                    continue
 
                 # Same-direction cooldown — see the matching comment in
                 # run_fo_scan() above.
