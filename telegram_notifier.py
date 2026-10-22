@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v7 (2026-10-22)"
+BUILD_TAG = "short-v6 (2026-10-22)"
 
 
 def _ema920_line(info15, info75):
@@ -162,9 +162,6 @@ def _build_compact_alert_text(signal):
         macd_rsi_line += f"MACD {ml} / {ms}"
     if rsi is not None:
         macd_rsi_line += (" | " if macd_rsi_line else "") + f"RSI {rsi}"
-    _pdv, _avg = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
-    if _pdv is not None and _avg:       # volume support, short: last-day volume vs its 1M average
-        macd_rsi_line += (" | " if macd_rsi_line else "") + f"Vol {(_pdv - _avg) / _avg * 100:+.0f}%"
     macd_rsi_line = (macd_rsi_line + "\n") if macd_rsi_line else ""
 
     st = signal.get("strength")
