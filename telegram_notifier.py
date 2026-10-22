@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v6 (2026-10-22)"
+BUILD_TAG = "short-v9 (2026-10-22)"
 
 
 def _ema920_line(info15, info75):
@@ -156,59 +156,105 @@ def _build_compact_alert_text(signal):
     dc = signal.get("day_change_pct")
     dc_part = f" | Day: {dc:+.2f}% {'🟢' if dc >= 0 else '🔴'}" if dc is not None else ""
 
+    st = signal.get("strength")
+    ok_of = {}
+    if st and st.get("checks"):
+        for name, ok, w in st["checks"]:
+            ok_of[name] = ok
+
+    def mark(prefix):
+        for n, ok in ok_of.items():
+            if n.startswith(prefix):
+                return "✅ " if ok else "❌ "
+        return "➖ "
+
+    # MACD / RSI = information, bottom line, with ✅/❌ from the strength checks
     ml, ms, rsi = signal.get("macd_line"), signal.get("macd_signal"), signal.get("rsi")
     macd_rsi_line = ""
     if ml is not None and ms is not None:
-        macd_rsi_line += f"MACD {ml} / {ms}"
+        macd_rsi_line += f"{mark('MACD')}MACD {ml} / {ms}"
     if rsi is not None:
-        macd_rsi_line += (" | " if macd_rsi_line else "") + f"RSI {rsi}"
+        macd_rsi_line += ("  ·  " if macd_rsi_line else "") + f"{mark('RSI')}RSI {rsi}"
     macd_rsi_line = (macd_rsi_line + "\n") if macd_rsi_line else ""
 
-    st = signal.get("strength")
     strength_line = ""
     if st and st.get("total"):
         icon = {"STRONG": "🔥", "MEDIUM": "🟡", "WEAK": "⚠️"}.get(st["label"], "")
         strength_line = f"💪 <b>{st['passed']}/{st['total']} {st['label']}</b> {icon}\n"
 
-    # ---- ONE tap block: each strength check ONCE, with its number beside it
-    # (no separate repeat of volume / delivery / VWAP / candle volume), 2026-10-22 ----
     pos = signal.get("positions") or {}
-    st = signal.get("strength")
     pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
     dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
-    e75 = pos.get("ema75")
-    detail = {}
-    if e75:
-        detail["75-min EMA50"] = f"{'+' if e75['state'] == 'ABOVE' else '-'}{e75['dist_pct']}% ({_p(e75['ema'])})"
-    if signal.get("vwap") is not None and signal.get("vwap_note"):
-        detail["VWAP"] = f"{signal['vwap']} {signal['vwap_note'].split('(', 1)[-1].rstrip(')') if '(' in signal['vwap_note'] else ''}".strip()
-    cmp_v = _vs_avg(pdv, avg_v)
-    if cmp_v:
-        detail["Last-day volume"] = f"{pdv:,} vs {avg_v:,.0f} → {cmp_v}"
-    cmp_d = _vs_avg(dp, avg_d)
-    if cmp_d:
-        detail["Last-day delivery"] = f"{dp}% vs {avg_d:.1f}% → {cmp_d}"
+    rows = []
+
+    # 1) DAILY (MACD + RSI + VOLUME)
+    ds = signal.get("daily_support")
+    if ds:
+        bull = direction == "BULLISH"
+        parts = []
+        n = ds.get("macd_days_ago")
+        when = "" if n is None else (" today" if n == 0 else f" {n}d ago")
+        parts.append(("✅" if ds["macd_ok"] else "❌") + f" MACD {'up' if bull else 'down'}{when if ds['macd_ok'] else ''}")
+        parts.append(("✅" if ds["rsi_ok"] else "❌") + f" RSI {ds['rsi']}")
+        if ds.get("vol_pct") is not None:
+            parts.append(("✅" if ds["vol_ok"] else "❌") + f" Vol {ds['vol_pct']:+.0f}%")
+        rows.append("📅 <b>DAILY:</b> " + " · ".join(parts))
+
+    # 2) Candle volume
     vc = signal.get("vol_change_pct")
     if vc is not None:
-        detail["Candle volume"] = f"{signal.get('volume', 0):,} ({vc:+.1f}%)"
+        rows.append(f"{mark('Candle volume')}<b>Candle volume:</b> {signal.get('volume', 0):,} ({vc:+.1f}%)")
 
-    t2 = ""
-    if st and st.get("checks"):
-        for name, ok, w in st["checks"]:
-            extra = next((v for k, v in detail.items() if name.startswith(k)), None)
-            t2 += ("✅ " if ok else "❌ ") + name + (f": {extra}" if extra else "") + "\n"
-    if t2:
-        t2 += f"build: {BUILD_TAG}\n"   # shows which version of this file is actually running
-    tap2 = f"<blockquote expandable>{t2.rstrip()}</blockquote>" if t2 else ""
+    # 3) Last-day volume (+ delivery on the same row)
+    cmp_v, cmp_d = _vs_avg(pdv, avg_v), _vs_avg(dp, avg_d)
+    if cmp_v or cmp_d:
+        bits = []
+        if cmp_v:
+            bits.append(f"Vol {cmp_v}")
+        if cmp_d:
+            bits.append(f"Deliv {dp}% ({cmp_d})")
+        both = [mark("Last-day volume"), mark("Last-day delivery")]
+        icon = "❌ " if "❌ " in both else ("✅ " if "✅ " in both else "➖ ")
+        rows.append(f"{icon}<b>Last day:</b> " + " · ".join(bits) + " vs 1M avg")
+
+    # 4) EMA 9/20 (15-min)
+    e15 = signal.get("ema920_15")
+    if e15 and e15.get("bias"):
+        e_icon = "📈" if e15["bias"] == "BULLISH" else "📉"
+        k = e15.get("candles_since_cross")
+        cross = "no recent cross" if k is None else ("crossed just now" if k == 0 else f"crossed {k} candle{'s' if k != 1 else ''} ago")
+        rows.append(f"{mark('EMA 9/20')}<b>EMA {e15.get('ema_fast_period', 9)}/{e15.get('ema_slow_period', 20)}:</b> {e15['bias'].title()} {e_icon} · {cross}")
+
+    # 5) 75-min EMA50
+    e75 = pos.get("ema75")
+    if e75:
+        rows.append(f"{mark('75-min EMA')}<b>75-min EMA{e75.get('period', 50)}:</b> Price {'Above' if e75['state'] == 'ABOVE' else 'Below'} "
+                    f"{_p(e75['ema'])} ({'+' if e75['state'] == 'ABOVE' else '-'}{e75['dist_pct']}%)")
+
+    # 6) VWAP
+    if signal.get("vwap") is not None and signal.get("vwap_note"):
+        vn = signal["vwap_note"]
+        tail = vn.split("(", 1)[-1].rstrip(")") if "(" in vn else ""
+        rows.append(f"{mark('VWAP')}<b>VWAP:</b> {signal['vwap']} {tail}".rstrip())
+
+    # 7) 1st 15-min
+    f15 = pos.get("first15")
+    if f15:
+        line = _position_line("1st 15-min", f15, direction, close, kind="day").strip()
+        if line:
+            rows.append(line)
+
+    rows.append(f"build: {BUILD_TAG}")
+    tap = "<blockquote expandable>" + "\n".join(rows) + "</blockquote>" if len(rows) > 1 else ""
 
     return (
-        f"{arrow} <b>{signal['symbol']}</b> — {direction} MACD+RSI ({timeframe_label})\n"
+        f"{arrow} <b>{signal['symbol']}</b> — {direction} ({timeframe_label})\n"
         f"{fno_line}"
         f"{link_line}"
         f"{date_part} {time_part} | Close: {_p(close)}{dc_part}\n"
-        f"{macd_rsi_line}"
         f"{strength_line}"
-        f"{tap2}"
+        f"{tap}\n"
+        f"{macd_rsi_line}"
     ).rstrip()
 
 

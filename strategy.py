@@ -1034,6 +1034,11 @@ def compute_alert_strength(signal):
         if key in mandatory and not ok:
             mandatory_failed.append(name)
 
+    # volume first (2026-10-22 — "volume sobar opre")
+    pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
+    if pdv is not None and avg_v:
+        add("volume", "Last-day volume > 1M avg", pdv > avg_v)
+
     ml = signal.get("macd_line")
     if ml is not None:
         add("macd_zero", "MACD " + ("above" if bull else "below") + " zero line", ml > 0 if bull else ml < 0)
@@ -1054,10 +1059,6 @@ def compute_alert_strength(signal):
     f15 = pos.get("first15")
     if f15 and f15.get("state") in ("ABOVE", "BELOW", "INSIDE"):
         add("first15", "1st 15-min " + ("above high" if bull else "below low"), f15["state"] == ("ABOVE" if bull else "BELOW"))
-
-    pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
-    if pdv is not None and avg_v:
-        add("volume", "Last-day volume > 1M avg", pdv > avg_v)
 
     dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
     if dp is not None and avg_d:
@@ -2833,4 +2834,154 @@ def check_monthly_macd_rsi_scan(history, symbol):
         "rsi": round(rsi_val, 1),
         "macd_line": round(float(last["macd_line"]), 2),
         "macd_signal": round(float(last["macd_signal"]), 2),
+    }
+
+
+def check_daily_macd_rsi_scan(history, symbol, delivery_pct=None, delivery_avg_1m=None):
+    """
+    DAILY MACD+RSI alert (ADDED 2026-10-22, per request — "ei sob daily
+    basise MACD RSI kora jabe?"). Same idea as the 15-min alert on DAILY
+    candles. `history` = main.fetch_daily_history output with include_today
+    =True; the caller checks the last candle is dated today.
+
+    Trigger: MACD(12/26/9) line crosses its signal line on the LAST daily
+    candle. MUST: MACD on the right side of zero. Then 7 more checks, 1 point
+    each (BULLISH shown; BEARISH is the mirror image):
+      RSI >= ALERT_STRONG_RSI_BULLISH · close above daily EMA50 · close above
+      daily EMA200 · EMA 9/20 bullish · close above the prior 21-day high ·
+      today's volume > its 20-day average · previous-day delivery % > 1M avg.
+    Checks with no data (index: no delivery; short history: no EMA200) are
+    skipped and the number needed is scaled down in proportion.
+    Returns None (no cross / not enough data) or a dict, incl. meets_min.
+    """
+    if len(history) < config.DAILY_ALERT_MIN_BARS:
+        return None
+    df = pd.DataFrame(history)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date").reset_index(drop=True)
+    df = add_macd(df, config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL)
+    df = add_rsi(df, config.RSI_PERIOD)
+    for p in (9, 20, 50, 200):
+        df = add_ema(df, p, f"ema{p}")
+
+    last, prev = df.iloc[-1], df.iloc[-2]
+    if pd.isna(last["rsi"]) or pd.isna(last["macd_signal"]) or pd.isna(prev["macd_signal"]):
+        return None
+    prev_diff = prev["macd_line"] - prev["macd_signal"]
+    curr_diff = last["macd_line"] - last["macd_signal"]
+    if prev_diff <= 0 < curr_diff:
+        direction = "BULLISH"
+    elif prev_diff >= 0 > curr_diff:
+        direction = "BEARISH"
+    else:
+        return None
+    bull = direction == "BULLISH"
+    close = float(last["close"])
+
+    checks, mandatory_failed = [], []
+
+    def add(name, ok, must=False):
+        checks.append((name, bool(ok)))
+        if must and not ok:
+            mandatory_failed.append(name)
+
+    ml = float(last["macd_line"])
+    add("MACD " + ("above" if bull else "below") + " zero line", ml > 0 if bull else ml < 0, must=True)
+    rsi = float(last["rsi"])
+    lim = config.ALERT_STRONG_RSI_BULLISH if bull else config.ALERT_STRONG_RSI_BEARISH
+    must_rv = getattr(config, "DAILY_ALERT_MANDATORY_RSI_VOLUME", False)
+    add(f"RSI {'≥' if bull else '≤'} {lim}", rsi >= lim if bull else rsi <= lim, must=must_rv)
+    add("Daily EMA50 " + ("above" if bull else "below"), (close > float(last["ema50"])) == bull)
+    if len(df) >= 200:
+        add("Daily EMA200 " + ("above" if bull else "below"), (close > float(last["ema200"])) == bull)
+    add("EMA 9/20 " + ("bullish" if bull else "bearish"), (float(last["ema9"]) > float(last["ema20"])) == bull)
+    if len(df) >= 23:
+        window = df.iloc[-22:-1]
+        if bull:
+            add("Above 1-month high", close > float(window["high"].max()))
+        else:
+            add("Below 1-month low", close < float(window["low"].min()))
+    vol_pct = None
+    if len(df) >= 22 and float(last["volume"]) > 0:
+        avg_v = float(df["volume"].iloc[-21:-1].mean())
+        if avg_v > 0:
+            vol_pct = (float(last["volume"]) / avg_v - 1) * 100
+            add("Volume > 20-day avg", float(last["volume"]) > avg_v, must=must_rv)
+    deliv_pct = None
+    if delivery_pct is not None and delivery_avg_1m:
+        deliv_pct = (delivery_pct / delivery_avg_1m - 1) * 100
+        add("Delivery > 1M avg", delivery_pct > delivery_avg_1m)
+
+    total = len(checks)
+    passed = sum(1 for _, ok in checks if ok)
+    full = max(1, int(config.DAILY_ALERT_FULL_CHECK_COUNT))
+    need = math.ceil(config.DAILY_ALERT_MIN_CHECKS_PASSED * total / full - 1e-9) if total else 0
+    prev_close = float(prev["close"])
+    return {
+        "symbol": symbol,
+        "direction": direction,
+        "date": df["date"].iloc[-1].strftime("%Y-%m-%d"),
+        "close": round(close, 2),
+        "day_change_pct": round((close / prev_close - 1) * 100, 2) if prev_close else None,
+        "rsi": round(rsi, 1),
+        "macd_line": round(ml, 2),
+        "macd_signal": round(float(last["macd_signal"]), 2),
+        "checks": checks,
+        "passed": passed, "total": total, "need": need,
+        "mandatory_failed": mandatory_failed,
+        "meets_min": passed >= need and not mandatory_failed,
+        "volume_vs_avg_pct": round(vol_pct, 1) if vol_pct is not None else None,
+        "delivery_vs_avg_pct": round(deliv_pct, 1) if deliv_pct is not None else None,
+    }
+
+
+def get_daily_support_info(history, direction):
+    """
+    DAILY (MACD + RSI + VOLUME) support for an intraday alert (ADDED 2026-10-22).
+    `history` = main.fetch_daily_history output (COMPLETED daily candles only).
+    Judged on the last completed daily candle:
+      macd_ok   — daily MACD line on the alert's side of its signal line
+                  (above for BULLISH, below for BEARISH); macd_days_ago = how many
+                  daily candles ago it crossed that way (None = no cross in the last 10)
+      rsi_ok    — daily RSI >= ALERT_STRONG_RSI_BULLISH (BULLISH) / <= _BEARISH (BEARISH)
+      vol_ok    — that day's volume above the average of the 20 days before it
+    Returns None when there isn't enough history.
+    """
+    if not history or len(history) < 60:
+        return None
+    df = pd.DataFrame(history)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date").reset_index(drop=True)
+    df = add_macd(df, config.MACD_FAST, config.MACD_SLOW, config.MACD_SIGNAL)
+    df = add_rsi(df, config.RSI_PERIOD)
+    last = df.iloc[-1]
+    if pd.isna(last["rsi"]) or pd.isna(last["macd_signal"]):
+        return None
+    bull = direction == "BULLISH"
+    diff = df["macd_line"] - df["macd_signal"]
+    macd_ok = bool(diff.iloc[-1] > 0) if bull else bool(diff.iloc[-1] < 0)
+    days_ago = None
+    if macd_ok:
+        for k in range(0, 10):
+            i = len(df) - 1 - k
+            if i < 1:
+                break
+            if (bull and diff.iloc[i - 1] <= 0 < diff.iloc[i]) or ((not bull) and diff.iloc[i - 1] >= 0 > diff.iloc[i]):
+                days_ago = k
+                break
+    rsi = float(last["rsi"])
+    lim = config.ALERT_STRONG_RSI_BULLISH if bull else config.ALERT_STRONG_RSI_BEARISH
+    rsi_ok = rsi >= lim if bull else rsi <= lim
+    vol_pct, vol_ok = None, None
+    if len(df) >= 22:
+        avg_v = float(df["volume"].iloc[-21:-1].mean())
+        if avg_v > 0 and float(last["volume"]) > 0:
+            vol_pct = (float(last["volume"]) / avg_v - 1) * 100
+            vol_ok = vol_pct > 0
+    return {
+        "date": df["date"].iloc[-1].strftime("%Y-%m-%d"),
+        "macd_ok": macd_ok, "macd_days_ago": days_ago,
+        "rsi": round(rsi, 1), "rsi_ok": bool(rsi_ok),
+        "vol_pct": round(vol_pct, 1) if vol_pct is not None else None,
+        "vol_ok": vol_ok,
     }
