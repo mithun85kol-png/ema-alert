@@ -941,6 +941,7 @@ ENABLED_SCAN_MODES = {
     "opening_bias_report",
     "ema_cross_report", "ema_cross_report_evening",
     "monthly_scan",
+    "daily_scan",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -971,7 +972,7 @@ ALERT_STRENGTH_WEIGHTS = {
 # These checks MUST pass or no alert is sent, whatever the other points add up to
 # (per request 2026-10-21 — "MACD RSI lagbei"). A check whose data is missing never blocks.
 # Keys are the ALERT_STRENGTH_WEIGHTS keys. Set to () to make everything points-only.
-ALERT_MANDATORY_CHECKS = ("macd_zero",)   # MACD must (+ the MACD cross trigger itself). Others below are counted, not individually required.
+ALERT_MANDATORY_CHECKS = ("macd_zero", "rsi", "volume")   # MACD cross (trigger) + MACD side of zero + RSI + last-day volume support: all must hold (2026-10-22). Missing data never blocks.
 # Alert rule (2026-10-21, "MACD must ar nicher mot 50% match korle alert asbe"):
 # the MACD check is mandatory; of ALL THE OTHER checks (RSI, 75-min EMA50, VWAP,
 # 1st 15-min, last-day volume, last-day delivery, candle volume — only those whose
@@ -987,3 +988,34 @@ ALERT_MIN_OTHERS_RATIO = 0.5
 # alert through, 8 for stricter. (ALERT_MIN_OTHERS_RATIO above is no longer used.)
 ALERT_MIN_CHECKS_PASSED = 7
 ALERT_FULL_CHECK_COUNT = 9
+
+
+# ---------- DAILY MACD + RSI alert (ADDED 2026-10-22, "ei sob daily basise MACD RSI") ----------
+# ONE combined Telegram message per day (bullish then bearish) listing every
+# F&O stock / index whose DAILY MACD crossed its signal line today and that
+# passed enough checks (see strategy.check_daily_macd_rsi_scan). Runs once a day
+# from the normal scheduled run (first run at/after DAILY_ALERT_RUN_AFTER, weekdays),
+# or on demand with SCAN_MODE=daily_scan. MORNING (default, run before 15:45): judges the
+# last COMPLETED daily candle; a run at/after 15:45 judges today's own candle.
+DAILY_ALERT_ENABLED = True
+DAILY_ALERT_RUN_AFTER = "08:00"          # IST — morning, before the market opens (judges the last completed daily candle)
+DAILY_ALERT_HISTORY_LOOKBACK_DAYS = 420  # calendar days (~290 trading days: EMA200 warm-up)
+DAILY_ALERT_MIN_BARS = 60
+# Alert if MACD (zero-line check) passes AND at least this many of the checks pass.
+# DAILY_ALERT_FULL_CHECK_COUNT = how many checks exist when all data is available
+# (MACD zero, RSI, EMA50, EMA200, EMA 9/20, 1-month high/low, volume, delivery = 8).
+DAILY_ALERT_MIN_CHECKS_PASSED = 6
+DAILY_ALERT_FULL_CHECK_COUNT = 8
+# Add the Nifty 500 cash stocks too ("fo+n500"); default F&O stocks + 3 indices.
+DAILY_ALERT_UNIVERSE = "fo"
+# If today's daily candle is missing for more than this share of symbols (holiday /
+# ran too early) the scan is skipped instead of judging stale data.
+DAILY_ALERT_STALE_ABORT_FRACTION = 0.3
+
+# Daily alert: only UP (BULLISH) crosses (2026-10-22, "up only positive chai").
+# False = bearish crosses are reported too.
+DAILY_ALERT_BULLISH_ONLY = True
+
+# Daily alert: RSI and volume (today's volume > 20-day average) are mandatory too,
+# next to the MACD cross + zero-line check (2026-10-22, "MACD+RSI+VOLUME support e alert").
+DAILY_ALERT_MANDATORY_RSI_VOLUME = True

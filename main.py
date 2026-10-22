@@ -141,7 +141,7 @@ except ImportError:
     # delivery_data.py. If you have this file, just add it back to
     # the repo root and this feature resumes automatically.
     corporate_actions = None
-from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan, compute_alert_strength
+from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan, check_daily_macd_rsi_scan, compute_alert_strength
 from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
@@ -3720,6 +3720,171 @@ def maybe_run_monthly_scan_once_a_day(now_ist):
     run_monthly_macd_rsi_scan(now_ist)
 
 
+def _fetch_daily_histories(watchlist, days_back, include_today=True):
+    """{symbol: daily history list}, [failed symbols] — threaded, rate-limited."""
+    def _one(symbol, key):
+        return symbol, fetch_daily_history(key, days_back=days_back, include_today=include_today)
+
+    histories, failed = {}, []
+    with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
+        futures = {pool.submit(_one, s, k): s for s, k in watchlist.items()}
+        for fut in as_completed(futures):
+            sym = futures[fut]
+            try:
+                _, hist = fut.result()
+                if hist:
+                    histories[sym] = hist
+                else:
+                    failed.append(sym)
+            except Exception as e:
+                print(f"Fetch failed for {sym} (daily scan): {e}")
+                failed.append(sym)
+    return histories, failed
+
+
+def send_daily_macd_rsi_summary(hits, now_ist):
+    """ONE combined message (split only if it exceeds Telegram's size limit):
+    bullish first, then bearish, strongest first inside each group."""
+    hits = sorted(hits, key=lambda h: (h["direction"] != "BULLISH", -h["passed"] / max(1, h["total"]), h["symbol"]))
+    nb = sum(1 for h in hits if h["direction"] == "BULLISH")
+    cdate = dt.date.fromisoformat(hits[0]["date"]).strftime("%d %b %Y") if hits else now_ist.strftime("%d %b %Y")
+    counts = f"\U0001F7E2 {nb} bullish" + ("" if config.DAILY_ALERT_BULLISH_ONLY else f"   \U0001F534 {len(hits) - nb} bearish")
+    header = (f"\U0001F4C5 <b>DAILY MACD + RSI CROSS (UP)</b>  (candle of {cdate})\n{counts}"
+              if config.DAILY_ALERT_BULLISH_ONLY else
+              f"\U0001F4C5 <b>DAILY MACD + RSI CROSS</b>  (candle of {cdate})\n{counts}")
+    lines = []
+    for h in hits:
+        icon = "\U0001F7E2\u2B06\uFE0F" if h["direction"] == "BULLISH" else "\U0001F534\u2B07\uFE0F"
+        ratio = h["passed"] / max(1, h["total"])
+        fire = " \U0001F525" if ratio >= 0.75 else ""
+        chg = f" ({h['day_change_pct']:+.2f}%)" if h.get("day_change_pct") is not None else ""
+        sym = h["symbol"]
+        links = []
+        if h.get("chart_link"):
+            links.append(f"\U0001F4C8 <a href=\"{h['chart_link']}\">Chart</a>")
+        if h.get("results_link"):
+            links.append(f"\U0001F4CA <a href=\"{h['results_link']}\">Results</a>")
+        link_line = ("  ·  ".join(links) + "\n") if links else ""
+        extra = ""
+        if h.get("volume_vs_avg_pct") is not None:
+            extra += f" | Vol {h['volume_vs_avg_pct']:+.0f}%"
+        if h.get("delivery_vs_avg_pct") is not None:
+            extra += f" | Deliv {h['delivery_vs_avg_pct']:+.0f}%"
+        missing = [n for n, ok in h["checks"] if not ok]
+        miss = ("\n\u274C " + ", ".join(missing)) if missing else ""
+        lines.append(
+            f"{icon} <b>{sym}</b>  {h['close']}{chg}  \U0001F4AA {h['passed']}/{h['total']}{fire}\n"
+            f"{link_line}"
+            f"MACD {h['macd_line']} / {h['macd_signal']} | RSI {h['rsi']}{extra}{miss}"
+        )
+    parts, cur = [], header
+    for ln in lines:
+        if len(cur) + len(ln) + 2 > 3800 and cur != header:
+            parts.append(cur); cur = header
+        cur += "\n\n" + ln
+    parts.append(cur)
+    for part in parts:
+        _send_html_text(part)
+
+
+def run_daily_macd_rsi_scan(now_ist, notify_if_stale=True):
+    """
+    DAILY MACD+RSI alert (ADDED 2026-10-22). Universe: F&O stocks + indices
+    (+ Nifty 500 if config.DAILY_ALERT_UNIVERSE == "fo+n500"). One combined
+    message; each (symbol, direction, date) alerted once. See
+    strategy.check_daily_macd_rsi_scan and the DAILY_ALERT_* block in config.py.
+    """
+    today_str = now_ist.date().isoformat()
+    watchlist = {}
+    watchlist.update(instruments.resolve_fo_stock_list(None))
+    watchlist.update(instruments.resolve_indices(config.INDICES))
+    if config.DAILY_ALERT_UNIVERSE == "fo+n500":
+        watchlist.update(instruments.resolve_nifty500_stocks())
+    if not watchlist:
+        print("Daily MACD+RSI scan: empty watchlist - skipping.", flush=True)
+        return 0, [], 0
+    print(f"Daily MACD+RSI scan: {len(watchlist)} instruments...", flush=True)
+
+    # Morning run (the default, before 15:45) judges the LAST COMPLETED daily candle
+    # (yesterday / last trading day) — never today's still-forming one. A run at/after
+    # 15:45 judges today's own candle instead.
+    use_today = now_ist.time() >= dt.time(15, 45)
+    histories, failed = _fetch_daily_histories(
+        watchlist, config.DAILY_ALERT_HISTORY_LOOKBACK_DAYS, include_today=use_today)
+    if not use_today:   # safety: drop a partial row for today if the API sent one anyway
+        histories = {s: [r for r in h if str(r["date"])[:10] < today_str] for s, h in histories.items()}
+        histories = {s: h for s, h in histories.items() if h}
+    latest = max((str(h[-1]["date"])[:10] for h in histories.values()), default=None)
+    fresh = {s: h for s, h in histories.items() if str(h[-1]["date"])[:10] == latest}
+    stale = (not histories) or (use_today and latest != today_str) or \
+            (len(histories) - len(fresh)) / len(histories) > config.DAILY_ALERT_STALE_ABORT_FRACTION
+    if stale:
+        msg = (f"Daily MACD+RSI scan: the latest daily candle ({latest}) isn't available for "
+               f"{len(histories) - len(fresh)}/{len(histories)} symbols (holiday, or ran too early) - nothing scanned.")
+        print(msg, flush=True)
+        if notify_if_stale:
+            send_telegram_text(msg)
+        return 0, failed, len(watchlist)
+
+    try:
+        delivery_map = delivery_data.get_delivery_data(now_ist.date()) or {}
+        delivery_avg_map = delivery_data.get_delivery_avg_1m(now_ist.date()) or {}
+    except Exception as e:
+        print(f"Daily scan: delivery data unavailable ({e})", flush=True)
+        delivery_map, delivery_avg_map = {}, {}
+
+    saved_state = state.load_state()
+    hits, below_bar = [], 0
+    for symbol, history in fresh.items():
+        try:
+            sig = check_daily_macd_rsi_scan(
+                history, symbol,
+                delivery_pct=delivery_map.get(symbol.upper()),
+                delivery_avg_1m=delivery_avg_map.get(symbol.upper()),
+            )
+            if sig is None:
+                continue
+            if config.DAILY_ALERT_BULLISH_ONLY and sig["direction"] != "BULLISH":
+                continue
+            if not sig["meets_min"]:
+                below_bar += 1
+                continue
+            state_symbol = f"{symbol}::DAILY"
+            if state.already_alerted(saved_state, state_symbol, sig["direction"], sig["date"]):
+                continue
+            sig["chart_link"] = build_chart_link(symbol)
+            if symbol not in set(config.INDICES.keys()):
+                sig["results_link"] = f"https://www.screener.in/company/{symbol}/consolidated/"
+            state.mark_alerted(saved_state, state_symbol, sig["direction"], sig["date"])
+            hits.append(sig)
+        except Exception as e:
+            print(f"Error on {symbol} (daily scan): {e}")
+            failed.append(symbol)
+
+    if hits:
+        send_daily_macd_rsi_summary(hits, now_ist)
+    state.save_state(saved_state)
+    print(f"Daily scan done. {len(hits)} alert(s); {below_bar} cross(es) below the strength bar.", flush=True)
+    return len(hits), failed, len(watchlist)
+
+
+def maybe_run_daily_scan_once_a_day(now_ist):
+    """Called from every normal run; does real work only on the first run of
+    the day at/after config.DAILY_ALERT_RUN_AFTER IST (weekdays)."""
+    if not config.DAILY_ALERT_ENABLED or now_ist.weekday() >= 5:
+        return
+    hh, mm = (int(x) for x in config.DAILY_ALERT_RUN_AFTER.split(":"))
+    if now_ist.time() < dt.time(hh, mm):
+        return
+    today = now_ist.date().isoformat()
+    st = state.load_state()
+    if state.already_alerted(st, "DAILY_SCAN", "DONE", today):
+        return
+    state.mark_alerted(st, "DAILY_SCAN", "DONE", today)  # mark first: a crash must not retry every run
+    state.save_state(st)
+    run_daily_macd_rsi_scan(now_ist, notify_if_stale=False)
+
+
 def run():
     # TEMP DEBUG — remove once we confirm why "Run scan" finished in ~1s
     # with zero stdout beyond the auto-generated env dump: this print
@@ -3879,6 +4044,15 @@ def run():
             print("Daily EMA50 scan disabled (config.DAILY_EMA50_SCAN_ENABLED=False) — skipping.", flush=True)
         return
 
+    if mode == "daily_scan":
+        if config.DAILY_ALERT_ENABLED:
+            try:
+                run_daily_macd_rsi_scan(now_ist)
+            except Exception as e:
+                print(f"run_daily_macd_rsi_scan failed: {e}", flush=True)
+                send_mode_failure_notice("daily_scan", e, now_ist)
+        return
+
     if mode == "monthly_scan":
         if config.MONTHLY_ALERT_ENABLED:
             try:
@@ -3887,6 +4061,13 @@ def run():
                 print(f"run_monthly_macd_rsi_scan failed: {e}", flush=True)
                 send_mode_failure_notice("monthly_scan", e, now_ist)
         return
+
+    # Daily MACD+RSI alert: first run of the day from 08:00 IST (the 09:00 cron run
+    # is before the trading session, so this sits ahead of the session gate).
+    try:
+        maybe_run_daily_scan_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Daily scan failed this run (non-blocking): {e}", flush=True)
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)
