@@ -966,7 +966,7 @@ ALERT_REQUIRE_STILL_VALID = True
 # (per request 2026-10-21 — "Macd 2 RSI 2"); the other 6 checks 1 each = 10 total.
 ALERT_STRENGTH_WEIGHTS = {
     "macd_zero": 1, "rsi": 1, "ema75": 1, "vwap": 1, "first15": 1,
-    "volume": 1, "delivery": 1, "candle_volume": 1,
+    "volume": 1, "delivery": 1, "candle_volume": 1, "ema920": 1,
 }
 # These checks MUST pass or no alert is sent, whatever the other points add up to
 # (per request 2026-10-21 — "MACD RSI lagbei"). A check whose data is missing never blocks.
@@ -977,3 +977,13 @@ ALERT_MANDATORY_CHECKS = ("macd_zero",)   # MACD must (+ the MACD cross trigger 
 # 1st 15-min, last-day volume, last-day delivery, candle volume — only those whose
 # data exists) at least this share must agree. 0.5 = half.
 ALERT_MIN_OTHERS_RATIO = 0.5
+
+# Alert rule (2026-10-22, "above 6 alert asbe, prochur aschhe"): MACD (zero-line check)
+# must pass AND at least ALERT_MIN_CHECKS_PASSED of the ALERT_FULL_CHECK_COUNT checks
+# must pass (MACD zero line, RSI, 75-min EMA50, VWAP, 1st 15-min, last-day volume,
+# last-day delivery, candle volume, EMA 9/20 = 9 checks, 1 point each). If some data
+# does not exist for a symbol (index/commodity: no delivery or volume average) the
+# number needed is scaled down in proportion. 7 = "above 6"; use 6 to let one more
+# alert through, 8 for stricter. (ALERT_MIN_OTHERS_RATIO above is no longer used.)
+ALERT_MIN_CHECKS_PASSED = 7
+ALERT_FULL_CHECK_COUNT = 9

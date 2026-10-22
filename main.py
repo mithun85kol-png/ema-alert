@@ -2682,9 +2682,9 @@ def run_fo_scan(now_ist, index_only=False):
                 # independent confirmations agree with the cross; weak ones are dropped
                 # (not marked alerted). config.ALERT_MIN_STRENGTH_RATIO = 0 sends all.
                 signal["strength"] = compute_alert_strength(signal)
-                if signal["strength"]["mandatory_failed"] or signal["strength"]["others_ratio"] < config.ALERT_MIN_OTHERS_RATIO:
+                if signal["strength"]["mandatory_failed"] or not signal["strength"]["meets_min"]:
                     print(f"[strength] {symbol} {signal['direction']} {signal['candle_time']} skipped "
-                          f"(others {signal['strength']['others_passed']}/{signal['strength']['others_total']}, missing: {signal['strength']['mandatory_failed']})", flush=True)
+                          f"({signal['strength']['passed']}/{signal['strength']['total']}, need {signal['strength']['need']}, failed must: {signal['strength']['mandatory_failed']})", flush=True)
                     continue
 
                 # Same-direction cooldown (added, per request) — blocks
@@ -3182,9 +3182,9 @@ def run_nifty500_scan(now_ist):
                 # independent confirmations agree with the cross; weak ones are dropped
                 # (not marked alerted). config.ALERT_MIN_STRENGTH_RATIO = 0 sends all.
                 signal["strength"] = compute_alert_strength(signal)
-                if signal["strength"]["mandatory_failed"] or signal["strength"]["others_ratio"] < config.ALERT_MIN_OTHERS_RATIO:
+                if signal["strength"]["mandatory_failed"] or not signal["strength"]["meets_min"]:
                     print(f"[strength] {symbol} {signal['direction']} {signal['candle_time']} skipped "
-                          f"(others {signal['strength']['others_passed']}/{signal['strength']['others_total']}, missing: {signal['strength']['mandatory_failed']})", flush=True)
+                          f"({signal['strength']['passed']}/{signal['strength']['total']}, need {signal['strength']['need']}, failed must: {signal['strength']['mandatory_failed']})", flush=True)
                     continue
 
                 # Same-direction cooldown — see the matching comment in

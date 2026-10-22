@@ -20,6 +20,7 @@ compute_position_info() below builds the 1st-15-min / 75-min / 1-month
 
 import datetime as _dt
 
+import math
 import pandas as pd
 
 import config
@@ -1066,6 +1067,10 @@ def compute_alert_strength(signal):
     if vc is not None:
         add("candle_volume", "Candle volume up vs previous", vc > 0)
 
+    e15 = signal.get("ema920_15")
+    if e15 and e15.get("bias"):
+        add("ema920", "EMA 9/20 (15-min) " + ("bullish" if bull else "bearish"), (e15["bias"] == "BULLISH") == bull)
+
     others = [(n, ok, w) for (n, ok, w), k in zip(checks, keys) if k not in mandatory]
     others_total = sum(w for _, _, w in others)
     others_passed = sum(w for _, ok, w in others if ok)
@@ -1074,7 +1079,13 @@ def compute_alert_strength(signal):
     passed = sum(w for _, ok, w in checks if ok)
     ratio = passed / total if total else 1.0
     label = "STRONG" if ratio >= 0.75 else ("MEDIUM" if ratio >= 0.5 else "WEAK")
-    return {"passed": passed, "total": total, "ratio": round(ratio, 2), "label": label,
+    # Alert rule (2026-10-22): at least ALERT_MIN_CHECKS_PASSED of the
+    # ALERT_FULL_CHECK_COUNT checks. When some data is missing (index/commodity
+    # have no delivery/volume avg) the bar is scaled down in proportion.
+    full = max(1, int(getattr(config, "ALERT_FULL_CHECK_COUNT", 9)))
+    need = math.ceil(getattr(config, "ALERT_MIN_CHECKS_PASSED", 7) * total / full - 1e-9) if total else 0
+    meets_min = passed >= need
+    return {"passed": passed, "need": need, "meets_min": meets_min, "total": total, "ratio": round(ratio, 2), "label": label,
             "checks": checks, "mandatory_failed": mandatory_failed,
             "others_passed": others_passed, "others_total": others_total,
             "others_ratio": round(others_ratio, 2)}
