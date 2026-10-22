@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v9 (2026-10-22)"
+BUILD_TAG = "short-v10 (2026-10-22)"
 
 
 def _ema920_line(info15, info75):
@@ -244,6 +244,10 @@ def _build_compact_alert_text(signal):
         if line:
             rows.append(line)
 
+    # 8) MACD / RSI (last row inside the tap block)
+    if macd_rsi_line:
+        rows.append(macd_rsi_line.strip())
+
     rows.append(f"build: {BUILD_TAG}")
     tap = "<blockquote expandable>" + "\n".join(rows) + "</blockquote>" if len(rows) > 1 else ""
 
@@ -253,8 +257,7 @@ def _build_compact_alert_text(signal):
         f"{link_line}"
         f"{date_part} {time_part} | Close: {_p(close)}{dc_part}\n"
         f"{strength_line}"
-        f"{tap}\n"
-        f"{macd_rsi_line}"
+        f"{tap}"
     ).rstrip()
 
 
