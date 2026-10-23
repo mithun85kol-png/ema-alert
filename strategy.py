@@ -2815,23 +2815,23 @@ def check_monthly_macd_rsi_scan(history, symbol):
 
     prev_diff = prev["macd_line"] - prev["macd_signal"]
     curr_diff = last["macd_line"] - last["macd_signal"]
-    rsi_val = float(last["rsi"])
-    if prev_diff <= 0 < curr_diff and rsi_val > config.ALERT_RSI_BULLISH_MIN:
+    rsi = float(last["rsi"])
+    if prev_diff <= 0 < curr_diff and rsi > config.ALERT_RSI_BULLISH_MIN:
         direction = "BULLISH"
-    elif prev_diff >= 0 > curr_diff and rsi_val < config.ALERT_RSI_BEARISH_MAX:
+    elif prev_diff >= 0 > curr_diff and rsi < config.ALERT_RSI_BEARISH_MAX:
         direction = "BEARISH"
     else:
         return None
-
+    close = float(last["close"])
     prev_close = float(prev["close"])
     return {
         "symbol": symbol,
         "direction": direction,
-        "month": monthly.index[-1].strftime("%Y-%m"),
+        "month": monthly.index[-1].strftime("%b %Y"),
         "in_progress": bool(in_progress),
-        "close": round(float(last["close"]), 2),
-        "month_change_pct": round((float(last["close"]) / prev_close - 1) * 100, 2) if prev_close else None,
-        "rsi": round(rsi_val, 1),
+        "close": round(close, 2),
+        "month_change_pct": round((close / prev_close - 1) * 100, 2) if prev_close else None,
+        "rsi": round(rsi, 1),
         "macd_line": round(float(last["macd_line"]), 2),
         "macd_signal": round(float(last["macd_signal"]), 2),
     }
@@ -2839,19 +2839,17 @@ def check_monthly_macd_rsi_scan(history, symbol):
 
 def check_daily_macd_rsi_scan(history, symbol, delivery_pct=None, delivery_avg_1m=None):
     """
-    DAILY MACD+RSI alert (ADDED 2026-10-22, per request — "ei sob daily
-    basise MACD RSI kora jabe?"). Same idea as the 15-min alert on DAILY
-    candles. `history` = main.fetch_daily_history output with include_today
-    =True; the caller checks the last candle is dated today.
+    DAILY MACD+RSI alert (ADDED 2026-10-22). Same idea as the 15-min alert on
+    DAILY candles. `history` = main.fetch_daily_history output.
 
-    Trigger: MACD(12/26/9) line crosses its signal line on the LAST daily
-    candle. MUST: MACD on the right side of zero. Then 7 more checks, 1 point
-    each (BULLISH shown; BEARISH is the mirror image):
-      RSI >= ALERT_STRONG_RSI_BULLISH · close above daily EMA50 · close above
-      daily EMA200 · EMA 9/20 bullish · close above the prior 21-day high ·
-      today's volume > its 20-day average · previous-day delivery % > 1M avg.
-    Checks with no data (index: no delivery; short history: no EMA200) are
-    skipped and the number needed is scaled down in proportion.
+    Trigger: MACD(12/26/9) line crosses its signal line on the last daily candle
+    or up to DAILY_ALERT_CROSS_LOOKBACK-1 candles earlier (MACD still on that
+    side now). MUST: MACD on the right side of zero (+ RSI and volume when
+    DAILY_ALERT_MANDATORY_RSI_VOLUME). Then more checks, 1 point each (BULLISH
+    shown; BEARISH is the mirror): RSI >= 55, close above daily EMA50 / EMA200,
+    EMA 9/20 bullish, close above the prior 21-day high, volume > 20-day
+    average, previous-day delivery % > 1M avg. Checks with no data are skipped
+    and the number needed is scaled down in proportion.
     Returns None (no cross / not enough data) or a dict, incl. meets_min.
     """
     if len(history) < config.DAILY_ALERT_MIN_BARS:
@@ -2867,13 +2865,24 @@ def check_daily_macd_rsi_scan(history, symbol, delivery_pct=None, delivery_avg_1
     last, prev = df.iloc[-1], df.iloc[-2]
     if pd.isna(last["rsi"]) or pd.isna(last["macd_signal"]) or pd.isna(prev["macd_signal"]):
         return None
-    prev_diff = prev["macd_line"] - prev["macd_signal"]
-    curr_diff = last["macd_line"] - last["macd_signal"]
-    if prev_diff <= 0 < curr_diff:
-        direction = "BULLISH"
-    elif prev_diff >= 0 > curr_diff:
-        direction = "BEARISH"
-    else:
+
+    # Cross may be on the last candle or up to DAILY_ALERT_CROSS_LOOKBACK-1 candles
+    # earlier (2026-10-23 — "last day r alert elo na"), but MACD must still be on
+    # that side now. The cross candle's date is the dedupe date.
+    diff = (df["macd_line"] - df["macd_signal"])
+    look = max(1, int(getattr(config, "DAILY_ALERT_CROSS_LOOKBACK", 1)))
+    direction, cross_idx = None, None
+    for k in range(0, look):
+        i = len(df) - 1 - k
+        if i < 1 or pd.isna(diff.iloc[i]) or pd.isna(diff.iloc[i - 1]):
+            break
+        if diff.iloc[i - 1] <= 0 < diff.iloc[i] and diff.iloc[-1] > 0:
+            direction, cross_idx = "BULLISH", i
+            break
+        if diff.iloc[i - 1] >= 0 > diff.iloc[i] and diff.iloc[-1] < 0:
+            direction, cross_idx = "BEARISH", i
+            break
+    if direction is None:
         return None
     bull = direction == "BULLISH"
     close = float(last["close"])
@@ -2920,7 +2929,9 @@ def check_daily_macd_rsi_scan(history, symbol, delivery_pct=None, delivery_avg_1
     return {
         "symbol": symbol,
         "direction": direction,
-        "date": df["date"].iloc[-1].strftime("%Y-%m-%d"),
+        "date": df["date"].iloc[cross_idx].strftime("%Y-%m-%d"),
+        "cross_days_ago": len(df) - 1 - cross_idx,
+        "candle_date": df["date"].iloc[-1].strftime("%Y-%m-%d"),
         "close": round(close, 2),
         "day_change_pct": round((close / prev_close - 1) * 100, 2) if prev_close else None,
         "rsi": round(rsi, 1),
