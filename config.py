@@ -998,7 +998,7 @@ ALERT_FULL_CHECK_COUNT = 9
 # or on demand with SCAN_MODE=daily_scan. MORNING (default, run before 15:45): judges the
 # last COMPLETED daily candle; a run at/after 15:45 judges today's own candle.
 DAILY_ALERT_ENABLED = True
-DAILY_ALERT_RUN_AFTER = "08:00"          # IST — morning, before the market opens (judges the last completed daily candle)
+DAILY_ALERT_RUN_AFTER = "09:25"          # IST — morning, before the market opens (judges the last completed daily candle)
 DAILY_ALERT_HISTORY_LOOKBACK_DAYS = 420  # calendar days (~290 trading days: EMA200 warm-up)
 DAILY_ALERT_MIN_BARS = 60
 # Alert if MACD (zero-line check) passes AND at least this many of the checks pass.
@@ -1024,3 +1024,12 @@ DAILY_ALERT_MANDATORY_RSI_VOLUME = True
 # default. True = a 15-min alert is only sent if the DAILY MACD, RSI and volume all support
 # its direction (skipped when the daily data can't be fetched).
 ALERT_REQUIRE_DAILY_SUPPORT = False
+
+# DAILY alert: MACD cross may be up to this many daily candles old (1 = last candle only).
+DAILY_ALERT_CROSS_LOOKBACK = 3
+# Send a short "scan ran, nothing qualified" note when the daily scan finds no alert.
+DAILY_ALERT_NOTIFY_WHEN_EMPTY = True
+
+# All 15-min alerts of one run go out as ONE message (symbol + score + chart visible,
+# everything else in a tap block). False = one message per alert.
+COMBINE_15MIN_ALERTS = True

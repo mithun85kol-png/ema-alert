@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v10 (2026-10-22)"
+BUILD_TAG = "short-v11 (2026-10-23)"
 
 
 def _ema920_line(info15, info75):
@@ -124,7 +124,7 @@ def _ema920_line(info15, info75):
     return f"EMA {fast}/{slow}: " + "  |  ".join(parts) + "\n"
 
 
-def _build_compact_alert_text(signal):
+def _build_compact_alert_text(signal, parts=False):
     """
     SHORT MACD+RSI alert (rewritten 2026-10-21 — "message ta short koro, baki
     tap khole"). What is visible without tapping is only:
@@ -251,6 +251,18 @@ def _build_compact_alert_text(signal):
     rows.append(f"build: {BUILD_TAG}")
     tap = "<blockquote expandable>" + "\n".join(rows) + "</blockquote>" if len(rows) > 1 else ""
 
+    if parts:
+        # combined-message pieces: visible header + tap-block rows
+        sc = f"  💪 <b>{st['passed']}/{st['total']}</b> {({'STRONG': '🔥', 'MEDIUM': '🟡', 'WEAK': '⚠️'}).get(st['label'], '')}" if (st and st.get("total")) else ""
+        chart = f"  ·  📈 <a href=\"{chart_link}\">Chart</a>" if chart_link else ""
+        shot = f"  ·  📊 <a href=\"{screener_link}\">Screener</a>" if screener_link else ""
+        dcs = f" ({dc:+.2f}% {'🟢' if dc >= 0 else '🔴'})" if dc is not None else ""
+        chart2 = f"📈 <a href=\"{chart_link}\">Chart</a>" if chart_link else ""
+        head = (f"{arrow} <b>{signal['symbol']}</b> {direction}{sc}\n"
+                f"{chart2}{shot}  ·  Close <b>{_p(close)}</b>{dcs}")
+        info = [f"{date_part} {time_part}" + (f"  |  {fno_line.strip()}" if fno_line else "")]
+        return {"head": head, "rows": info + rows[:-1]}   # rows[-1] is the build tag
+
     return (
         f"{arrow} <b>{signal['symbol']}</b> — {direction} ({timeframe_label})\n"
         f"{fno_line}"
@@ -261,7 +273,52 @@ def _build_compact_alert_text(signal):
     ).rstrip()
 
 
+_PENDING_ALERTS = []
+
+
+def flush_pending_alerts():
+    """Send every queued 15-min alert of this run as ONE message: per symbol a visible
+    header line (symbol, direction, score, chart) and everything else in a tap block.
+    Split into several messages only if Telegram's size limit would be exceeded."""
+    if not _PENDING_ALERTS:
+        return
+    sigs = list(_PENDING_ALERTS)
+    _PENDING_ALERTS.clear()
+    sigs.sort(key=lambda s: (s["direction"] != "BULLISH", -((s.get("strength") or {}).get("passed", 0)), s["symbol"]))
+    blocks = []
+    for s in sigs:
+        try:
+            p = _build_compact_alert_text(s, parts=True)
+            blocks.append(p["head"] + "\n<blockquote expandable>" + "\n".join(p["rows"]) + "</blockquote>")
+        except Exception as e:
+            print(f"Combined alert build failed for {s.get('symbol')}: {e}", flush=True)
+    if not blocks:
+        return
+    nb = sum(1 for s in sigs if s["direction"] == "BULLISH")
+    tf = sigs[0].get("timeframe", "15-min")
+    ct = str(sigs[0]["candle_time"]).split(" ")[1][:5]
+    counts = f"🟢 {nb} bullish" + (f"   🔴 {len(sigs) - nb} bearish" if len(sigs) - nb else "")
+    header = f"⏱ <b>{tf.upper()} ALERTS</b> ({ct})\n{counts}   <i>build {BUILD_TAG.split(' ')[0]}</i>"
+    msgs, cur = [], header
+    for b in blocks:
+        if len(cur) + len(b) + 2 > 3800 and cur != header:
+            msgs.append(cur); cur = header
+        cur += "\n\n" + b
+    msgs.append(cur)
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    for m in msgs:
+        try:
+            r = requests.post(url, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": m,
+                                         "parse_mode": "HTML", "disable_web_page_preview": True}, timeout=15)
+            r.raise_for_status()
+        except Exception as e:
+            print("Telegram send failed (combined):", e)
+
+
 def _send_compact_alert(signal):
+    if getattr(config, "COMBINE_15MIN_ALERTS", False):
+        _PENDING_ALERTS.append(signal)
+        return
     text = _build_compact_alert_text(signal)
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
     try:

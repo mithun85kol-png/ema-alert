@@ -142,7 +142,7 @@ except ImportError:
     # the repo root and this feature resumes automatically.
     corporate_actions = None
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan, check_daily_macd_rsi_scan, get_daily_support_info, compute_alert_strength
-from telegram_notifier import send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
+from telegram_notifier import flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -3794,6 +3794,8 @@ def send_daily_macd_rsi_summary(hits, now_ist):
             links.append(f"\U0001F4CA <a href=\"{h['results_link']}\">Results</a>")
         link_line = ("  ·  ".join(links) + "\n") if links else ""
         extra = ""
+        if h.get("cross_days_ago"):
+            extra += f" | cross {h['cross_days_ago']}d ago"
         if h.get("volume_vs_avg_pct") is not None:
             extra += f" | Vol {h['volume_vs_avg_pct']:+.0f}%"
         if h.get("delivery_vs_avg_pct") is not None:
@@ -3801,6 +3803,8 @@ def send_daily_macd_rsi_summary(hits, now_ist):
         missing = [n for n, ok in h["checks"] if not ok]
         miss = ("\n\u274C " + ", ".join(missing)) if missing else ""
         vd = []
+        if h.get("cross_days_ago"):
+            vd.append(f"cross {h['cross_days_ago']}d ago")
         if h.get("volume_vs_avg_pct") is not None:
             vd.append(f"Vol {h['volume_vs_avg_pct']:+.0f}%")
         if h.get("delivery_vs_avg_pct") is not None:
@@ -3900,6 +3904,14 @@ def run_daily_macd_rsi_scan(now_ist, notify_if_stale=True):
 
     if hits:
         send_daily_macd_rsi_summary(hits, now_ist)
+    elif getattr(config, "DAILY_ALERT_NOTIFY_WHEN_EMPTY", False):
+        try:
+            send_telegram_text(
+                f"\U0001F4C5 <b>DAILY MACD + RSI</b>: scan chalechhe ({len(fresh)} symbol) — "
+                f"aj kono bullish alert nei. {below_bar} ta cross bar-er niche."
+            )
+        except Exception as e:
+            print(f"Daily empty note failed: {e}", flush=True)
     state.save_state(saved_state)
     print(f"Daily scan done. {len(hits)} alert(s); {below_bar} cross(es) below the strength bar.", flush=True)
     return len(hits), failed, len(watchlist)
@@ -3922,7 +3934,7 @@ def maybe_run_daily_scan_once_a_day(now_ist):
     run_daily_macd_rsi_scan(now_ist, notify_if_stale=False)
 
 
-def run():
+def _run_inner():
     # TEMP DEBUG — remove once we confirm why "Run scan" finished in ~1s
     # with zero stdout beyond the auto-generated env dump: this print
     # (with explicit flush) tells us whether run() is even being
@@ -4084,6 +4096,9 @@ def run():
     if mode == "daily_scan":
         if config.DAILY_ALERT_ENABLED:
             try:
+                _st = state.load_state()   # mark today DONE so the normal-run hook doesn't repeat it
+                state.mark_alerted(_st, "DAILY_SCAN", "DONE", now_ist.date().isoformat())
+                state.save_state(_st)
                 run_daily_macd_rsi_scan(now_ist)
             except Exception as e:
                 print(f"run_daily_macd_rsi_scan failed: {e}", flush=True)
@@ -4197,6 +4212,17 @@ def run():
     # ---- Fetch-failure visibility: one summary alert if enough
     # instruments failed to fetch this run ----
     maybe_send_failure_summary(fo_failed, fo_total, n500_failed, n500_total)
+
+
+def run():
+    try:
+        _run_inner()
+    finally:
+        # send the run's queued 15-min alerts as one combined message
+        try:
+            flush_pending_alerts()
+        except Exception as e:
+            print(f"flush_pending_alerts failed: {e}", flush=True)
 
 
 if __name__ == "__main__":
