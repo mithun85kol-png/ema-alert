@@ -1033,3 +1033,8 @@ DAILY_ALERT_NOTIFY_WHEN_EMPTY = True
 # All 15-min alerts of one run go out as ONE message (symbol + score + chart visible,
 # everything else in a tap block). False = one message per alert.
 COMBINE_15MIN_ALERTS = True
+
+# 15-min alerts as ONE short list (symbol + score); click a symbol -> jumps to its own detail
+# message. Needs a Telegram supergroup (chat id starting -100); otherwise the expandable
+# combined message is used. False = always the expandable combined message.
+ALERT_LIST_MODE = True

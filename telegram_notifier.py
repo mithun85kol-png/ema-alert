@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v11 (2026-10-23)"
+BUILD_TAG = "short-v12 (2026-10-23)"
 
 
 def _ema920_line(info15, info75):
@@ -285,6 +285,46 @@ def flush_pending_alerts():
     sigs = list(_PENDING_ALERTS)
     _PENDING_ALERTS.clear()
     sigs.sort(key=lambda s: (s["direction"] != "BULLISH", -((s.get("strength") or {}).get("passed", 0)), s["symbol"]))
+    nb = sum(1 for s in sigs if s["direction"] == "BULLISH")
+    counts = f"🟢 {nb} bullish" + (f"   🔴 {len(sigs) - nb} bearish" if len(sigs) - nb else "")
+    ct0 = str(sigs[0]["candle_time"]).split(" ")[1][:5]
+    tf0 = sigs[0].get("timeframe", "15-min")
+    chat = str(config.TELEGRAM_CHAT_ID)
+    if getattr(config, "ALERT_LIST_MODE", False) and chat.startswith("-100"):
+        # LIST MODE (2026-10-23): ONE short list (symbol + score). Each symbol is a link that
+        # jumps to that stock's own detail message (sent silently just before the list).
+        api = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+        lines = []
+        for s in sigs:
+            icon_d = "🟢⬆️" if s["direction"] == "BULLISH" else "🔴⬇️"
+            st_ = s.get("strength") or {}
+            fire = {"STRONG": "🔥", "MEDIUM": "🟡", "WEAK": "⚠️"}.get(st_.get("label"), "")
+            score = f" {st_['passed']}/{st_['total']} {fire}" if st_.get("total") else ""
+            link = s.get("chart_link")
+            try:
+                p = _build_compact_alert_text(s, parts=True)
+                body = p["head"] + "\n" + "\n".join(p["rows"]) + f"\nbuild: {BUILD_TAG}"
+                r = requests.post(api, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": body, "parse_mode": "HTML",
+                                             "disable_web_page_preview": True, "disable_notification": True}, timeout=15)
+                r.raise_for_status()
+                mid = r.json()["result"]["message_id"]
+                link = f"https://t.me/c/{chat[4:]}/{mid}"
+            except Exception as e:
+                print(f"Detail message failed for {s.get('symbol')}: {e}", flush=True)
+            name = f'<a href="{link}">{s["symbol"]}</a>' if link else f'{s["symbol"]}'
+            dcp = s.get("day_change_pct")
+            dc_txt = f" ({dcp:+.2f}%{'🟢' if dcp >= 0 else '🔴'})" if dcp is not None else ""
+            chart_txt = f' · <a href="{s["chart_link"]}">📈</a>' if s.get("chart_link") else ""
+            lines.append(f"{icon_d} <b>{name}</b>{score} · {_p(float(s['close']))}{dc_txt}{chart_txt}")
+        text = (f"⏱ <b>{tf0.upper()} ALERTS</b> ({ct0})\n{counts}   <i>{BUILD_TAG.split(' ')[0]}</i>\n\n"
+                + "\n".join(lines) + "\n\n<i>Stock-er naam e click korle detail</i>")
+        try:
+            requests.post(api, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML",
+                                     "disable_web_page_preview": True}, timeout=15).raise_for_status()
+        except Exception as e:
+            print("Telegram send failed (list):", e)
+        return
+
     blocks = []
     for s in sigs:
         try:
