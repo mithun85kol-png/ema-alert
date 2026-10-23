@@ -3794,8 +3794,6 @@ def send_daily_macd_rsi_summary(hits, now_ist):
             links.append(f"\U0001F4CA <a href=\"{h['results_link']}\">Results</a>")
         link_line = ("  ·  ".join(links) + "\n") if links else ""
         extra = ""
-        if h.get("cross_days_ago"):
-            extra += f" | cross {h['cross_days_ago']}d ago"
         if h.get("volume_vs_avg_pct") is not None:
             extra += f" | Vol {h['volume_vs_avg_pct']:+.0f}%"
         if h.get("delivery_vs_avg_pct") is not None:
@@ -3803,8 +3801,6 @@ def send_daily_macd_rsi_summary(hits, now_ist):
         missing = [n for n, ok in h["checks"] if not ok]
         miss = ("\n\u274C " + ", ".join(missing)) if missing else ""
         vd = []
-        if h.get("cross_days_ago"):
-            vd.append(f"cross {h['cross_days_ago']}d ago")
         if h.get("volume_vs_avg_pct") is not None:
             vd.append(f"Vol {h['volume_vs_avg_pct']:+.0f}%")
         if h.get("delivery_vs_avg_pct") is not None:
@@ -3904,14 +3900,6 @@ def run_daily_macd_rsi_scan(now_ist, notify_if_stale=True):
 
     if hits:
         send_daily_macd_rsi_summary(hits, now_ist)
-    elif getattr(config, "DAILY_ALERT_NOTIFY_WHEN_EMPTY", False):
-        try:
-            send_telegram_text(
-                f"\U0001F4C5 <b>DAILY MACD + RSI</b>: scan chalechhe ({len(fresh)} symbol) — "
-                f"aj kono bullish alert nei. {below_bar} ta cross bar-er niche."
-            )
-        except Exception as e:
-            print(f"Daily empty note failed: {e}", flush=True)
     state.save_state(saved_state)
     print(f"Daily scan done. {len(hits)} alert(s); {below_bar} cross(es) below the strength bar.", flush=True)
     return len(hits), failed, len(watchlist)
@@ -4096,9 +4084,6 @@ def run():
     if mode == "daily_scan":
         if config.DAILY_ALERT_ENABLED:
             try:
-                _st = state.load_state()   # mark today DONE so the normal-run hook doesn't repeat it
-                state.mark_alerted(_st, "DAILY_SCAN", "DONE", now_ist.date().isoformat())
-                state.save_state(_st)
                 run_daily_macd_rsi_scan(now_ist)
             except Exception as e:
                 print(f"run_daily_macd_rsi_scan failed: {e}", flush=True)
