@@ -1037,4 +1037,10 @@ COMBINE_15MIN_ALERTS = True
 # 15-min alerts as ONE short list (symbol + score); click a symbol -> jumps to its own detail
 # message. Needs a Telegram supergroup (chat id starting -100); otherwise the expandable
 # combined message is used. False = always the expandable combined message.
-ALERT_LIST_MODE = True
+ALERT_LIST_MODE = True   # (old flag, no longer used — see ALERT_MESSAGE_STYLE)
+# How a run's 15-min alerts are sent:
+#   "single"   = ONE message: short list on top (symbol, score, close, day change, chart), one tap block below
+#                with every stock's details  <- default
+#   "list"     = short list + a silent detail message per stock; click a name to jump (supergroup only)
+#   "expandable" = one message, each stock its own expandable block
+ALERT_MESSAGE_STYLE = "single"

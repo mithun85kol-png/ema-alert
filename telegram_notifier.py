@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v12 (2026-10-23)"
+BUILD_TAG = "short-v14 (2026-10-23)"
 
 
 def _ema920_line(info15, info75):
@@ -290,7 +290,48 @@ def flush_pending_alerts():
     ct0 = str(sigs[0]["candle_time"]).split(" ")[1][:5]
     tf0 = sigs[0].get("timeframe", "15-min")
     chat = str(config.TELEGRAM_CHAT_ID)
-    if getattr(config, "ALERT_LIST_MODE", False) and chat.startswith("-100"):
+    if getattr(config, "ALERT_MESSAGE_STYLE", "single") == "single":
+        # SINGLE MESSAGE (2026-10-23): short list on top (one line per stock), then ONE tap block
+        # with every stock's details. If it would pass Telegram's size limit it is split by stock.
+        header = f"⏱ <b>{tf0.upper()} ALERTS</b> ({ct0})\n{counts}   <i>{BUILD_TAG.split(' ')[0]}</i>"
+        items = []
+        for s in sigs:
+            try:
+                st_ = s.get("strength") or {}
+                fire = {"STRONG": "🔥", "MEDIUM": "🟡", "WEAK": "⚠️"}.get(st_.get("label"), "")
+                score = f" {st_['passed']}/{st_['total']} {fire}" if st_.get("total") else ""
+                dcp = s.get("day_change_pct")
+                dc_txt = f" ({dcp:+.2f}%{'🟢' if dcp >= 0 else '🔴'})" if dcp is not None else ""
+                ch = f' · <a href="{s["chart_link"]}">📈</a>' if s.get("chart_link") else ""
+                line = f"{'🟢⬆️' if s['direction'] == 'BULLISH' else '🔴⬇️'} <b>{s['symbol']}</b>{score} · {_p(float(s['close']))}{dc_txt}{ch}"
+                p = _build_compact_alert_text(s, parts=True)
+                links = []
+                if s.get("chart_link"):
+                    links.append(f'📈 <a href="{s["chart_link"]}">Chart</a>')
+                if s.get("screener_link"):
+                    links.append(f'📊 <a href="{s["screener_link"]}">Screener</a>')
+                rows = p["rows"]
+                body = "\n".join(rows[:1] + (["  ·  ".join(links)] if links else []) + rows[1:])
+                items.append(f"<blockquote expandable>{line}\n{body}</blockquote>")
+            except Exception as e:
+                print(f"Single-message build failed for {s.get('symbol')}: {e}", flush=True)
+        groups, cur, size = [], [], 0
+        for it in items:
+            if cur and size + len(it) + 400 > 3800:
+                groups.append(cur); cur, size = [], 0
+            cur.append(it); size += len(it) + 2
+        if cur:
+            groups.append(cur)
+        api = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+        for g in groups:
+            text = header + "\n\n" + "\n\n".join(g) + "\n\n<i>Stock-er line e tap korle detail</i>"
+            try:
+                requests.post(api, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML",
+                                         "disable_web_page_preview": True}, timeout=15).raise_for_status()
+            except Exception as e:
+                print("Telegram send failed (single):", e)
+        return
+    if getattr(config, "ALERT_MESSAGE_STYLE", "single") == "list" and chat.startswith("-100"):
         # LIST MODE (2026-10-23): ONE short list (symbol + score). Each symbol is a link that
         # jumps to that stock's own detail message (sent silently just before the list).
         api = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
