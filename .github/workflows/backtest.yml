@@ -26,7 +26,7 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Run backtest
         env:
-          UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_ACCESS_TOKEN }}
+          UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
         run: python backtest.py --days "${{ github.event.inputs.days }}" --limit "${{ github.event.inputs.limit }}" --cost-pct "${{ github.event.inputs.cost_pct }}" | tee backtest_summary.txt
       - uses: actions/upload-artifact@v4
         with:
