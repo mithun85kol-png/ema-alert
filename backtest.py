@@ -46,7 +46,7 @@ MIN_CHECKS, FULL_CHECKS = 7, 8          # live: 7 of 9; delivery missing here ->
 
 
 # ----------------------------------------------------------------- data -----
-def to_15min(df):
+def to_15min(df, minutes=15):
     """df: timestamp(open/high/low/close/volume) -> 15-min candles, NSE hours, tz-naive IST."""
     df = df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -54,11 +54,11 @@ def to_15min(df):
         df["timestamp"] = df["timestamp"].dt.tz_convert("Asia/Kolkata").dt.tz_localize(None)
     df = df.sort_values("timestamp").drop_duplicates("timestamp").set_index("timestamp")
     df = df.between_time(MARKET_OPEN, dt.time(15, 29))
-    o = df["open"].resample("15min", origin="start_day", offset="9h15min").first()
-    h = df["high"].resample("15min", origin="start_day", offset="9h15min").max()
-    l = df["low"].resample("15min", origin="start_day", offset="9h15min").min()
-    c = df["close"].resample("15min", origin="start_day", offset="9h15min").last()
-    v = df["volume"].resample("15min", origin="start_day", offset="9h15min").sum()
+    o = df["open"].resample(f"{minutes}min", origin="start_day", offset="9h15min").first()
+    h = df["high"].resample(f"{minutes}min", origin="start_day", offset="9h15min").max()
+    l = df["low"].resample(f"{minutes}min", origin="start_day", offset="9h15min").min()
+    c = df["close"].resample(f"{minutes}min", origin="start_day", offset="9h15min").last()
+    v = df["volume"].resample(f"{minutes}min", origin="start_day", offset="9h15min").sum()
     out = pd.DataFrame({"open": o, "high": h, "low": l, "close": c, "volume": v}).dropna(subset=["close"])
     return out.reset_index()
 
