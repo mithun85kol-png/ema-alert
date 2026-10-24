@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v14 (2026-10-23)"
+BUILD_TAG = "short-v16 (2026-10-23)"
 
 
 def _ema920_line(info15, info75):
@@ -301,18 +301,19 @@ def flush_pending_alerts():
                 fire = {"STRONG": "🔥", "MEDIUM": "🟡", "WEAK": "⚠️"}.get(st_.get("label"), "")
                 score = f" {st_['passed']}/{st_['total']} {fire}" if st_.get("total") else ""
                 dcp = s.get("day_change_pct")
-                dc_txt = f" ({dcp:+.2f}%{'🟢' if dcp >= 0 else '🔴'})" if dcp is not None else ""
-                ch = f' · <a href="{s["chart_link"]}">📈</a>' if s.get("chart_link") else ""
-                line = f"{'🟢⬆️' if s['direction'] == 'BULLISH' else '🔴⬇️'} <b>{s['symbol']}</b>{score} · {_p(float(s['close']))}{dc_txt}{ch}"
-                p = _build_compact_alert_text(s, parts=True)
+                dc_txt = f" ({dcp:+.2f}%)" if dcp is not None else ""
+                # ONE plain line per stock in the main message (outside the tap block):
+                line = f"{'🟢' if s['direction'] == 'BULLISH' else '🔴'} <b>{s['symbol']}</b>{score} · {_p(float(s['close']))}{dc_txt}"
                 links = []
                 if s.get("chart_link"):
                     links.append(f'📈 <a href="{s["chart_link"]}">Chart</a>')
                 if s.get("screener_link"):
                     links.append(f'📊 <a href="{s["screener_link"]}">Screener</a>')
-                rows = p["rows"]
-                body = "\n".join(rows[:1] + (["  ·  ".join(links)] if links else []) + rows[1:])
-                items.append(f"<blockquote expandable>{line}\n{body}</blockquote>")
+                p = _build_compact_alert_text(s, parts=True)
+                body = "\n".join((["  ·  ".join(links)] if links else []) + p["rows"])
+                # first 3 lines of the block (the only ones Telegram shows collapsed) are a short
+                # label + two invisible lines, so nothing readable shows before the tap
+                items.append(f"{line}\n<blockquote expandable>▼ tap korle detail\n\u2800\n\u2800\n{body}</blockquote>")
             except Exception as e:
                 print(f"Single-message build failed for {s.get('symbol')}: {e}", flush=True)
         groups, cur, size = [], [], 0
@@ -324,7 +325,7 @@ def flush_pending_alerts():
             groups.append(cur)
         api = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
         for g in groups:
-            text = header + "\n\n" + "\n\n".join(g) + "\n\n<i>Stock-er line e tap korle detail</i>"
+            text = header + "\n\n" + "\n\n".join(g) + "\n\n<i>Niche tap korle detail</i>"
             try:
                 requests.post(api, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML",
                                          "disable_web_page_preview": True}, timeout=15).raise_for_status()

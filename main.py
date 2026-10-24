@@ -3931,7 +3931,7 @@ def maybe_run_daily_scan_once_a_day(now_ist):
         return
     state.mark_alerted(st, "DAILY_SCAN", "DONE", today)  # mark first: a crash must not retry every run
     state.save_state(st)
-    run_daily_macd_rsi_scan(now_ist, notify_if_stale=False)
+    run_daily_macd_rsi_scan(now_ist, notify_if_stale=True)
 
 
 def _run_inner():
@@ -4120,6 +4120,10 @@ def _run_inner():
         maybe_run_daily_scan_once_a_day(now_ist)
     except Exception as e:
         print(f"Daily scan failed this run (non-blocking): {e}", flush=True)
+        try:
+            send_mode_failure_notice("daily_scan", e, now_ist)
+        except Exception:
+            pass
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)
