@@ -8,6 +8,8 @@ Rules (BULLISH shown, BEARISH is the mirror image)
   trigger : MACD(12/26/9) line crosses ABOVE its signal line on a closed candle
   filter 1: close ABOVE EMA50      (BEARISH: below)
   filter 2: RSI(14) >= --rsi-bull  (BEARISH: RSI <= --rsi-bear)       default 55 / 45
+  filter 3: LAST DAY volume vs the 20-day average - tested BOTH ways (below / above), rows 5 and 6.
+            (needs ~20 earlier sessions, so use --days 90 or more for enough trades)
   entry   : OPEN of the next candle ; exits: after 1h, after 2h, at the day's close,
             plus a 1 x ATR stop / 1.5 x ATR target version.  --cost-pct is deducted per trade.
 
@@ -37,6 +39,10 @@ def run_symbol(symbol, df, tf, rsi_bull, rsi_bear, cost_pct):
     pc = df["close"].shift(1)
     tr = pd.concat([df["high"] - df["low"], (df["high"] - pc).abs(), (df["low"] - pc).abs()], axis=1).max(axis=1)
     df["atr"] = tr.ewm(alpha=1 / 14, adjust=False).mean()
+    # last completed day's volume vs the average of the last 20 completed days (same idea as the live alert)
+    dv = df.groupby("day")["volume"].sum()
+    vol_tab = pd.DataFrame({"prev_vol": dv.shift(1), "avg20": dv.shift(1).rolling(20, min_periods=15).mean()})
+    df = df.join(vol_tab, on="day")
     diff = df["macd_line"] - df["macd_signal"]
     up = (diff.shift(1) <= 0) & (diff > 0)
     dn = (diff.shift(1) >= 0) & (diff < 0)
@@ -59,7 +65,9 @@ def run_symbol(symbol, df, tf, rsi_bull, rsi_bear, cost_pct):
         entry = float(df.at[j, "open"])
         last = idxs[-1]
         res = {"symbol": symbol, "time": row["timestamp"], "dir": "BULL" if bull else "BEAR",
-               "ema_ok": bool(ema_ok), "rsi_ok": bool(rsi_ok), "rsi": round(float(row["rsi"]), 1)}
+               "ema_ok": bool(ema_ok), "rsi_ok": bool(rsi_ok), "rsi": round(float(row["rsi"]), 1),
+               "vol_low": (bool(row["prev_vol"] < row["avg20"]) if pd.notna(row["avg20"]) else None),
+               "vol_high": (bool(row["prev_vol"] > row["avg20"]) if pd.notna(row["avg20"]) else None)}
         for nm, n in (("1h", per_h), ("2h", 2 * per_h)):
             k = min(j + n - 1, last)
             res["ret_" + nm] = sgn * (float(df.at[k, "close"]) / entry - 1) * 100 - cost_pct
@@ -140,6 +148,10 @@ def main():
     show(t[t["rsi_ok"]], "3) + RSI only")
     both = t[t["ema_ok"] & t["rsi_ok"]]
     show(both, "4) MACD + EMA50 + RSI (all 3)")
+    known = both[both["vol_low"].notna()]
+    show(known[known["vol_low"] == True], "5) all 3 + last-day vol < 20D avg")   # noqa: E712
+    show(known[known["vol_high"] == True], "6) all 3 + last-day vol > 20D avg")  # noqa: E712
+    show(known, "   (all 3, where 20D avg exists)")
     print()
     for d in ("BULL", "BEAR"):
         show(both[both["dir"] == d], f"   all 3, {d} only")
