@@ -1,0 +1,52 @@
+name: Backtest MACD VWAP
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Calendar days of history"
+        default: "90"
+      limit:
+        description: "First N F&O stocks (0 = all)"
+        default: "20"
+      tf:
+        description: "Candle minutes (15, 30, 60, 75)"
+        default: "15"
+      cost_pct:
+        description: "Round-trip cost per trade in %"
+        default: "0.1"
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Run MACD VWAP backtest
+        env:
+          UPSTOX_ACCESS_TOKEN: ${{ secrets.UPSTOX_TOKEN }}
+        run: python backtest_macd_vwap.py --days "${{ github.event.inputs.days }}" --limit "${{ github.event.inputs.limit }}" --tf "${{ github.event.inputs.tf }}" --cost-pct "${{ github.event.inputs.cost_pct }}" | tee backtest_macd_vwap_summary.txt
+      - name: Show result on the run page
+        if: always()
+        run: |
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat backtest_macd_vwap_summary.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Send result to Telegram
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          { echo "<b>backtest_macd_vwap result</b>"; echo "<pre>"; tail -c 3300 backtest_macd_vwap_summary.txt | sed 's/&/\&amp;/g; s/</\&lt;/g'; echo "</pre>"; } > msg.html
+          curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "parse_mode=HTML" --data-urlencode "text@msg.html" > /dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backtest-macd-vwap-result
+          path: |
+            backtest_macd_vwap_summary.txt
+            backtest_macd_vwap_trades.csv
