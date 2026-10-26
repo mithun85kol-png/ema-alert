@@ -45,7 +45,7 @@ def _position_line(label, info, direction, close, kind="day"):
     rng = ""
     if info.get("high") is not None and info.get("low") is not None:
         rng = f"{_p(info['low'])}–{_p(info['high'])}"
-    ref = {"day": "range", "month": "1M range"}[kind]
+    ref = {"day": "range", "month": "20D range"}[kind]
 
     if state == "FORMING":
         icon, text = "➖", "1st candle still forming (closes 10:30)"
@@ -53,13 +53,13 @@ def _position_line(label, info, direction, close, kind="day"):
         icon, text = "➖", f"alert is inside the 1st candle ({rng})"
     elif state == "ABOVE":
         icon = "✅" if bullish else "⚠️"
-        nm = "1M high" if kind == "month" else "high"
+        nm = "20D high" if kind == "month" else "high"
         text = f"Above {nm} {_p(info['high'])} (+{info['dist_pct']}%)"
         if kind == "month":
             text += " — breakout"
     elif state == "BELOW":
         icon = "⚠️" if bullish else "✅"
-        nm = "1M low" if kind == "month" else "low"
+        nm = "20D low" if kind == "month" else "low"
         text = f"Below {nm} {_p(info['low'])} (-{info['dist_pct']}%)"
         if kind == "month":
             text += " — breakdown"
@@ -68,7 +68,7 @@ def _position_line(label, info, direction, close, kind="day"):
         text = f"Inside {ref} ({info['pct']:.0f}% from low) {rng}"
         if kind == "month" and info.get("high"):
             gap = (info["high"] - close) / info["high"] * 100.0
-            text += f" · {gap:.1f}% below 1M high"
+            text += f" · {gap:.1f}% below 20D high"
 
     tail = ""
     if kind == "day" and info.get("bias") == "BULLISH":
@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v16 (2026-10-23)"
+BUILD_TAG = "short-v19 (2026-10-26)"
 
 
 def _ema920_line(info15, info75):
@@ -187,6 +187,20 @@ def _build_compact_alert_text(signal, parts=False):
     dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
     rows = []
 
+    # 0) DAILY / MONTHLY RSI (one short row)
+    _bull = direction == "BULLISH"
+    def _rsi_ok(v):
+        return (v >= 55) if _bull else (v <= 45)
+    _rp = []
+    _d = signal.get("daily_support") or {}
+    if _d.get("rsi") is not None:
+        _rp.append(f"Daily {'✅' if _rsi_ok(_d['rsi']) else '❌'} {_d['rsi']}")
+    _m = signal.get("monthly_rsi") or {}
+    if _m.get("rsi") is not None:
+        _rp.append(f"Monthly {'✅' if _rsi_ok(_m['rsi']) else '❌'} {_m['rsi']}")
+    if _rp:
+        rows.append("📊 <b>RSI:</b> " + " · ".join(_rp))
+
     # 1) DAILY (MACD + RSI + VOLUME)
     ds = signal.get("daily_support")
     if ds:
@@ -215,7 +229,7 @@ def _build_compact_alert_text(signal, parts=False):
             bits.append(f"Deliv {dp}% ({cmp_d})")
         both = [mark("Last-day volume"), mark("Last-day delivery")]
         icon = "❌ " if "❌ " in both else ("✅ " if "✅ " in both else "➖ ")
-        rows.append(f"{icon}<b>Last day:</b> " + " · ".join(bits) + " vs 1M avg")
+        rows.append(f"{icon}<b>Last day:</b> " + " · ".join(bits) + " vs 20D avg")
 
     # 4) EMA 9/20 (15-min)
     e15 = signal.get("ema920_15")
@@ -313,7 +327,7 @@ def flush_pending_alerts():
                 body = "\n".join((["  ·  ".join(links)] if links else []) + p["rows"])
                 # first 3 lines of the block (the only ones Telegram shows collapsed) are a short
                 # label + two invisible lines, so nothing readable shows before the tap
-                items.append(f"{line}\n<blockquote expandable>▼ tap korle detail\n\u2800\n\u2800\n{body}</blockquote>")
+                items.append(f"{line}\n<blockquote expandable>{body}</blockquote>")
             except Exception as e:
                 print(f"Single-message build failed for {s.get('symbol')}: {e}", flush=True)
         groups, cur, size = [], [], 0
@@ -325,7 +339,7 @@ def flush_pending_alerts():
             groups.append(cur)
         api = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
         for g in groups:
-            text = header + "\n\n" + "\n\n".join(g) + "\n\n<i>Niche tap korle detail</i>"
+            text = header + "\n" + "\n".join(g)
             try:
                 requests.post(api, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML",
                                          "disable_web_page_preview": True}, timeout=15).raise_for_status()
@@ -478,7 +492,7 @@ def send_alert(signal):
         sign = "+" if day_vol_vs_avg_pct >= 0 else ""
         day_volume_line = (
             f"Day Volume (prev day): {prev_day_volume:,} "
-            f"(1M avg: {volume_avg_1m:,.0f}, {sign}{day_vol_vs_avg_pct:.1f}% vs avg)\n"
+            f"(20D avg: {volume_avg_1m:,.0f}, {sign}{day_vol_vs_avg_pct:.1f}% vs avg)\n"
         )
     else:
         day_volume_line = ""
@@ -678,7 +692,7 @@ def send_alert(signal):
         sign = "+" if vs_avg_pct >= 0 else ""
         delivery_line = (
             f"Delivery % (prev day): {delivery_pct}% "
-            f"(1M avg: {delivery_avg_1m:.1f}%, {sign}{vs_avg_pct:.1f}% vs avg)\n"
+            f"(20D avg: {delivery_avg_1m:.1f}%, {sign}{vs_avg_pct:.1f}% vs avg)\n"
         )
     elif delivery_pct is not None:
         delivery_line = f"Delivery % (prev day): {delivery_pct}%\n"

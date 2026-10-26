@@ -1037,7 +1037,7 @@ def compute_alert_strength(signal):
     # volume first (2026-10-22 — "volume sobar opre")
     pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
     if pdv is not None and avg_v:
-        add("volume", "Last-day volume > 1M avg", pdv > avg_v)
+        add("volume", "Last-day volume > 20D avg", pdv > avg_v)
 
     ml = signal.get("macd_line")
     if ml is not None:
@@ -1062,7 +1062,7 @@ def compute_alert_strength(signal):
 
     dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
     if dp is not None and avg_d:
-        add("delivery", "Last-day delivery > 1M avg", dp > avg_d)
+        add("delivery", "Last-day delivery > 20D avg", dp > avg_d)
 
     vc = signal.get("vol_change_pct")
     if vc is not None:
@@ -2904,12 +2904,12 @@ def check_daily_macd_rsi_scan(history, symbol, delivery_pct=None, delivery_avg_1
     if len(df) >= 200:
         add("Daily EMA200 " + ("above" if bull else "below"), (close > float(last["ema200"])) == bull)
     add("EMA 9/20 " + ("bullish" if bull else "bearish"), (float(last["ema9"]) > float(last["ema20"])) == bull)
-    if len(df) >= 23:
-        window = df.iloc[-22:-1]
+    if len(df) >= 22:
+        window = df.iloc[-21:-1]   # prior 20 trading days
         if bull:
-            add("Above 1-month high", close > float(window["high"].max()))
+            add("Above 20-day high", close > float(window["high"].max()))
         else:
-            add("Below 1-month low", close < float(window["low"].min()))
+            add("Below 20-day low", close < float(window["low"].min()))
     vol_pct = None
     if len(df) >= 22 and float(last["volume"]) > 0:
         avg_v = float(df["volume"].iloc[-21:-1].mean())
@@ -2919,7 +2919,7 @@ def check_daily_macd_rsi_scan(history, symbol, delivery_pct=None, delivery_avg_1
     deliv_pct = None
     if delivery_pct is not None and delivery_avg_1m:
         deliv_pct = (delivery_pct / delivery_avg_1m - 1) * 100
-        add("Delivery > 1M avg", delivery_pct > delivery_avg_1m)
+        add("Delivery > 20D avg", delivery_pct > delivery_avg_1m)
 
     total = len(checks)
     passed = sum(1 for _, ok in checks if ok)

@@ -1334,7 +1334,7 @@ def build_momentum_volume_data(watchlist):
             # trading days (same 21-day "1M" window as multi_month_highs
             # above), from the `history` already fetched — no extra API
             # call. The alert shows where the close sits inside it.
-            month_window = history[-MONTHLY_HIGH_LOOKBACKS_TRADING_DAYS[1]:]
+            month_window = history[-MOMENTUM_LOOKBACK_TRADING_DAYS:]   # 20 trading days (2026-10-24)
             month_high = max(day["high"] for day in month_window)
             month_low = min(day["low"] for day in month_window)
 
@@ -2040,6 +2040,7 @@ def maybe_send_failure_summary(fo_failed, fo_total, n500_failed=None, n500_total
 # ---------------------------------------------------------------------
 
 _daily_history_cache = {}
+_monthly_history_cache = {}
 
 
 def _attach_daily_support(signal, symbol, instrument_key):
@@ -2053,6 +2054,17 @@ def _attach_daily_support(signal, symbol, instrument_key):
     except Exception as e:
         print(f"Daily support info failed for {symbol}: {e}", flush=True)
         signal["daily_support"] = None
+    # Monthly RSI (shown in the compact alert next to Daily RSI). Never blocks.
+    try:
+        if symbol not in _monthly_history_cache:
+            _monthly_history_cache[symbol] = fetch_daily_history(
+                instrument_key, days_back=config.MONTHLY_RSI_HISTORY_LOOKBACK_DAYS, include_today=True)
+        mh = _monthly_history_cache[symbol]
+        info = get_monthly_rsi_info(mh) if mh else None
+        if info:
+            signal["monthly_rsi"] = info
+    except Exception as e:
+        print(f"Monthly RSI failed for {symbol}: {e}", flush=True)
 
 
 def _daily_support_blocks(signal):
