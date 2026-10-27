@@ -1028,6 +1028,9 @@ ALERT_REQUIRE_DAILY_SUPPORT = False
 # Monthly RSI filter: True = alert is NOT sent if Monthly RSI is against the direction
 # (bullish needs monthly RSI >= BULL_MIN, bearish needs <= BEAR_MAX). Same 55/45 as the ✅/❌ shown.
 ALERT_REQUIRE_MONTHLY_RSI = True
+
+# True = cash-only (non-F&O) stocks send BULLISH alerts only; F&O stocks send both.
+CASH_STOCKS_BULLISH_ONLY = True
 MONTHLY_RSI_BULL_MIN = 55
 MONTHLY_RSI_BEAR_MAX = 45
 

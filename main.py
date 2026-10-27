@@ -2069,6 +2069,10 @@ def _attach_daily_support(signal, symbol, instrument_key):
 
 def _daily_support_blocks(signal):
     """True if the optional daily-support requirement is satisfied (or not enforced)."""
+    # Cash-only stocks: no bearish alerts (F&O stocks keep both directions)
+    if getattr(config, "CASH_STOCKS_BULLISH_ONLY", False) and signal.get("is_fno") is False and signal["direction"] == "BEARISH":
+        print(f"[cash-bearish] {signal.get('symbol')} BEARISH skipped (cash stock)", flush=True)
+        return True
     # Monthly RSI against the direction -> block (missing data never blocks)
     if getattr(config, "ALERT_REQUIRE_MONTHLY_RSI", False):
         mr = (signal.get("monthly_rsi") or {}).get("rsi")
