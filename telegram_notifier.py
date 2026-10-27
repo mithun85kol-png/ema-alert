@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v20 (2026-10-27)"
+BUILD_TAG = "short-v19 (2026-10-26)"
 
 
 def _ema920_line(info15, info75):
@@ -122,29 +122,6 @@ def _ema920_line(info15, info75):
     fast = (info15 or info75).get("ema_fast_period", 9)
     slow = (info15 or info75).get("ema_slow_period", 20)
     return f"EMA {fast}/{slow}: " + "  |  ".join(parts) + "\n"
-
-
-_SECTOR_FALLBACK = {"DEVYANI": "Consumer Services", "IREDA": "Financial Services", "360ONE": "Financial Services"}
-_INDUSTRY_MAP = None
-
-
-def _sector_label(symbol):
-    """Short sector/industry name for a symbol ('' if unknown). Never raises."""
-    global _INDUSTRY_MAP
-    try:
-        sym = str(symbol).upper()
-        if _INDUSTRY_MAP is None:
-            try:
-                import instruments
-                _INDUSTRY_MAP = instruments.get_industry_map() or {}
-            except Exception:
-                _INDUSTRY_MAP = {}
-        v = _INDUSTRY_MAP.get(sym) or config.STOCK_SECTOR_MAP.get(sym) or _SECTOR_FALLBACK.get(sym)
-        if v and v.upper().startswith("NIFTY "):
-            v = v[6:].title()
-        return v or ""
-    except Exception:
-        return ""
 
 
 def _build_compact_alert_text(signal, parts=False):
@@ -340,9 +317,7 @@ def flush_pending_alerts():
                 dcp = s.get("day_change_pct")
                 dc_txt = f" ({dcp:+.2f}%)" if dcp is not None else ""
                 # ONE plain line per stock in the main message (outside the tap block):
-                _sec = _sector_label(s["symbol"])
-                _sec = f" <i>({_sec})</i>" if _sec else ""
-                line = f"{'🟢' if s['direction'] == 'BULLISH' else '🔴'} <b>{s['symbol']}</b>{_sec}{score} · {_p(float(s['close']))}{dc_txt}"
+                line = f"{'🟢' if s['direction'] == 'BULLISH' else '🔴'} <b>{s['symbol']}</b>{score} · {_p(float(s['close']))}{dc_txt}"
                 links = []
                 if s.get("chart_link"):
                     links.append(f'📈 <a href="{s["chart_link"]}">Chart</a>')

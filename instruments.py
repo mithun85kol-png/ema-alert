@@ -242,36 +242,6 @@ def _save_nifty500_cache(cache):
         json.dump(cache, f)
 
 
-def get_industry_map():
-    """{SYMBOL: Industry} from the NSE Nifty 500 CSV ("Industry" column), cached per
-    calendar day in the same cache file. Never raises; returns {} if unavailable."""
-    try:
-        cache = _load_nifty500_cache()
-        today_str = dt.date.today().isoformat()
-        if cache.get("industries") and cache.get("ind_date") == today_str:
-            return cache["industries"]
-        ind = {}
-        try:
-            resp = requests.get(NIFTY500_LIST_URL, headers=NSE_HEADERS, timeout=20)
-            resp.raise_for_status()
-            for row in csv.DictReader(io.StringIO(resp.text)):
-                sym = (row.get("Symbol") or row.get("SYMBOL") or "").strip().upper()
-                industry = (row.get("Industry") or row.get("INDUSTRY") or "").strip()
-                if sym and industry:
-                    ind[sym] = industry
-        except Exception as e:
-            print(f"Industry list fetch failed: {e}", flush=True)
-        if ind:
-            cache["industries"] = ind
-            cache["ind_date"] = today_str
-            _save_nifty500_cache(cache)
-            return ind
-        return cache.get("industries") or {}
-    except Exception as e:
-        print(f"Industry map failed: {e}", flush=True)
-        return {}
-
-
 def fetch_nifty500_symbols():
     """
     Fetches the current Nifty 500 constituent list (trading symbols)
@@ -305,9 +275,7 @@ def fetch_nifty500_symbols():
                 symbols.append(sym)
         if symbols:
             print(f"Fetched {len(symbols)} Nifty 500 symbols.", flush=True)
-            cache["date"] = today_str
-            cache["symbols"] = symbols
-            _save_nifty500_cache(cache)
+            _save_nifty500_cache({"date": today_str, "symbols": symbols})
             return symbols
         print("Nifty 500 list fetch returned no symbols.", flush=True)
     except Exception as e:
