@@ -1025,6 +1025,12 @@ DAILY_ALERT_MANDATORY_RSI_VOLUME = True
 # its direction (skipped when the daily data can't be fetched).
 ALERT_REQUIRE_DAILY_SUPPORT = False
 
+# Monthly RSI filter: True = alert is NOT sent if Monthly RSI is against the direction
+# (bullish needs monthly RSI >= BULL_MIN, bearish needs <= BEAR_MAX). Same 55/45 as the ✅/❌ shown.
+ALERT_REQUIRE_MONTHLY_RSI = True
+MONTHLY_RSI_BULL_MIN = 55
+MONTHLY_RSI_BEAR_MAX = 45
+
 # DAILY alert: MACD cross may be up to this many daily candles old (1 = last candle only).
 DAILY_ALERT_CROSS_LOOKBACK = 3
 # Send a short "scan ran, nothing qualified" note when the daily scan finds no alert.

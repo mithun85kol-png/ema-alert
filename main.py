@@ -2069,6 +2069,14 @@ def _attach_daily_support(signal, symbol, instrument_key):
 
 def _daily_support_blocks(signal):
     """True if the optional daily-support requirement is satisfied (or not enforced)."""
+    # Monthly RSI against the direction -> block (missing data never blocks)
+    if getattr(config, "ALERT_REQUIRE_MONTHLY_RSI", False):
+        mr = (signal.get("monthly_rsi") or {}).get("rsi")
+        if mr is not None:
+            bull = signal["direction"] == "BULLISH"
+            if (bull and mr < config.MONTHLY_RSI_BULL_MIN) or (not bull and mr > config.MONTHLY_RSI_BEAR_MAX):
+                print(f"[monthly-rsi] {signal.get('symbol')} {signal['direction']} skipped (monthly RSI {mr})", flush=True)
+                return True
     if not getattr(config, "ALERT_REQUIRE_DAILY_SUPPORT", False):
         return False
     ds = signal.get("daily_support")
