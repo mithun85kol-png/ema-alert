@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v21 (2026-10-27)"
+BUILD_TAG = "short-v22 (2026-10-28)"
 
 
 def _ema920_line(info15, info75):
@@ -124,7 +124,26 @@ def _ema920_line(info15, info75):
     return f"EMA {fast}/{slow}: " + "  |  ".join(parts) + "\n"
 
 
-_SECTOR_FALLBACK = {"DEVYANI": "Consumer Services", "IREDA": "Financial Services", "360ONE": "Financial Services"}
+_SECTOR_FALLBACK = {
+    "DEVYANI": "Consumer Services", "IREDA": "Financial Services", "360ONE": "Financial Services",
+    "CHENNPETRO": "Oil & Gas", "KEC": "Capital Goods", "CONCORDBIO": "Pharma", "INDUSTOWER": "Telecom",
+    "FORCEMOT": "Auto", "TRIDENT": "Textiles", "UJJIVANSFB": "Bank", "ADANIENSOL": "Power",
+    "ADANIENT": "Metals & Mining", "ADANIPORTS": "Services", "ADANIGREEN": "Power", "ADANIPOWER": "Power",
+    "RELIANCE": "Oil & Gas", "ONGC": "Oil & Gas", "BPCL": "Oil & Gas", "IOC": "Oil & Gas", "GAIL": "Oil & Gas",
+    "NTPC": "Power", "POWERGRID": "Power", "TATAPOWER": "Power", "NHPC": "Power", "JSWENERGY": "Power",
+    "BHARTIARTL": "Telecom", "IDEA": "Telecom", "LT": "Capital Goods", "SIEMENS": "Capital Goods",
+    "ABB": "Capital Goods", "BHEL": "Capital Goods", "HAL": "Defence", "BEL": "Defence", "BDL": "Defence",
+    "BAJFINANCE": "Financial Services", "BAJAJFINSV": "Financial Services", "SBICARD": "Financial Services",
+    "CHOLAFIN": "Financial Services", "MUTHOOTFIN": "Financial Services", "PFC": "Financial Services",
+    "RECLTD": "Financial Services", "HDFCLIFE": "Insurance", "SBILIFE": "Insurance", "ICICIGI": "Insurance",
+    "ZOMATO": "Consumer Services", "ETERNAL": "Consumer Services", "TITAN": "Consumer Durables",
+    "DLF": "Realty", "GODREJPROP": "Realty", "ULTRACEMCO": "Cement", "AMBUJACEM": "Cement",
+    "SHREECEM": "Cement", "GRASIM": "Cement", "TATASTEEL": "Metals", "JSWSTEEL": "Metals",
+    "HINDALCO": "Metals", "VEDL": "Metals", "COALINDIA": "Mining", "SAIL": "Metals", "NMDC": "Mining",
+    "ASIANPAINT": "Consumer Durables", "PIDILITIND": "Chemicals", "UPL": "Chemicals", "SRF": "Chemicals",
+    "APOLLOHOSP": "Healthcare", "MAXHEALTH": "Healthcare", "INDIGO": "Aviation", "IRCTC": "Services",
+    "PAYTM": "Financial Services", "NYKAA": "Consumer Services", "DIXON": "Consumer Durables",
+}
 _INDUSTRY_MAP = None
 
 
@@ -342,14 +361,16 @@ def flush_pending_alerts():
                 # ONE plain line per stock in the main message (outside the tap block):
                 _sec = _sector_label(s["symbol"])
                 _sec = f" <i>({_sec})</i>" if _sec else ""
-                line = f"{'🟢' if s['direction'] == 'BULLISH' else '🔴'} <b>{s['symbol']}</b>{_sec}{score} · {_p(float(s['close']))}{dc_txt}"
                 links = []
                 if s.get("chart_link"):
                     links.append(f'📈 <a href="{s["chart_link"]}">Chart</a>')
                 if s.get("screener_link"):
                     links.append(f'📊 <a href="{s["screener_link"]}">Screener</a>')
                 p = _build_compact_alert_text(s, parts=True)
-                body = "\n".join((["  ·  ".join(links)] if links else []) + p["rows"])
+                body = "\n".join(p["rows"])
+                line = (f"{'🟢' if s['direction'] == 'BULLISH' else '🔴'} <b>{s['symbol']}</b>{_sec}"
+                        + ("  " + "  ·  ".join(links) if links else "")
+                        + f"\n{score.strip()} · {_p(float(s['close']))}{dc_txt}")
                 # first 3 lines of the block (the only ones Telegram shows collapsed) are a short
                 # label + two invisible lines, so nothing readable shows before the tap
                 items.append(f"{line}\n<blockquote expandable>{body}</blockquote>")
