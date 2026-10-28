@@ -6009,7 +6009,8 @@
     "2026-10-22",
     "2026-10-23",
     "2026-10-26",
-    "2026-10-27"
+    "2026-10-27",
+    "2026-10-28"
   ],
   "ADANIPOWER:BEARISH": [
     "2026-08-14 12:30:00+05:30"
@@ -10180,5 +10181,14 @@
   ],
   "RRKABEL::N500:BULLISH": [
     "2026-10-28 15:00:00+05:30"
+  ],
+  "PIDILITIND::MONTHLY:BEARISH": [
+    "Oct 2026"
+  ],
+  "MANKIND::MONTHLY:BULLISH": [
+    "Oct 2026"
+  ],
+  "AUBANK::MONTHLY:BEARISH": [
+    "Oct 2026"
   ]
 }
