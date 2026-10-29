@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v23 (2026-10-28)"
+BUILD_TAG = "short-v29 (2026-10-29)"
 
 
 def _ema920_line(info15, info75):
@@ -142,7 +142,27 @@ _SECTOR_FALLBACK = {
     "HINDALCO": "Metals", "VEDL": "Metals", "COALINDIA": "Mining", "SAIL": "Metals", "NMDC": "Mining",
     "ASIANPAINT": "Consumer Durables", "PIDILITIND": "Chemicals", "UPL": "Chemicals", "SRF": "Chemicals",
     "APOLLOHOSP": "Healthcare", "MAXHEALTH": "Healthcare", "INDIGO": "Aviation", "IRCTC": "Services",
-    "PAYTM": "Financial Services", "NYKAA": "Consumer Services", "DIXON": "Consumer Durables",
+    "YESBANK": "Bank", "PETRONET": "Oil & Gas", "PAGEIND": "Textiles", "HYUNDAI": "Auto", "APLAPOLLO": "Metals",
+    "GODFRYPHLP": "FMCG", "RADICO": "FMCG", "DMART": "Retail", "OIL": "Oil & Gas", "ATHERENERG": "Auto",
+    "BANKINDIA": "PSU Bank", "ICICILIFE": "Insurance", "CAMS": "Financial Services", "GMRAIRPORT": "Services",
+    "INDHOTEL": "Consumer Services", "ZYDUSLIFE": "Pharma", "TORNTPHARM": "Pharma", "NMDC": "Metals",
+    "PAYTM": "Financial Services", "HDFCAMC": "Financial Services", "ANGELONE": "Financial Services",
+    "BSE": "Financial Services", "MCX": "Financial Services", "LICI": "Insurance", "POLICYBZR": "Financial Services",
+    "JIOFIN": "Financial Services", "LICHSGFIN": "Financial Services", "MANAPPURAM": "Financial Services",
+    "PIIND": "Chemicals", "TATACHEM": "Chemicals", "DEEPAKNTR": "Chemicals", "NAVINFLUOR": "Chemicals",
+    "OBEROIRLTY": "Realty", "PRESTIGE": "Realty", "LODHA": "Realty", "PHOENIXLTD": "Realty",
+    "HAVELLS": "Consumer Durables", "VOLTAS": "Consumer Durables", "POLYCAB": "Capital Goods", "KEI": "Capital Goods",
+    "CUMMINSIND": "Capital Goods", "SUPREMEIND": "Capital Goods", "ASTRAL": "Capital Goods", "CGPOWER": "Capital Goods",
+    "INOXWIND": "Power", "SUZLON": "Power", "TORNTPOWER": "Power", "WAAREEENER": "Power", "PREMIERENE": "Power",
+    "IRFC": "Financial Services", "RVNL": "Railways", "IRCON": "Railways", "CONCOR": "Services", "INDIANB": "PSU Bank",
+    "BANKBARODA": "PSU Bank", "IDBI": "Bank", "RBLBANK": "Bank", "CUB": "Bank", "FEDERALBNK": "Bank",
+    "LAURUSLABS": "Pharma", "GLENMARK": "Pharma", "MANKIND": "Pharma", "FORTIS": "Healthcare", "LTF": "Financial Services",
+    "COCHINSHIP": "Defence", "MAZDOCK": "Defence", "SOLARINDS": "Defence", "BHARATFORG": "Auto", "BOSCHLTD": "Auto",
+    "EXIDEIND": "Auto", "AMBER": "Consumer Durables", "KAYNES": "Capital Goods", "TIINDIA": "Auto", "UNOMINDA": "Auto",
+    "NAUKRI": "IT", "OFSS": "IT", "KPITTECH": "IT", "TATAELXSI": "IT", "TATATECH": "IT", "SONACOMS": "Auto",
+    "PGEL": "Consumer Durables", "NBCC": "Infra", "NCC": "Infra", "GODREJPROP": "Realty",
+    "COFORGE": "IT", "HCLTECH": "IT", "TECHM": "IT", "TATACONSUM": "FMCG", "NESTLEIND": "FMCG", "ICICIBANK": "Bank",
+    "IOC": "Oil & Gas", "ONGC": "Oil & Gas", "NYKAA": "Consumer Services", "DIXON": "Consumer Durables",
 }
 _INDUSTRY_MAP = None
 
@@ -161,6 +181,8 @@ def _sector_label(symbol):
         v = _INDUSTRY_MAP.get(sym) or config.STOCK_SECTOR_MAP.get(sym) or _SECTOR_FALLBACK.get(sym)
         if v and v.upper().startswith("NIFTY "):
             v = v[6:].title()
+            v = {"It": "IT", "Fmcg": "FMCG", "Oil And Gas": "Oil & Gas", "Fin Service": "Financial Services",
+                 "Psu Bank": "PSU Bank", "Consumer Durables": "Consumer Durables"}.get(v, v)
         return v or ""
     except Exception:
         return ""
@@ -1145,33 +1167,35 @@ def send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links=N
     bullish = sorted(bullish, key=_sort_key, reverse=True)
     bearish = sorted(bearish, key=_sort_key, reverse=True)
 
-    def _fmt(symbols, links):
-        if not links and not pct_changes:
-            return ", ".join(symbols)
+    def _one(sym, links):
+        label = f"<a href=\"{links[sym]}\">{sym}</a>" if sym in links else sym
+        if sym in pct_changes:
+            pct = pct_changes[sym]
+            label += f" {'+' if pct >= 0 else ''}{pct:.2f}%"
+        return label
 
-        def _one(sym):
-            label = f"<a href=\"{links[sym]}\">{sym}</a>" if sym in links else sym
-            if sym in pct_changes:
-                pct = pct_changes[sym]
-                sign = "+" if pct >= 0 else ""
-                label += f" {sign}{pct:.2f}%"
-            return f"• {label}"
-
-        return "\n".join(_one(sym) for sym in symbols)
+    def _sector_blocks(symbols, links):
+        """Group by sector: biggest sector first; inside a sector strongest mover first."""
+        groups = {}
+        for sym in symbols:
+            groups.setdefault(_sector_label(sym) or "Others", []).append(sym)
+        order = sorted(groups.items(), key=lambda kv: (kv[0] == "Others", -len(kv[1]), kv[0]))
+        return [f"▪️ <b>{sec}</b> ({len(syms)}): " + "  ·  ".join(_one(s, links) for s in syms)
+                for sec, syms in order]
 
     date_str = now_ist.strftime("%Y-%m-%d")
     time_str = now_ist.strftime("%H:%M")
 
-    lines = [f"📐 <b>F&O Opening 15-min Bias</b> — {date_str} {time_str}\n"]
+    lines = [f"📐 <b>F&O Opening 15-min Bias</b> — {date_str} {time_str}  <i>(sector wise)</i>\n"]
 
     if bullish:
         lines.append(f"🟢 <b>Open = Low</b> ({len(bullish)}):")
-        lines.append(_fmt(bullish, bullish_links))
+        lines.extend(_sector_blocks(bullish, bullish_links))
         lines.append("")
 
     if bearish:
         lines.append(f"🔴 <b>Open = High</b> ({len(bearish)}):")
-        lines.append(_fmt(bearish, bearish_links))
+        lines.extend(_sector_blocks(bearish, bearish_links))
         lines.append("")
 
     if not bullish and not bearish:
@@ -1181,19 +1205,62 @@ def send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links=N
     if no_data:
         lines.append(f"⚪ No data ({len(no_data)}): {', '.join(no_data)}")
 
-    text = "\n".join(lines).rstrip()
+    chunks, cur = [], []
+    for ln in lines:
+        if cur and len("\n".join(cur)) + len(ln) > 3600:
+            chunks.append("\n".join(cur).rstrip()); cur = []
+        cur.append(ln)
+    if cur:
+        chunks.append("\n".join(cur).rstrip())
 
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    for text in chunks:
+        try:
+            r = requests.post(url, data={
+                "chat_id": config.TELEGRAM_CHAT_ID,
+                "text": text,
+                "parse_mode": "HTML",
+                "disable_web_page_preview": True,
+            }, timeout=15)
+            r.raise_for_status()
+        except Exception as e:
+            print("Telegram send failed (opening_bias_report):", e)
+
+
+def send_sector_performance_report(all_pct, now_ist, month_pct=None):
+    """Separate alert: sector-wise performance of the 1st 15-min candle (avg % change of the
+    F&O stocks in each sector vs previous close), strongest sector first."""
+    if not all_pct:
+        print("Sector performance: no data, skipping.", flush=True)
+        return
+    day_pct = (month_pct or {}).get("__day__") or {}
+    groups = {}
+    for sym, pct in all_pct.items():
+        groups.setdefault(_sector_label(sym) or "Others", []).append((sym, pct))
+    rows = []
+    for sec, items in groups.items():
+        avg = sum(p for _, p in items) / len(items)
+        up = sum(1 for _, p in items if p > 0)
+        ms = [month_pct[s] for s, _ in items if month_pct and s in month_pct]
+        m_avg = sum(ms) / len(ms) if ms else None
+        ds_ = [day_pct[s] for s, _ in items if s in day_pct]
+        d_avg = sum(ds_) / len(ds_) if ds_ else None
+        rows.append((sec, avg, up, len(items) - up, m_avg, d_avg))
+    rows.sort(key=lambda r: (r[0] == "Others", -r[1]))
+    lines = [f"🏭 <b>SECTOR PERFORMANCE — 1st 15-min</b>  {now_ist.strftime('%H:%M')}",
+             "<i>1st 15-min avg change vs prev close  │  1D = last day  │  1M = last 1 month</i>\n"]
+    for sec, avg, up, dn, m_avg, d_avg in rows:
+        icon = "🟢" if avg >= 0.15 else ("🔴" if avg <= -0.15 else "⚪")
+        mtxt = "" if d_avg is None else f"   │ 1D {d_avg:+.1f}%"
+        mtxt += "" if m_avg is None else f"   │ 1M {m_avg:+.1f}%"
+        lines.append(f"{icon} <b>{sec}</b>  {avg:+.2f}%  (↑{up} ↓{dn}){mtxt}")
+    text = "\n".join(lines)
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
     try:
-        r = requests.post(url, data={
-            "chat_id": config.TELEGRAM_CHAT_ID,
-            "text": text,
-            "parse_mode": "HTML",
-            "disable_web_page_preview": True,
-        }, timeout=15)
-        r.raise_for_status()
+        requests.post(url, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text[:4000], "parse_mode": "HTML",
+                                 "disable_web_page_preview": True}, timeout=15).raise_for_status()
     except Exception as e:
-        print("Telegram send failed (opening_bias_report):", e)
+        print("Telegram send failed (sector_performance):", e)
 
 
 def send_ema_cross_report(crosses, now_ist, period_label="Fresh Cross"):

@@ -142,7 +142,7 @@ except ImportError:
     # the repo root and this feature resumes automatically.
     corporate_actions = None
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan, check_daily_macd_rsi_scan, get_daily_support_info, compute_alert_strength
-from telegram_notifier import flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
+from telegram_notifier import flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_sector_performance_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -1608,6 +1608,7 @@ def build_todays_opening_bias_list(now_ist):
 
     bullish, bearish, no_data = [], [], []
     pct_changes = {}
+    all_pct = {}
     for symbol in watchlist:
         if symbol not in dfs:
             no_data.append(symbol)
@@ -1616,6 +1617,10 @@ def build_todays_opening_bias_list(now_ist):
         if df15 is None or not _opening_candle_reliable(df15, now_ist):
             no_data.append(symbol)
             continue
+        # first-15-min change for EVERY stock (sector performance report)
+        _pc = (pivots.get(symbol) or {}).get("prev_close")
+        if _pc and not df15.empty:
+            all_pct[symbol] = (float(df15.iloc[0]["close"]) - _pc) / _pc * 100.0
         bias = get_opening_candle_bias(df15, symbol)
         if bias == "BULLISH":
             bullish.append(symbol)
@@ -1632,7 +1637,12 @@ def build_todays_opening_bias_list(now_ist):
             close = float(df15.iloc[0]["close"])
             pct_changes[symbol] = (close - prev_close) / prev_close * 100.0
 
+    global _LAST_ALL_PCT
+    _LAST_ALL_PCT = all_pct
     return sorted(bullish), sorted(bearish), sorted(no_data), pct_changes
+
+
+_LAST_ALL_PCT = {}
 
 
 def run_opening_bias_report(now_ist):
@@ -1682,6 +1692,44 @@ def run_opening_bias_report(now_ist):
     bearish_links = {sym: build_chart_link(sym) for sym in bearish}
 
     send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links, bearish_links, pct_changes)
+    try:
+        try:
+            _wl = instruments.resolve_fo_stock_list(None if config.USE_FULL_FO_LIST else config.FO_STOCK_WATCHLIST)
+            _m1 = build_1month_changes({s: _wl[s] for s in _LAST_ALL_PCT if s in _wl})
+        except Exception as e:
+            print(f"1-month sector data failed: {e}", flush=True)
+            _m1 = {"__day__": {}}
+        send_sector_performance_report(_LAST_ALL_PCT, now_ist, _m1)
+    except Exception as e:
+        print(f"Sector performance report failed: {e}", flush=True)
+
+
+def build_1month_changes(watchlist):
+    """{symbol: % change over ~1 month} = last completed daily close vs the close ~30 days
+    earlier. Failures are skipped quietly (sector just averages the rest)."""
+    out = {}
+    day_out = {}
+
+    def _one(sym, key):
+        h = fetch_daily_history(key, days_back=35, include_today=False)
+        if len(h) < 10:
+            return sym, None
+        first, last, prev = float(h[0]["close"]), float(h[-1]["close"]), float(h[-2]["close"])
+        if prev:
+            day_out[sym] = (last - prev) / prev * 100.0   # last trading day
+        return sym, ((last - first) / first * 100.0 if first else None)
+
+    with ThreadPoolExecutor(max_workers=config.PIVOT_FETCH_WORKERS) as pool:
+        futs = [pool.submit(_one, s, k) for s, k in watchlist.items()]
+        for f in as_completed(futs):
+            try:
+                s, v = f.result()
+                if v is not None:
+                    out[s] = v
+            except Exception as e:
+                print(f"1M change failed: {e}", flush=True)
+    out["__day__"] = day_out
+    return out
 
 
 def build_todays_top_movers_1min(now_ist):
@@ -4242,7 +4290,45 @@ def _run_inner():
     maybe_send_failure_summary(fo_failed, fo_total, n500_failed, n500_total)
 
 
+def _upstox_token_ok():
+    """False only when Upstox clearly rejects the token (401). Network trouble => True (don't block)."""
+    try:
+        r = requests.get("https://api.upstox.com/v2/user/profile",
+                         headers={"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}", "Accept": "application/json"},
+                         timeout=15)
+        return r.status_code != 401
+    except Exception as e:
+        print(f"Token check skipped ({e})", flush=True)
+        return True
+
+
+def _notify_token_expired():
+    """Telegram note (max once per 60 min, remembered in alert_state.json)."""
+    try:
+        st = state.load_state()
+        now = dt.datetime.now()
+        last = st.get("_token_notice")
+        if last:
+            try:
+                if (now - dt.datetime.fromisoformat(last)).total_seconds() < 3600:
+                    return
+            except Exception:
+                pass
+        st["_token_notice"] = now.isoformat()
+        state.save_state(st)
+        requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                      data={"chat_id": config.TELEGRAM_CHAT_ID, "parse_mode": "HTML",
+                            "text": "⚠️ <b>UPSTOX TOKEN EXPIRED</b>\nAj kono alert ashbe na. Notun token toiri kore GitHub → Settings → Secrets → <b>UPSTOX_TOKEN</b> update koro."},
+                      timeout=15)
+    except Exception as e:
+        print(f"Token notice failed: {e}", flush=True)
+
+
 def run():
+    if not _upstox_token_ok():
+        print("Upstox token rejected (401) — skipping run.", flush=True)
+        _notify_token_expired()
+        return
     try:
         _run_inner()
     finally:
