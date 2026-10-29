@@ -4293,7 +4293,8 @@ def _run_inner():
 def _upstox_token_ok():
     """False only when Upstox clearly rejects the token (401). Network trouble => True (don't block)."""
     try:
-        r = requests.get("https://api.upstox.com/v2/user/profile",
+        r = requests.get("https://api.upstox.com/v2/market-quote/ltp",
+                         params={"instrument_key": "NSE_INDEX|Nifty 50"},
                          headers={"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}", "Accept": "application/json"},
                          timeout=15)
         return r.status_code != 401
