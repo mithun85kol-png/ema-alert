@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v29 (2026-10-29)"
+BUILD_TAG = "short-v30 (2026-11-02)"
 
 
 def _ema920_line(info15, info75):
@@ -1180,8 +1180,11 @@ def send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links=N
         for sym in symbols:
             groups.setdefault(_sector_label(sym) or "Others", []).append(sym)
         order = sorted(groups.items(), key=lambda kv: (kv[0] == "Others", -len(kv[1]), kv[0]))
-        return [f"▪️ <b>{sec}</b> ({len(syms)}): " + "  ·  ".join(_one(s, links) for s in syms)
-                for sec, syms in order]
+        out = []
+        for sec, syms in order:
+            out.append(f"▪️ <b>{sec}</b> ({len(syms)})")
+            out.extend(f"   • {_one(s, links)}" for s in syms)
+        return out
 
     date_str = now_ist.strftime("%Y-%m-%d")
     time_str = now_ist.strftime("%H:%M")
