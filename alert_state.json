@@ -6357,7 +6357,8 @@
     "2026-10-26",
     "2026-10-27",
     "2026-10-28",
-    "2026-11-02"
+    "2026-11-02",
+    "2026-11-03"
   ],
   "BANKINDIA::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-21 11:00:00+05:30",
@@ -10281,5 +10282,17 @@
   ],
   "NAVINFLUOR:BULLISH": [
     "2026-11-03 13:00:00+05:30"
+  ],
+  "INDHOTEL::MONTHLY:BULLISH": [
+    "Nov 2026"
+  ],
+  "DLF::MONTHLY:BULLISH": [
+    "Nov 2026"
+  ],
+  "DRREDDY::MONTHLY:BULLISH": [
+    "Nov 2026"
+  ],
+  "PETRONET::MONTHLY:BULLISH": [
+    "Nov 2026"
   ]
 }
