@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v30 (2026-11-02)"
+BUILD_TAG = "short-v33 (2026-11-04)"
 
 
 def _ema920_line(info15, info75):
@@ -256,14 +256,28 @@ def _build_compact_alert_text(signal, parts=False):
     def _rsi_ok(v):
         return (v >= 55) if _bull else (v <= 45)
     _rp = []
-    _d = signal.get("daily_support") or {}
-    if _d.get("rsi") is not None:
-        _rp.append(f"Daily {'✅' if _rsi_ok(_d['rsi']) else '❌'} {_d['rsi']}")
     _m = signal.get("monthly_rsi") or {}
     if _m.get("rsi") is not None:
         _rp.append(f"Monthly {'✅' if _rsi_ok(_m['rsi']) else '❌'} {_m['rsi']}")
+    _d = signal.get("daily_support") or {}
+    if _d.get("rsi") is not None:
+        _rp.append(f"Daily {'✅' if _rsi_ok(_d['rsi']) else '❌'} {_d['rsi']}")
     if _rp:
         rows.append("📊 <b>RSI:</b> " + " · ".join(_rp))
+
+    # 0b) 52-WEEK HIGH / LOW
+    _w = signal.get("week52")
+    if _w:
+        _tag = ""
+        if _w.get("pct_from_high") is not None and _w["pct_from_high"] >= -0.01:
+            _tag = " 🚀 <b>NEW 52W HIGH</b>"
+        elif _w.get("pct_from_low") is not None and _w["pct_from_low"] <= 0.01:
+            _tag = " ⚠️ <b>NEW 52W LOW</b>"
+        elif _w.get("pct_from_high") is not None and _w["pct_from_high"] >= -5:
+            _tag = " 🔥 near high"
+        elif _w.get("pct_from_low") is not None and _w["pct_from_low"] <= 5:
+            _tag = " ⚠️ near low"
+        rows.append(f"📆 <b>52W:</b> High {_p(_w['high'])} ({_w['pct_from_high']:+.1f}%) · Low {_p(_w['low'])} ({_w['pct_from_low']:+.1f}%){_tag}")
 
     # 1) DAILY (MACD + RSI + VOLUME)
     ds = signal.get("daily_support")

@@ -2111,6 +2111,20 @@ def _attach_daily_support(signal, symbol, instrument_key):
         info = get_monthly_rsi_info(mh) if mh else None
         if info:
             signal["monthly_rsi"] = info
+        # 52-week high / low from the same long daily history (last 365 days)
+        if mh:
+            cutoff = (_now_ist().date() - dt.timedelta(days=365)).isoformat()
+            rows = [r for r in mh if str(r["date"])[:10] >= cutoff]
+            if len(rows) >= 20:
+                hi = max(float(r["high"]) for r in rows)
+                lo = min(float(r["low"]) for r in rows)
+                px = float(signal.get("close") or rows[-1]["close"])
+                hi, lo = max(hi, px), min(lo, px)   # today's price can set a new high/low
+                signal["week52"] = {
+                    "high": hi, "low": lo,
+                    "pct_from_high": (px - hi) / hi * 100.0 if hi else None,
+                    "pct_from_low": (px - lo) / lo * 100.0 if lo else None,
+                }
     except Exception as e:
         print(f"Monthly RSI failed for {symbol}: {e}", flush=True)
 
@@ -2124,6 +2138,9 @@ def _daily_support_blocks(signal):
     # Monthly RSI against the direction -> block (missing data never blocks)
     if getattr(config, "ALERT_REQUIRE_MONTHLY_RSI", False):
         mr = (signal.get("monthly_rsi") or {}).get("rsi")
+        if mr is None and getattr(config, "MONTHLY_RSI_BLOCK_IF_MISSING", False):
+            print(f"[monthly-rsi] {signal.get('symbol')} {signal['direction']} skipped (no monthly RSI data)", flush=True)
+            return True
         if mr is not None:
             bull = signal["direction"] == "BULLISH"
             if (bull and mr < config.MONTHLY_RSI_BULL_MIN) or (not bull and mr > config.MONTHLY_RSI_BEAR_MAX):

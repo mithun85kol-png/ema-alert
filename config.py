@@ -1033,6 +1033,8 @@ ALERT_REQUIRE_MONTHLY_RSI = True
 CASH_STOCKS_BULLISH_ONLY = True
 MONTHLY_RSI_BULL_MIN = 55
 MONTHLY_RSI_BEAR_MAX = 45
+# True = if Monthly RSI cannot be calculated (new listing / data fetch failed) the alert is also blocked.
+MONTHLY_RSI_BLOCK_IF_MISSING = True
 
 # DAILY alert: MACD cross may be up to this many daily candles old (1 = last candle only).
 DAILY_ALERT_CROSS_LOOKBACK = 3
