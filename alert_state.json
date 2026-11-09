@@ -686,7 +686,8 @@
     "2026-11-03",
     "2026-11-04",
     "2026-11-05",
-    "2026-11-06"
+    "2026-11-06",
+    "2026-11-09"
   ],
   "MAZDOCK::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-25 10:30:00+05:30"
@@ -10516,6 +10517,12 @@
     "2026-11-06 13:45:00+05:30"
   ],
   "LODHA::MONTHLY:BULLISH": [
+    "Nov 2026"
+  ],
+  "ICICIBANK::MONTHLY:BULLISH": [
+    "Nov 2026"
+  ],
+  "GLENMARK::MONTHLY:BULLISH": [
     "Nov 2026"
   ]
 }
