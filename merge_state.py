@@ -87,12 +87,36 @@ def _parse_dt(candle_time_str):
     return None
 
 
+def _merge_alert_log(a, b):
+    """Union of two {day: [entries]} dicts (entries identified by symbol+direction+time)."""
+    out = {}
+    for src in (a if isinstance(a, dict) else {}, b if isinstance(b, dict) else {}):
+        for day, entries in src.items():
+            lst = out.setdefault(day, [])
+            seen = {(e.get("symbol"), e.get("direction"), str(e.get("time"))) for e in lst}
+            for e in entries or []:
+                sig = (e.get("symbol"), e.get("direction"), str(e.get("time")))
+                if sig not in seen:
+                    lst.append(e)
+                    seen.add(sig)
+    for old in sorted(out.keys())[:-6]:
+        out.pop(old, None)
+    return out
+
+
 def merge(local, remote):
     keys = set(local.keys()) | set(remote.keys())
     merged = {}
     for key in keys:
-        combined = list(_times(local.get(key)))
-        for ct in _times(remote.get(key)):
+        if key == "_alerts_log":
+            merged[key] = _merge_alert_log(local.get(key), remote.get(key))
+            continue
+        lv, rv = local.get(key), remote.get(key)
+        if isinstance(lv, str) or isinstance(rv, str):      # plain markers, e.g. _token_notice
+            merged[key] = max([v for v in (lv, rv) if isinstance(v, str)])
+            continue
+        combined = list(_times(lv))
+        for ct in _times(rv):
             if ct not in combined:
                 combined.append(ct)
         merged[key] = _sorted_recent(combined, MAX_REMEMBERED_PER_KEY)

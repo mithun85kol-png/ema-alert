@@ -942,6 +942,7 @@ ENABLED_SCAN_MODES = {
     "ema_cross_report", "ema_cross_report_evening",
     "monthly_scan",
     "daily_scan",
+    "eod_report",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -1031,6 +1032,20 @@ ALERT_REQUIRE_MONTHLY_RSI = True
 
 # True = cash-only (non-F&O) stocks send BULLISH alerts only; F&O stocks send both.
 CASH_STOCKS_BULLISH_ONLY = True
+
+# Each stock alerts at most ONCE per day (per direction). True for ANY_DIRECTION = once per
+# day in total (a later opposite-direction alert is also blocked).
+ALERT_ONCE_PER_DAY = True
+ALERT_ONCE_PER_DAY_ANY_DIRECTION = False
+# ...but a stock that already alerted today may alert AGAIN if its strength score has gone up by
+# at least this many points since its last alert (e.g. 5/9 earlier, 7/9 now = +2).
+ALERT_REALERT_IF_SCORE_UP = True
+ALERT_REALERT_MIN_IMPROVEMENT = 2
+
+# End-of-day summary: every stock that alerted today, with its move since the alert.
+# Sent by the first run at/after EOD_REPORT_RUN_AFTER (IST, weekdays). SCAN_MODE=eod_report re-sends it.
+EOD_REPORT_ENABLED = True
+EOD_REPORT_RUN_AFTER = "15:40"
 MONTHLY_RSI_BULL_MIN = 55
 MONTHLY_RSI_BEAR_MAX = 45
 # True = if Monthly RSI cannot be calculated (new listing / data fetch failed) the alert is also blocked.
