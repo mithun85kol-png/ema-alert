@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v33 (2026-11-04)"
+BUILD_TAG = "short-v38 (2026-11-13)"
 
 
 def _ema920_line(info15, info75):
@@ -165,6 +165,22 @@ _SECTOR_FALLBACK = {
     "IOC": "Oil & Gas", "ONGC": "Oil & Gas", "NYKAA": "Consumer Services", "DIXON": "Consumer Durables",
 }
 _INDUSTRY_MAP = None
+
+
+def _count_txt(s):
+    """' · 🔁 Day 2' = days in a row this stock alerted; ' · ⬆️ 5→7' = score went up since today's earlier alert."""
+    out = ""
+    try:
+        n = s.get("alert_count")
+        if n:
+            out += f" · 🔁 Day {int(n)}"
+        up = s.get("score_up_from")
+        now = (s.get("strength") or {}).get("passed")
+        if up is not None and now is not None:
+            out += f" · ⬆️ score {up}→{now}"
+    except Exception:
+        pass
+    return out
 
 
 def _sector_label(symbol):
@@ -406,7 +422,7 @@ def flush_pending_alerts():
                 body = "\n".join(p["rows"])
                 line = (f"{'🟢' if s['direction'] == 'BULLISH' else '🔴'} <b>{s['symbol']}</b>{_sec}"
                         + ("  " + "  ·  ".join(links) if links else "")
-                        + f"\n{score.strip()} · {_p(float(s['close']))}{dc_txt}")
+                        + f"\n{score.strip()} · {_p(float(s['close']))}{dc_txt}{_count_txt(s)}")
                 # first 3 lines of the block (the only ones Telegram shows collapsed) are a short
                 # label + two invisible lines, so nothing readable shows before the tap
                 items.append(f"{line}\n<blockquote expandable>{body}</blockquote>")
@@ -1278,6 +1294,74 @@ def send_sector_performance_report(all_pct, now_ist, month_pct=None):
                                  "disable_web_page_preview": True}, timeout=15).raise_for_status()
     except Exception as e:
         print("Telegram send failed (sector_performance):", e)
+
+
+def send_eod_alert_report(results, now_ist):
+    """End-of-day summary: every stock that alerted today and how it moved since the alert.
+    pnl is in TRADE terms: bullish = price up is +, bearish = price down is +."""
+    day_txt = now_ist.strftime("%d %b")
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+
+    def _post(text):
+        try:
+            requests.post(url, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML",
+                                     "disable_web_page_preview": True}, timeout=15).raise_for_status()
+        except Exception as e:
+            print("Telegram send failed (eod_report):", e)
+
+    if not results:
+        _post(f"📋 <b>DAILY ALERT SUMMARY</b> — {day_txt}\nAj kono stock alert ashe ni.")
+        return
+
+    def _stats(rows):
+        ok = [r for r in rows if r["pnl"] is not None]
+        if not ok:
+            return "no data"
+        w = sum(1 for r in ok if r["pnl"] > 0)
+        avg = sum(r["pnl"] for r in ok) / len(ok)
+        return f"✅ {w} · ❌ {len(ok) - w} · avg {avg:+.2f}%"
+
+    bull = [r for r in results if r["direction"] == "BULLISH"]
+    bear = [r for r in results if r["direction"] == "BEARISH"]
+    allok = [r for r in results if r["pnl"] is not None]
+    head = [f"📋 <b>DAILY ALERT SUMMARY</b> — {day_txt}  ({len(results)} alerts)"]
+    if bull:
+        head.append(f"🟢 Bullish ({len(bull)}): {_stats(bull)}")
+    if bear:
+        head.append(f"🔴 Bearish ({len(bear)}): {_stats(bear)}")
+    if allok:
+        w = sum(1 for r in allok if r["pnl"] > 0)
+        head.append(f"🎯 Total: {w}/{len(allok)} profit ({w / len(allok) * 100:.0f}%) · avg {sum(r['pnl'] for r in allok) / len(allok):+.2f}%")
+    head.append("<i>alert price → close · bullish e daam bar-le ✅, bearish e kome gele ✅</i>")
+
+    def _line(r):
+        sec = _sector_label(r["symbol"])
+        sec = f" <i>({sec})</i>" if sec else ""
+        hhmm = str(r["time"])[11:16]
+        if r["pnl"] is None:
+            return f"⚪ <b>{r['symbol']}</b>{sec} {hhmm} @ {_p(r['price'])} · data nei"
+        icon = "✅" if r["pnl"] > 0 else "❌"
+        day = f" · Day {r['day']}" if r.get("day") else ""
+        return (f"{icon} <b>{r['symbol']}</b>{sec} {hhmm}\n"
+                f"     {_p(r['price'])} → {_p(r['last'])} (<b>{r['pnl']:+.2f}%</b>) · max +{r['best']:.1f}% · dd {r['worst']:.1f}%{day}")
+
+    blocks = []
+    for title, rows in (("🟢 <b>BULLISH</b>", bull), ("🔴 <b>BEARISH</b>", bear)):
+        if rows:
+            rows = sorted(rows, key=lambda r: (r["pnl"] is None, -(r["pnl"] or 0)))
+            blocks.append("")
+            blocks.append(title)
+            blocks.extend(_line(r) for r in rows)
+
+    msgs, cur = [], list(head) + [""]
+    for ln in blocks:
+        if len("\n".join(cur)) + len(ln) > 3600:
+            msgs.append("\n".join(cur)); cur = []
+        cur.append(ln)
+    if cur:
+        msgs.append("\n".join(cur))
+    for text in msgs:
+        _post(text)
 
 
 def send_ema_cross_report(crosses, now_ist, period_label="Fresh Cross"):

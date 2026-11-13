@@ -142,7 +142,7 @@ except ImportError:
     # the repo root and this feature resumes automatically.
     corporate_actions = None
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan, check_daily_macd_rsi_scan, get_daily_support_info, compute_alert_strength
-from telegram_notifier import flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_sector_performance_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
+from telegram_notifier import flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_sector_performance_report, send_eod_alert_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -2811,6 +2811,16 @@ def run_fo_scan(now_ist, index_only=False):
                 # only catches the exact-same-candle case.
                 if state.in_cooldown(saved_state, symbol, signal["direction"], signal["candle_time"], config.SAME_DIRECTION_COOLDOWN_MINUTES):
                     continue
+                if getattr(config, "ALERT_ONCE_PER_DAY", False) and state.alerted_today(
+                        saved_state, symbol, signal["direction"], signal["candle_time"],
+                        getattr(config, "ALERT_ONCE_PER_DAY_ANY_DIRECTION", False)):
+                    # already alerted today -> only repeat if the score has clearly improved
+                    _prev = state.last_alert_score(saved_state, symbol, signal["direction"], str(signal["candle_time"])[:10])
+                    _now = (signal.get("strength") or {}).get("passed")
+                    if (not getattr(config, "ALERT_REALERT_IF_SCORE_UP", False) or _prev is None or _now is None
+                            or _now - _prev < getattr(config, "ALERT_REALERT_MIN_IMPROVEMENT", 2)):
+                        continue
+                    signal["score_up_from"] = _prev
 
                 # Mark BEFORE sending: if send_alert() raises after the
                 # Telegram API call already succeeded (e.g. a parsing
@@ -2821,6 +2831,11 @@ def run_fo_scan(now_ist, index_only=False):
                 # send failure costs at most one missed alert, never
                 # an infinite duplicate loop.
                 state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
+                try:
+                    signal["alert_count"] = state.alert_day_streak(saved_state, symbol, signal["direction"], signal["candle_time"])
+                except Exception:
+                    pass
+                _log_alert_for_eod(saved_state, signal, symbol, watchlist.get(symbol))
                 # Stock News (added, per request, 2026-09-10) — fetched
                 # only now, for symbols actually about to alert, not
                 # for every scanned symbol. See fetch_stock_news above.
@@ -3308,10 +3323,25 @@ def run_nifty500_scan(now_ist):
                 # run_fo_scan() above.
                 if state.in_cooldown(saved_state, state_symbol, signal["direction"], signal["candle_time"], config.SAME_DIRECTION_COOLDOWN_MINUTES):
                     continue
+                if getattr(config, "ALERT_ONCE_PER_DAY", False) and state.alerted_today(
+                        saved_state, state_symbol, signal["direction"], signal["candle_time"],
+                        getattr(config, "ALERT_ONCE_PER_DAY_ANY_DIRECTION", False)):
+                    # already alerted today -> only repeat if the score has clearly improved
+                    _prev = state.last_alert_score(saved_state, symbol, signal["direction"], str(signal["candle_time"])[:10])
+                    _now = (signal.get("strength") or {}).get("passed")
+                    if (not getattr(config, "ALERT_REALERT_IF_SCORE_UP", False) or _prev is None or _now is None
+                            or _now - _prev < getattr(config, "ALERT_REALERT_MIN_IMPROVEMENT", 2)):
+                        continue
+                    signal["score_up_from"] = _prev
 
                 # Mark BEFORE sending -- see the matching comment in
                 # run_fo_scan() above for why.
                 state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
+                try:
+                    signal["alert_count"] = state.alert_day_streak(saved_state, state_symbol, signal["direction"], signal["candle_time"])
+                except Exception:
+                    pass
+                _log_alert_for_eod(saved_state, signal, symbol, watchlist.get(symbol))
                 # Stock News — see the matching comment in run_fo_scan
                 # above.
                 if config.ENABLE_STOCK_NEWS and not config.COMPACT_ALERT_FORMAT:
@@ -4006,6 +4036,95 @@ def run_daily_macd_rsi_scan(now_ist, notify_if_stale=True):
     return len(hits), failed, len(watchlist)
 
 
+def _log_alert_for_eod(st, signal, symbol, instrument_key):
+    """Remember this alert (stocks only) for the end-of-day summary. Never raises."""
+    try:
+        if not instrument_key or not str(instrument_key).startswith("NSE_EQ"):
+            return
+        stt = signal.get("strength") or {}
+        state.log_alert(st, {
+            "symbol": symbol,
+            "direction": signal["direction"],
+            "time": str(signal["candle_time"]),
+            "price": float(signal["close"]),
+            "key": instrument_key,
+            "score": f"{stt.get('passed')}/{stt.get('total')}" if stt.get("total") else "",
+            "fno": bool(signal.get("is_fno")),
+            "day": signal.get("alert_count"),
+        })
+    except Exception as e:
+        print(f"EOD log failed for {symbol}: {e}", flush=True)
+
+
+def _eod_one(entry):
+    """Move of one alerted stock since the alert (uses today's 1-min candles)."""
+    df = fetch_1min_candles(entry["key"])
+    if df is None or df.empty:
+        return None
+    ts = df["timestamp"]
+    try:
+        ts = ts.dt.tz_convert(IST)
+    except TypeError:
+        ts = ts.dt.tz_localize(IST)
+    ts = ts.dt.tz_localize(None)
+    price = float(entry["price"])
+    t0 = pd.Timestamp(str(entry["time"])[:19]) + pd.Timedelta(minutes=15)   # 15-min candle has closed
+    after = df[ts >= t0]
+    last = float(df.iloc[-1]["close"])
+    bull = entry["direction"] == "BULLISH"
+    sign = 1.0 if bull else -1.0
+    pnl = sign * (last - price) / price * 100.0
+    if after.empty:
+        best = worst = 0.0
+    elif bull:
+        best = (float(after["high"].max()) - price) / price * 100.0
+        worst = (float(after["low"].min()) - price) / price * 100.0
+    else:
+        best = (price - float(after["low"].min())) / price * 100.0
+        worst = (price - float(after["high"].max())) / price * 100.0
+    out = dict(entry)
+    out.update({"last": last, "pnl": pnl, "best": max(best, 0.0), "worst": min(worst, 0.0)})
+    return out
+
+
+def run_eod_alert_report(now_ist):
+    """End-of-day summary of every stock alerted today (see config.EOD_REPORT_*)."""
+    today = now_ist.date().isoformat()
+    entries = state.get_alert_log(state.load_state(), today)
+    results = []
+    if entries:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futs = {pool.submit(_eod_one, e): e for e in entries}
+            for f in as_completed(futs):
+                e = futs[f]
+                try:
+                    r = f.result()
+                except Exception as ex:
+                    print(f"EOD fetch failed for {e.get('symbol')}: {ex}", flush=True)
+                    r = None
+                if r:
+                    results.append(r)
+                else:
+                    results.append(dict(e, last=None, pnl=None, best=None, worst=None))
+    send_eod_alert_report(results, now_ist)
+
+
+def maybe_run_eod_report_once_a_day(now_ist):
+    """First run of the day at/after config.EOD_REPORT_RUN_AFTER (weekdays) sends the summary."""
+    if not getattr(config, "EOD_REPORT_ENABLED", False) or now_ist.weekday() >= 5:
+        return
+    hh, mm = (int(x) for x in config.EOD_REPORT_RUN_AFTER.split(":"))
+    if now_ist.time() < dt.time(hh, mm):
+        return
+    today = now_ist.date().isoformat()
+    st = state.load_state()
+    if state.already_alerted(st, "EOD_REPORT", "DONE", today):
+        return
+    state.mark_alerted(st, "EOD_REPORT", "DONE", today)   # mark first: a crash must not retry every run
+    state.save_state(st)
+    run_eod_alert_report(now_ist)
+
+
 def maybe_run_daily_scan_once_a_day(now_ist):
     """Called from every normal run; does real work only on the first run of
     the day at/after config.DAILY_ALERT_RUN_AFTER IST (weekdays)."""
@@ -4194,6 +4313,14 @@ def _run_inner():
                 send_mode_failure_notice("daily_scan", e, now_ist)
         return
 
+    if mode == "eod_report":
+        try:
+            run_eod_alert_report(now_ist)
+        except Exception as e:
+            print(f"run_eod_alert_report failed: {e}", flush=True)
+            send_mode_failure_notice("eod_report", e, now_ist)
+        return
+
     if mode == "monthly_scan":
         if config.MONTHLY_ALERT_ENABLED:
             try:
@@ -4213,6 +4340,12 @@ def _run_inner():
             send_mode_failure_notice("daily_scan", e, now_ist)
         except Exception:
             pass
+
+    # End-of-day summary of today's alerts (first run at/after 15:40 IST).
+    try:
+        maybe_run_eod_report_once_a_day(now_ist)
+    except Exception as e:
+        print(f"EOD report failed this run (non-blocking): {e}", flush=True)
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)
