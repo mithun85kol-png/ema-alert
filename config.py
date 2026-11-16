@@ -943,6 +943,7 @@ ENABLED_SCAN_MODES = {
     "monthly_scan",
     "daily_scan",
     "eod_report",
+    "oversold_report", "oversold_eod", "opening_bias_report_1h",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -1070,3 +1071,27 @@ ALERT_LIST_MODE = True   # (old flag, no longer used — see ALERT_MESSAGE_STYLE
 #   "list"     = short list + a silent detail message per stock; click a name to jump (supergroup only)
 #   "expandable" = one message, each stock its own expandable block
 ALERT_MESSAGE_STYLE = "single"
+
+
+# ---------- Daily RSI < 30 (OVERSOLD) alert (ADDED 2026-11-15) ----------
+# Once a day (first normal run at/after OVERSOLD_RUN_AFTER, weekdays) ONE combined list of every
+# stock whose DAILY RSI(14) on the LAST COMPLETED day is below OVERSOLD_DAILY_RSI_MAX.
+# Each row also shows the 1-hour RSI and Monthly RSI (information only - they never block).
+# After the close (>= OVERSOLD_EOD_RUN_AFTER) a performance report says how each of those stocks
+# moved since the morning alert.
+OVERSOLD_ALERT_ENABLED = True
+OVERSOLD_DAILY_RSI_MAX = 30
+OVERSOLD_RUN_AFTER = "09:30"            # IST
+OVERSOLD_UNIVERSE = "fo+n500"           # "fo" = F&O stocks only, "fo+n500" = F&O + Nifty 500 cash stocks
+OVERSOLD_HISTORY_LOOKBACK_DAYS = 300    # calendar days of daily candles (RSI warm-up)
+OVERSOLD_HOURLY_HISTORY_DAYS = 25       # calendar days of 1-min candles used to build 1-hour bars
+OVERSOLD_MAX_STOCKS = 80                # safety cap on list size (lowest RSI kept)
+OVERSOLD_EOD_ENABLED = True
+OVERSOLD_EOD_RUN_AFTER = "15:40"        # IST
+
+# ---------- 1st 1-HOUR Open=Low/High + sector report (ADDED 2026-11-16) ----------
+# Same as the 9:30 "1st 15-min" report, but for the first hour (09:15-10:15): F&O stocks with
+# Open=Low (bullish) / Open=High (bearish) over the whole hour, sector wise, + a sector-performance
+# report. Sent automatically by the first normal run at/after OPENING_1H_RUN_AFTER (no new cron job).
+OPENING_1H_REPORT_ENABLED = True
+OPENING_1H_RUN_AFTER = "10:17"   # IST (the 10:15 candle needs a minute or two to be final)

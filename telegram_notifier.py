@@ -96,7 +96,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v38 (2026-11-13)"
+BUILD_TAG = "short-v41 (2026-11-16)"
 
 
 def _ema920_line(info15, info75):
@@ -1154,7 +1154,7 @@ def send_alert(signal):
         print("Telegram send failed:", e)
 
 
-def send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links=None, bearish_links=None, pct_changes=None):
+def send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links=None, bearish_links=None, pct_changes=None, label="15-min"):
     """
     NEW (per request) — SCAN_MODE=opening_bias_report. ONE consolidated
     message listing every F&O stock whose today's first 15-min candle
@@ -1219,7 +1219,7 @@ def send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links=N
     date_str = now_ist.strftime("%Y-%m-%d")
     time_str = now_ist.strftime("%H:%M")
 
-    lines = [f"📐 <b>F&O Opening 15-min Bias</b> — {date_str} {time_str}  <i>(sector wise)</i>\n"]
+    lines = [f"📐 <b>F&O Opening {label} Bias</b> — {date_str} {time_str}  <i>(sector wise)</i>\n"]
 
     if bullish:
         lines.append(f"🟢 <b>Open = Low</b> ({len(bullish)}):")
@@ -1260,7 +1260,7 @@ def send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links=N
             print("Telegram send failed (opening_bias_report):", e)
 
 
-def send_sector_performance_report(all_pct, now_ist, month_pct=None):
+def send_sector_performance_report(all_pct, now_ist, month_pct=None, label="15-min"):
     """Separate alert: sector-wise performance of the 1st 15-min candle (avg % change of the
     F&O stocks in each sector vs previous close), strongest sector first."""
     if not all_pct:
@@ -1280,8 +1280,8 @@ def send_sector_performance_report(all_pct, now_ist, month_pct=None):
         d_avg = sum(ds_) / len(ds_) if ds_ else None
         rows.append((sec, avg, up, len(items) - up, m_avg, d_avg))
     rows.sort(key=lambda r: (r[0] == "Others", -r[1]))
-    lines = [f"🏭 <b>SECTOR PERFORMANCE — 1st 15-min</b>  {now_ist.strftime('%H:%M')}",
-             "<i>1st 15-min avg change vs prev close  │  1D = last day  │  1M = last 1 month</i>\n"]
+    lines = [f"🏭 <b>SECTOR PERFORMANCE — 1st {label}</b>  {now_ist.strftime('%H:%M')}",
+             f"<i>1st {label} avg change vs prev close  │  1D = last day  │  1M = last 1 month</i>\n"]
     for sec, avg, up, dn, m_avg, d_avg in rows:
         icon = "🟢" if avg >= 0.15 else ("🔴" if avg <= -0.15 else "⚪")
         mtxt = "" if d_avg is None else f"   │ 1D {d_avg:+.1f}%"
@@ -1362,6 +1362,87 @@ def send_eod_alert_report(results, now_ist):
         msgs.append("\n".join(cur))
     for text in msgs:
         _post(text)
+
+
+def _post_html_chunks(head, body, tag):
+    """Send head + body lines as one or more Telegram HTML messages (<= ~3600 chars each)."""
+    url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage"
+    msgs, cur = [], list(head) + [""]
+    for ln in body:
+        if len("\n".join(cur)) + len(ln) > 3600:
+            msgs.append("\n".join(cur)); cur = []
+        cur.append(ln)
+    if cur:
+        msgs.append("\n".join(cur))
+    for text in msgs:
+        try:
+            requests.post(url, data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML",
+                                     "disable_web_page_preview": True}, timeout=15).raise_for_status()
+        except Exception as e:
+            print(f"Telegram send failed ({tag}):", e)
+
+
+def _rsi_txt(v):
+    return "–" if v is None else f"{v:.1f}"
+
+
+def send_oversold_report(hits, now_ist, ref_date):
+    """Morning list: Daily RSI < 30 on the last completed day, with 1H + Monthly RSI (info only)."""
+    day_txt = now_ist.strftime("%d %b")
+    try:
+        import datetime as _dt
+        ref_txt = _dt.datetime.strptime(str(ref_date)[:10], "%Y-%m-%d").strftime("%d %b")
+    except Exception:
+        ref_txt = str(ref_date)
+    lim = getattr(config, "OVERSOLD_DAILY_RSI_MAX", 30)
+    if not hits:
+        _post_html_chunks([f"📉 <b>DAILY RSI &lt; {lim}</b> — {day_txt}", f"{ref_txt} er close e kono stock oversold na."], [], "oversold")
+        return
+    nfo = sum(1 for h in hits if h.get("is_fno"))
+    head = [f"📉 <b>DAILY RSI &lt; {lim} (OVERSOLD)</b> — {day_txt}  ({len(hits)} stocks)",
+            f"<i>{ref_txt} er close basis · F&amp;O {nfo} · cash {len(hits) - nfo} · kom RSI age</i>",
+            "<i>D = Daily · 1H = 1-hour · M = Monthly RSI (sob info)</i>"]
+    body = []
+    for h in hits:
+        sec = _sector_label(h["symbol"])
+        sec = f" <i>({sec})</i>" if sec else ""
+        fno = " · F&amp;O" if h.get("is_fno") else ""
+        chg = f" ({h['chg']:+.2f}%)" if h.get("chg") is not None else ""
+        streak = f" · 🔻 {h['streak']} din" if h.get("streak", 0) > 1 else ""
+        body.append(f"🔻 <b>{h['symbol']}</b>{sec}{fno}  📈 <a href=\"{h['chart_link']}\">Chart</a> · 📊 <a href=\"{h['screener_link']}\">Screener</a>")
+        body.append(f"     {_p(h['price'])}{chg}\n     RSI: D <b>{_rsi_txt(h['d_rsi'])}</b> · 1H {_rsi_txt(h.get('h_rsi'))} · M {_rsi_txt(h.get('m_rsi'))}{streak}")
+    _post_html_chunks(head, body, "oversold")
+
+
+def send_oversold_eod_report(results, now_ist):
+    """Day-end: how each morning oversold stock moved since the alert (long/bounce view)."""
+    day_txt = now_ist.strftime("%d %b")
+    lim = getattr(config, "OVERSOLD_DAILY_RSI_MAX", 30)
+    ok = [r for r in results if r.get("pnl") is not None]
+    head = [f"📋 <b>OVERSOLD PERFORMANCE</b> — {day_txt}  ({len(results)} stocks)"]
+    if ok:
+        w = sum(1 for r in ok if r["pnl"] > 0)
+        avg = sum(r["pnl"] for r in ok) / len(ok)
+        best = max(ok, key=lambda r: r["pnl"])
+        worst = min(ok, key=lambda r: r["pnl"])
+        head.append(f"🎯 Bounce: {w}/{len(ok)} ✅ ({w / len(ok) * 100:.0f}%) · ❌ {len(ok) - w} · avg {avg:+.2f}%")
+        if len(ok) > 1:
+            head.append(f"🏆 {best['symbol']} {best['pnl']:+.2f}%  ·  🔻 {worst['symbol']} {worst['pnl']:+.2f}%")
+    head.append(f"<i>Daily RSI &lt; {lim} · morning alert price → close · daam barle ✅</i>")
+    body = []
+    for r in sorted(results, key=lambda r: (r.get("pnl") is None, -(r.get("pnl") or 0))):
+        sec = _sector_label(r["symbol"])
+        sec = f" <i>({sec})</i>" if sec else ""
+        hhmm = str(r["time"])[11:16]
+        if r.get("pnl") is None:
+            body.append(f"⚪ <b>{r['symbol']}</b>{sec} {hhmm} @ {_p(r['price'])} · data nei")
+            continue
+        icon = "✅" if r["pnl"] > 0 else "❌"
+        dchg = f" · day {r['day_chg']:+.2f}%" if r.get("day_chg") is not None else ""
+        body.append(f"{icon} <b>{r['symbol']}</b>{sec} {hhmm}\n"
+                    f"     {_p(r['price'])} → {_p(r['last'])} (<b>{r['pnl']:+.2f}%</b>) · max +{r['best']:.1f}% · dd {r['worst']:.1f}%{dchg}\n"
+                    f"     RSI D {_rsi_txt(r.get('d_rsi'))} · 1H {_rsi_txt(r.get('h_rsi'))} · M {_rsi_txt(r.get('m_rsi'))}")
+    _post_html_chunks(head, body, "oversold_eod")
 
 
 def send_ema_cross_report(crosses, now_ist, period_label="Fresh Cross"):

@@ -108,7 +108,7 @@ def merge(local, remote):
     keys = set(local.keys()) | set(remote.keys())
     merged = {}
     for key in keys:
-        if key == "_alerts_log":
+        if key in ("_alerts_log", "_oversold_log"):
             merged[key] = _merge_alert_log(local.get(key), remote.get(key))
             continue
         lv, rv = local.get(key), remote.get(key)

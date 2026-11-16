@@ -142,7 +142,7 @@ except ImportError:
     # the repo root and this feature resumes automatically.
     corporate_actions = None
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan, check_daily_macd_rsi_scan, get_daily_support_info, compute_alert_strength
-from telegram_notifier import flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_sector_performance_report, send_eod_alert_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
+from telegram_notifier import send_oversold_report, send_oversold_eod_report, flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_sector_performance_report, send_eod_alert_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -369,7 +369,7 @@ def resample_15min(df):
     return out
 
 
-def resample_75min(df):
+def resample_75min(df, rule="75min"):
     """
     Resamples 1-minute candles to 75-minute bars, aligning each trading
     day's bins independently to the session start (09:15 IST). This
@@ -394,7 +394,7 @@ def resample_75min(df):
     out_frames = []
     for date, day_df in df.groupby(df.index.date):
         day_start = dt.datetime.combine(date, STOCK_SESSION_START, tzinfo=IST)
-        day_out = day_df.resample("75min", origin=day_start).agg({
+        day_out = day_df.resample(rule, origin=day_start).agg({
             "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
         }).dropna()
         out_frames.append(day_out)
@@ -1542,18 +1542,17 @@ def run_ema_cross_report_evening(now_ist):
     send_ema_cross_report(crosses, now_ist, period_label="Today's Close")
 
 
-def _opening_candle_reliable(df15, now_ist):
-    """True only if today's 1st 15-min candle is complete enough to judge
-    Open==Low / Open==High: it exists for TODAY (not a stale yesterday row),
-    starts at 09:15, its 1-min data starts at 09:15 (so the open is the real
-    open) and runs to at least 09:28 (so the high/low are not missing the
-    last minutes of the candle because of data lag)."""
+def _opening_candle_reliable(df15, now_ist, n_candles=1):
+    """True only if today's opening window (1st 15-min candle, or the first `n_candles` 15-min
+    candles = 1 hour when n_candles=4) is complete enough to judge Open==Low / Open==High: it exists
+    for TODAY, starts at 09:15, its 1-min data starts at 09:15 (real open) and runs to the end of the
+    window (so the high/low are not missing the last minutes because of data lag)."""
     try:
         if df15 is None or df15.empty:
             return False
         today = now_ist.date()
         rows = df15[df15["timestamp"].dt.date == today]
-        if rows.empty:
+        if len(rows) < n_candles:
             return False
         t0 = rows.iloc[0]["timestamp"]
         if (t0.hour, t0.minute) != (9, 15):
@@ -1562,14 +1561,22 @@ def _opening_candle_reliable(df15, now_ist):
         lm = df15.attrs.get("last_minute")
         if fm is not None and (fm.hour, fm.minute) != (9, 15):
             return False
-        if lm is not None and (lm.hour, lm.minute) < (9, 28):
+        need = (9, 28) if n_candles == 1 else (10, 13)
+        if lm is not None and (lm.hour, lm.minute) < need:
             return False
         return True
     except Exception:
         return False
 
 
-def build_todays_opening_bias_list(now_ist):
+def _opening_window(df15, now_ist, n_candles):
+    """(open, high, low, close) of today's first `n_candles` 15-min candles combined."""
+    rows = df15[df15["timestamp"].dt.date == now_ist.date()].iloc[:n_candles]
+    return (float(rows.iloc[0]["open"]), float(rows["high"].max()),
+            float(rows["low"].min()), float(rows.iloc[-1]["close"]))
+
+
+def build_todays_opening_bias_list(now_ist, n_candles=1):
     """
     NEW (per request) — the "dala"/consolidated list of every F&O stock
     whose TODAY's first 15-min candle is Open==Low (bullish) or
@@ -1614,14 +1621,20 @@ def build_todays_opening_bias_list(now_ist):
             no_data.append(symbol)
             continue
         _df5, _df75, df15 = dfs[symbol]
-        if df15 is None or not _opening_candle_reliable(df15, now_ist):
+        if df15 is None or not _opening_candle_reliable(df15, now_ist, n_candles):
             no_data.append(symbol)
             continue
-        # first-15-min change for EVERY stock (sector performance report)
+        _o, _h, _l, _c = _opening_window(df15, now_ist, n_candles)
+        # opening-window change for EVERY stock (sector performance report)
         _pc = (pivots.get(symbol) or {}).get("prev_close")
         if _pc and not df15.empty:
-            all_pct[symbol] = (float(df15.iloc[0]["close"]) - _pc) / _pc * 100.0
-        bias = get_opening_candle_bias(df15, symbol)
+            all_pct[symbol] = (_c - _pc) / _pc * 100.0
+        if n_candles == 1:
+            bias = get_opening_candle_bias(df15, symbol)
+        else:
+            _eps = config.OPENING_CANDLE_EPSILON
+            _eq_l, _eq_h = abs(_o - _l) <= _eps, abs(_o - _h) <= _eps
+            bias = "BULLISH" if (_eq_l and not _eq_h) else ("BEARISH" if (_eq_h and not _eq_l) else None)
         if bias == "BULLISH":
             bullish.append(symbol)
         elif bias == "BEARISH":
@@ -1634,8 +1647,7 @@ def build_todays_opening_bias_list(now_ist):
 
         prev_close = (pivots.get(symbol) or {}).get("prev_close")
         if prev_close and not df15.empty:
-            close = float(df15.iloc[0]["close"])
-            pct_changes[symbol] = (close - prev_close) / prev_close * 100.0
+            pct_changes[symbol] = (_c - prev_close) / prev_close * 100.0
 
     global _LAST_ALL_PCT
     _LAST_ALL_PCT = all_pct
@@ -1645,7 +1657,7 @@ def build_todays_opening_bias_list(now_ist):
 _LAST_ALL_PCT = {}
 
 
-def run_opening_bias_report(now_ist):
+def run_opening_bias_report(now_ist, hour=False, sleep_first=True):
     """
     NEW (per request) — SCAN_MODE=opening_bias_report entry point.
     Meant to run shortly after 09:30 IST (once today's first 15-min
@@ -1667,20 +1679,23 @@ def run_opening_bias_report(now_ist):
     timestamp both reflect the real (post-sleep) clock time, not the
     stale pre-sleep one passed in from run().
     """
-    time.sleep(15)
+    n_c = 4 if hour else 1
+    label = "1-hour" if hour else "15-min"
+    if sleep_first:
+        time.sleep(15)
     now_ist = _now_ist()
 
     if not _in_stock_session(now_ist):
         print(f"Outside stock session ({now_ist.strftime('%H:%M')} IST) — opening-bias report skipping.", flush=True)
         return
-    bullish, bearish, no_data, pct_changes = build_todays_opening_bias_list(now_ist)
+    bullish, bearish, no_data, pct_changes = build_todays_opening_bias_list(now_ist, n_c)
     if len(no_data) >= 10:
         # Upstox usually just hasn't published the last minutes of the candle
         # yet — wait a little and look once more rather than report a wrong list.
         print(f"{len(no_data)} symbols not ready at {now_ist.strftime('%H:%M:%S')} — retrying once in 25s.", flush=True)
         time.sleep(25)
         now_ist = _now_ist()
-        bullish, bearish, no_data, pct_changes = build_todays_opening_bias_list(now_ist)
+        bullish, bearish, no_data, pct_changes = build_todays_opening_bias_list(now_ist, n_c)
 
     # Chart links (added, per request) — same Groww chart link
     # link every other alert type already gets (see build_chart_link).
@@ -1691,7 +1706,7 @@ def run_opening_bias_report(now_ist):
     bullish_links = {sym: build_chart_link(sym) for sym in bullish}
     bearish_links = {sym: build_chart_link(sym) for sym in bearish}
 
-    send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links, bearish_links, pct_changes)
+    send_opening_bias_report(bullish, bearish, no_data, now_ist, bullish_links, bearish_links, pct_changes, label=label)
     try:
         try:
             _wl = instruments.resolve_fo_stock_list(None if config.USE_FULL_FO_LIST else config.FO_STOCK_WATCHLIST)
@@ -1699,7 +1714,7 @@ def run_opening_bias_report(now_ist):
         except Exception as e:
             print(f"1-month sector data failed: {e}", flush=True)
             _m1 = {"__day__": {}}
-        send_sector_performance_report(_LAST_ALL_PCT, now_ist, _m1)
+        send_sector_performance_report(_LAST_ALL_PCT, now_ist, _m1, label=label)
     except Exception as e:
         print(f"Sector performance report failed: {e}", flush=True)
 
@@ -2130,7 +2145,12 @@ def _attach_daily_support(signal, symbol, instrument_key):
 
 
 def _daily_support_blocks(signal):
-    """True if the optional daily-support requirement is satisfied (or not enforced)."""
+    """True if this signal must be blocked by the stock-only gates (cash-bearish, Monthly RSI,
+    optional daily support). Commodities and indices are exempt: a nearest-expiry futures
+    contract has too little history for a Monthly RSI, so the "no Monthly RSI -> block" rule
+    was silently killing every commodity alert."""
+    if signal.get("symbol") in (set(config.COMMODITIES) | set(config.INDICES)):
+        return False
     # Cash-only stocks: no bearish alerts (F&O stocks keep both directions)
     if getattr(config, "CASH_STOCKS_BULLISH_ONLY", False) and signal.get("is_fno") is False and signal["direction"] == "BEARISH":
         print(f"[cash-bearish] {signal.get('symbol')} BEARISH skipped (cash stock)", flush=True)
@@ -4068,7 +4088,7 @@ def _eod_one(entry):
         ts = ts.dt.tz_localize(IST)
     ts = ts.dt.tz_localize(None)
     price = float(entry["price"])
-    t0 = pd.Timestamp(str(entry["time"])[:19]) + pd.Timedelta(minutes=15)   # 15-min candle has closed
+    t0 = pd.Timestamp(str(entry["time"])[:19]) + pd.Timedelta(minutes=entry.get("t_offset_min", 15))   # 15-min candle has closed
     after = df[ts >= t0]
     last = float(df.iloc[-1]["close"])
     bull = entry["direction"] == "BULLISH"
@@ -4123,6 +4143,216 @@ def maybe_run_eod_report_once_a_day(now_ist):
     state.mark_alerted(st, "EOD_REPORT", "DONE", today)   # mark first: a crash must not retry every run
     state.save_state(st)
     run_eod_alert_report(now_ist)
+
+
+# ---------- Daily RSI < 30 (oversold) alert + day-end performance (ADDED 2026-11-15) ----------
+def _rsi_series(closes, period=14):
+    s = pd.Series([float(x) for x in closes])
+    delta = s.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    ag = gain.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    al = loss.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    return 100 - 100 / (1 + ag / al)
+
+
+def _hourly_rsi(instrument_key, now_ist, today_df=None):
+    """RSI(14) of the last CLOSED 1-hour bar (09:15-anchored bars), or None. Info only."""
+    try:
+        raw = fetch_historical_1min(instrument_key, config.OVERSOLD_HOURLY_HISTORY_DAYS) or []
+        frames = []
+        if raw:
+            h = pd.DataFrame(raw).iloc[:, :6]
+            h.columns = ["timestamp", "open", "high", "low", "close", "volume"]
+            frames.append(h)
+        if today_df is not None and not today_df.empty:
+            frames.append(today_df[["timestamp", "open", "high", "low", "close", "volume"]])
+        if not frames:
+            return None
+        df = pd.concat(frames, ignore_index=True)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_convert(IST)
+        df = df.drop_duplicates("timestamp").sort_values("timestamp")
+        bars = resample_75min(df, "60min")
+        if bars.empty:
+            return None
+        last_start = bars["timestamp"].iloc[-1]
+        if last_start + pd.Timedelta(minutes=60) > pd.Timestamp(now_ist):   # still forming -> drop
+            bars = bars.iloc[:-1]
+        if len(bars) < 20:
+            return None
+        return round(float(_rsi_series(bars["close"].tolist()).iloc[-1]), 1)
+    except Exception as e:
+        print(f"1H RSI failed ({instrument_key}): {e}", flush=True)
+        return None
+
+
+def run_oversold_report(now_ist):
+    """ONE list: every stock with Daily RSI(14) < OVERSOLD_DAILY_RSI_MAX on the last completed day,
+    with 1H RSI + Monthly RSI alongside. Saved to state for the day-end performance report."""
+    today_str = now_ist.date().isoformat()
+    watchlist = {}
+    fo = instruments.resolve_fo_stock_list(None)
+    watchlist.update(fo)
+    if config.OVERSOLD_UNIVERSE == "fo+n500":
+        watchlist.update(instruments.resolve_nifty500_stocks())
+    if not watchlist:
+        print("Oversold scan: empty watchlist.", flush=True)
+        return 0
+    print(f"Oversold scan: {len(watchlist)} stocks...", flush=True)
+    histories, failed = _fetch_daily_histories(watchlist, config.OVERSOLD_HISTORY_LOOKBACK_DAYS, include_today=False)
+    histories = {s: [r for r in h if str(r["date"])[:10] < today_str] for s, h in histories.items()}
+    histories = {s: h for s, h in histories.items() if len(h) >= 40}
+    if not histories:
+        print("Oversold scan: no daily history - skipping.", flush=True)
+        return 0
+    latest = max(str(h[-1]["date"])[:10] for h in histories.values())
+
+    hits = []
+    for sym, h in histories.items():
+        try:
+            if str(h[-1]["date"])[:10] != latest:
+                continue                      # stale / suspended stock
+            rs = _rsi_series([r["close"] for r in h])
+            d = rs.iloc[-1]
+            if pd.isna(d) or d >= config.OVERSOLD_DAILY_RSI_MAX:
+                continue
+            streak = 0
+            for v in reversed(rs.tolist()):
+                if pd.notna(v) and v < config.OVERSOLD_DAILY_RSI_MAX:
+                    streak += 1
+                else:
+                    break
+            hits.append({"symbol": sym, "key": watchlist[sym], "is_fno": sym in fo,
+                         "d_rsi": round(float(d), 1), "streak": streak,
+                         "prev_close": float(h[-1]["close"])})
+        except Exception as e:
+            print(f"Oversold calc failed {sym}: {e}", flush=True)
+    hits.sort(key=lambda x: x["d_rsi"])
+    hits = hits[:config.OVERSOLD_MAX_STOCKS]
+    print(f"Oversold scan: {len(hits)} below RSI {config.OVERSOLD_DAILY_RSI_MAX}.", flush=True)
+
+    def _enrich(hit):
+        today_df = None
+        try:
+            today_df = fetch_1min_candles(hit["key"])
+        except Exception as e:
+            print(f"Oversold intraday failed {hit['symbol']}: {e}", flush=True)
+        hit["has_today"] = False
+        hit["price"] = hit["prev_close"]
+        if today_df is not None and not today_df.empty:
+            ts = pd.to_datetime(today_df["timestamp"])
+            ts = ts.dt.tz_convert(IST) if ts.dt.tz is not None else ts.dt.tz_localize(IST)
+            if str(ts.iloc[-1].date()) == today_str:
+                hit["has_today"] = True
+                hit["price"] = float(today_df.iloc[-1]["close"])
+        hit["chg"] = (hit["price"] - hit["prev_close"]) / hit["prev_close"] * 100.0 if hit["prev_close"] else None
+        hit["h_rsi"] = _hourly_rsi(hit["key"], now_ist, today_df if hit["has_today"] else None)
+        hit["m_rsi"] = None
+        try:
+            mh = fetch_daily_history(hit["key"], days_back=config.MONTHLY_RSI_HISTORY_LOOKBACK_DAYS, include_today=True)
+            info = get_monthly_rsi_info(mh) if mh else None
+            hit["m_rsi"] = round(float(info["rsi"]), 1) if info else None
+        except Exception as e:
+            print(f"Oversold monthly RSI failed {hit['symbol']}: {e}", flush=True)
+        hit["chart_link"] = build_chart_link(hit["symbol"])
+        hit["screener_link"] = f"https://www.screener.in/company/{hit['symbol']}/consolidated/"
+        return hit
+
+    if hits:
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            hits = list(pool.map(_enrich, hits))
+        if not any(h["has_today"] for h in hits):
+            print("Oversold scan: no live candles for today (holiday / feed not ready) - nothing sent.", flush=True)
+            return 0
+
+    send_oversold_report(hits, now_ist, latest)
+
+    try:
+        st = state.load_state()
+        stamp = now_ist.strftime("%Y-%m-%d %H:%M:%S")
+        for h in hits:
+            state.log_alert(st, {"symbol": h["symbol"], "direction": "BULLISH", "time": stamp,
+                                 "price": h["price"], "key": h["key"], "fno": h["is_fno"],
+                                 "prev_close": h["prev_close"], "d_rsi": h["d_rsi"],
+                                 "h_rsi": h["h_rsi"], "m_rsi": h["m_rsi"], "streak": h["streak"],
+                                 "t_offset_min": 0}, log_key="_oversold_log")
+        state.save_state(st)
+    except Exception as e:
+        print(f"Oversold log failed: {e}", flush=True)
+    return len(hits)
+
+
+def run_oversold_eod_report(now_ist):
+    today = now_ist.date().isoformat()
+    entries = state.get_alert_log(state.load_state(), today, log_key="_oversold_log")
+    if not entries:
+        print("Oversold EOD: nothing was alerted today - skipping.", flush=True)
+        return
+    results = []
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futs = {pool.submit(_eod_one, e): e for e in entries}
+        for f in as_completed(futs):
+            e = futs[f]
+            try:
+                r = f.result()
+            except Exception as ex:
+                print(f"Oversold EOD fetch failed {e.get('symbol')}: {ex}", flush=True)
+                r = None
+            if r:
+                pc = r.get("prev_close")
+                r["day_chg"] = (r["last"] - pc) / pc * 100.0 if pc else None
+                results.append(r)
+            else:
+                results.append(dict(e, last=None, pnl=None, best=None, worst=None, day_chg=None))
+    send_oversold_eod_report(results, now_ist)
+
+
+def maybe_run_opening_1h_once_a_day(now_ist):
+    """1st 1-hour (09:15-10:15) Open=Low/High + sector report. Runs from a normal run, once a day,
+    first run at/after OPENING_1H_RUN_AFTER (weekdays, before 12:00)."""
+    if not getattr(config, "OPENING_1H_REPORT_ENABLED", False) or now_ist.weekday() >= 5:
+        return
+    hh, mm = (int(x) for x in config.OPENING_1H_RUN_AFTER.split(":"))
+    if not (dt.time(hh, mm) <= now_ist.time() <= dt.time(12, 0)):
+        return
+    today = now_ist.date().isoformat()
+    st = state.load_state()
+    if state.already_alerted(st, "OPEN1H_REPORT", "DONE", today):
+        return
+    state.mark_alerted(st, "OPEN1H_REPORT", "DONE", today)   # mark first: a crash must not retry every run
+    state.save_state(st)
+    run_opening_bias_report(now_ist, hour=True, sleep_first=False)
+
+
+def maybe_run_oversold_once_a_day(now_ist):
+    """Morning list (first run at/after OVERSOLD_RUN_AFTER, before the close) + day-end performance."""
+    if now_ist.weekday() >= 5:
+        return
+    today = now_ist.date().isoformat()
+    if getattr(config, "OVERSOLD_ALERT_ENABLED", False):
+        hh, mm = (int(x) for x in config.OVERSOLD_RUN_AFTER.split(":"))
+        if dt.time(hh, mm) <= now_ist.time() <= dt.time(13, 0):
+            st = state.load_state()
+            if not state.already_alerted(st, "OVERSOLD_SCAN", "DONE", today):
+                state.mark_alerted(st, "OVERSOLD_SCAN", "DONE", today)   # mark first: a crash must not retry every run
+                state.save_state(st)
+                try:
+                    run_oversold_report(now_ist)
+                except Exception as e:
+                    print(f"run_oversold_report failed: {e}", flush=True)
+                    send_mode_failure_notice("oversold_report", e, now_ist)
+    if getattr(config, "OVERSOLD_EOD_ENABLED", False):
+        hh, mm = (int(x) for x in config.OVERSOLD_EOD_RUN_AFTER.split(":"))
+        if now_ist.time() >= dt.time(hh, mm):
+            st = state.load_state()
+            if not state.already_alerted(st, "OVERSOLD_EOD", "DONE", today):
+                state.mark_alerted(st, "OVERSOLD_EOD", "DONE", today)
+                state.save_state(st)
+                try:
+                    run_oversold_eod_report(now_ist)
+                except Exception as e:
+                    print(f"run_oversold_eod_report failed: {e}", flush=True)
+                    send_mode_failure_notice("oversold_eod", e, now_ist)
 
 
 def maybe_run_daily_scan_once_a_day(now_ist):
@@ -4313,6 +4543,30 @@ def _run_inner():
                 send_mode_failure_notice("daily_scan", e, now_ist)
         return
 
+    if mode == "opening_bias_report_1h":
+        try:
+            run_opening_bias_report(now_ist, hour=True)
+        except Exception as e:
+            print(f"run_opening_bias_report (1h) failed: {e}", flush=True)
+            send_mode_failure_notice("opening_bias_report_1h", e, now_ist)
+        return
+
+    if mode == "oversold_report":
+        try:
+            run_oversold_report(now_ist)
+        except Exception as e:
+            print(f"run_oversold_report failed: {e}", flush=True)
+            send_mode_failure_notice("oversold_report", e, now_ist)
+        return
+
+    if mode == "oversold_eod":
+        try:
+            run_oversold_eod_report(now_ist)
+        except Exception as e:
+            print(f"run_oversold_eod_report failed: {e}", flush=True)
+            send_mode_failure_notice("oversold_eod", e, now_ist)
+        return
+
     if mode == "eod_report":
         try:
             run_eod_alert_report(now_ist)
@@ -4346,6 +4600,18 @@ def _run_inner():
         maybe_run_eod_report_once_a_day(now_ist)
     except Exception as e:
         print(f"EOD report failed this run (non-blocking): {e}", flush=True)
+
+    # 1st 1-hour Open=Low/High + sector report (~10:17).
+    try:
+        maybe_run_opening_1h_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Opening 1H report failed this run (non-blocking): {e}", flush=True)
+
+    # Daily RSI < 30 list (morning, ~9:30) + its day-end performance report.
+    try:
+        maybe_run_oversold_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Oversold alert failed this run (non-blocking): {e}", flush=True)
 
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)

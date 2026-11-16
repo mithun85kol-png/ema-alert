@@ -185,12 +185,12 @@ def alerted_today(state, symbol, direction, candle_time, any_direction=False):
     return False
 
 
-def log_alert(state, entry):
+def log_alert(state, entry, log_key="_alerts_log"):
     """Remember one sent alert (price, time ...) for the end-of-day summary report.
     Stored inside alert_state.json under '_alerts_log' -> {YYYY-MM-DD: [entries]}."""
-    log = state.setdefault("_alerts_log", {})
+    log = state.setdefault(log_key, {})
     if not isinstance(log, dict):
-        log = state["_alerts_log"] = {}
+        log = state[log_key] = {}
     day = str(entry["time"])[:10]
     lst = log.setdefault(day, [])
     sig = (entry["symbol"], entry["direction"], str(entry["time"]))
@@ -200,8 +200,8 @@ def log_alert(state, entry):
         log.pop(old, None)
 
 
-def get_alert_log(state, day):
-    log = state.get("_alerts_log")
+def get_alert_log(state, day, log_key="_alerts_log"):
+    log = state.get(log_key)
     if not isinstance(log, dict):
         return []
     return list(log.get(day) or [])
