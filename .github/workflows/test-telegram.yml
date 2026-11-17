@@ -4,7 +4,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d text="Test message from GitHub Actions"
+      - env:
+          T: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          C: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "token length: ${#T}"
+          echo "has colon: $([[ "$T" == *:* ]] && echo yes || echo no)"
+          echo "chat id length: ${#C}"
+          curl -sS "https://api.telegram.org/bot${T}/getMe"
