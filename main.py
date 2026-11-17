@@ -1542,16 +1542,24 @@ def run_ema_cross_report_evening(now_ist):
     send_ema_cross_report(crosses, now_ist, period_label="Today's Close")
 
 
+def _opening_rows(df15, now_ist, n_candles):
+    """Today's 15-min candles that fall INSIDE the opening window (first `n_candles` x 15 min from 09:15)."""
+    rows = df15[df15["timestamp"].dt.date == now_ist.date()]
+    if rows.empty:
+        return rows
+    end = rows.iloc[0]["timestamp"] + pd.Timedelta(minutes=15 * n_candles)
+    return rows[rows["timestamp"] < end]
+
+
 def _opening_candle_reliable(df15, now_ist, n_candles=1):
     """True only if today's opening window (1st 15-min candle, or the first `n_candles` 15-min
-    candles = 1 hour when n_candles=4) is complete enough to judge Open==Low / Open==High: it exists
+    candles: 2 = 30 min, 4 = 1 hour) is complete enough to judge Open==Low / Open==High: it exists
     for TODAY, starts at 09:15, its 1-min data starts at 09:15 (real open) and runs to the end of the
     window (so the high/low are not missing the last minutes because of data lag)."""
     try:
         if df15 is None or df15.empty:
             return False
-        today = now_ist.date()
-        rows = df15[df15["timestamp"].dt.date == today]
+        rows = _opening_rows(df15, now_ist, n_candles)
         if len(rows) < n_candles:
             return False
         t0 = rows.iloc[0]["timestamp"]
@@ -1561,8 +1569,9 @@ def _opening_candle_reliable(df15, now_ist, n_candles=1):
         lm = df15.attrs.get("last_minute")
         if fm is not None and (fm.hour, fm.minute) != (9, 15):
             return False
-        need = (9, 28) if n_candles == 1 else (10, 13)
-        if lm is not None and (lm.hour, lm.minute) < need:
+        # last 1-min bar must be within 2 minutes of the window end (09:28 / 09:43 / 10:13)
+        end_min = 9 * 60 + 15 + 15 * n_candles - 2
+        if lm is not None and (lm.hour * 60 + lm.minute) < end_min:
             return False
         return True
     except Exception:
@@ -1571,7 +1580,7 @@ def _opening_candle_reliable(df15, now_ist, n_candles=1):
 
 def _opening_window(df15, now_ist, n_candles):
     """(open, high, low, close) of today's first `n_candles` 15-min candles combined."""
-    rows = df15[df15["timestamp"].dt.date == now_ist.date()].iloc[:n_candles]
+    rows = _opening_rows(df15, now_ist, n_candles)
     return (float(rows.iloc[0]["open"]), float(rows["high"].max()),
             float(rows["low"].min()), float(rows.iloc[-1]["close"]))
 
@@ -1657,7 +1666,7 @@ def build_todays_opening_bias_list(now_ist, n_candles=1):
 _LAST_ALL_PCT = {}
 
 
-def run_opening_bias_report(now_ist, hour=False, sleep_first=True):
+def run_opening_bias_report(now_ist, hour=False, sleep_first=True, window_min=None):
     """
     NEW (per request) — SCAN_MODE=opening_bias_report entry point.
     Meant to run shortly after 09:30 IST (once today's first 15-min
@@ -1679,8 +1688,11 @@ def run_opening_bias_report(now_ist, hour=False, sleep_first=True):
     timestamp both reflect the real (post-sleep) clock time, not the
     stale pre-sleep one passed in from run().
     """
-    n_c = 4 if hour else 1
-    label = "1-hour" if hour else "15-min"
+    # window_min: 15 (default) / 30 / 60.  `hour=True` is the old way of saying 60.
+    if window_min is None:
+        window_min = 60 if hour else 15
+    n_c = max(1, int(window_min) // 15)
+    label = {15: "15-min", 30: "30-min", 60: "1-hour"}.get(int(window_min), f"{int(window_min)}-min")
     if sleep_first:
         time.sleep(15)
     now_ist = _now_ist()
@@ -4324,6 +4336,23 @@ def maybe_run_opening_1h_once_a_day(now_ist):
     run_opening_bias_report(now_ist, hour=True, sleep_first=False)
 
 
+def maybe_run_opening_30m_once_a_day(now_ist):
+    """1st 30-min (09:15-09:45) Open=Low/High + sector report. Runs from a normal run, once a day,
+    first run at/after OPENING_30M_RUN_AFTER (weekdays, before 12:00)."""
+    if not getattr(config, "OPENING_30M_REPORT_ENABLED", False) or now_ist.weekday() >= 5:
+        return
+    hh, mm = (int(x) for x in config.OPENING_30M_RUN_AFTER.split(":"))
+    if not (dt.time(hh, mm) <= now_ist.time() <= dt.time(12, 0)):
+        return
+    today = now_ist.date().isoformat()
+    st = state.load_state()
+    if state.already_alerted(st, "OPEN30M_REPORT", "DONE", today):
+        return
+    state.mark_alerted(st, "OPEN30M_REPORT", "DONE", today)   # mark first: a crash must not retry every run
+    state.save_state(st)
+    run_opening_bias_report(now_ist, window_min=30, sleep_first=False)
+
+
 def maybe_run_oversold_once_a_day(now_ist):
     """Morning list (first run at/after OVERSOLD_RUN_AFTER, before the close) + day-end performance."""
     if now_ist.weekday() >= 5:
@@ -4543,6 +4572,14 @@ def _run_inner():
                 send_mode_failure_notice("daily_scan", e, now_ist)
         return
 
+    if mode == "opening_bias_report_30m":
+        try:
+            run_opening_bias_report(now_ist, window_min=30)
+        except Exception as e:
+            print(f"run_opening_bias_report (30m) failed: {e}", flush=True)
+            send_mode_failure_notice("opening_bias_report_30m", e, now_ist)
+        return
+
     if mode == "opening_bias_report_1h":
         try:
             run_opening_bias_report(now_ist, hour=True)
@@ -4600,6 +4637,12 @@ def _run_inner():
         maybe_run_eod_report_once_a_day(now_ist)
     except Exception as e:
         print(f"EOD report failed this run (non-blocking): {e}", flush=True)
+
+    # 1st 30-min Open=Low/High + sector report (~09:47).
+    try:
+        maybe_run_opening_30m_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Opening 30M report failed this run (non-blocking): {e}", flush=True)
 
     # 1st 1-hour Open=Low/High + sector report (~10:17).
     try:

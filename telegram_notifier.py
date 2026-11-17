@@ -50,7 +50,7 @@ def _position_line(label, info, direction, close, kind="day"):
     if state == "FORMING":
         icon, text = "➖", "1st candle still forming (closes 10:30)"
     elif state == "SELF":
-        icon, text = "➖", f"alert is inside the 1st candle ({rng})"
+        icon, text = "➖", f"alert is inside the 1st {info.get('window_min', 15)}-min range ({rng})"
     elif state == "ABOVE":
         icon = "✅" if bullish else "⚠️"
         nm = "20D high" if kind == "month" else "high"
@@ -71,6 +71,9 @@ def _position_line(label, info, direction, close, kind="day"):
             text += f" · {gap:.1f}% below 20D high"
 
     tail = ""
+    ca = info.get("cross_ago")
+    if kind == "day" and ca is not None and state in ("ABOVE", "BELOW"):
+        tail += " · 🔀 crossed " + ("just now" if ca == 0 else f"{ca} candle{'s' if ca != 1 else ''} ago")
     if kind == "day" and info.get("bias") == "BULLISH":
         tail += " · Open=Low 🟢"
     elif kind == "day" and info.get("bias") == "BEARISH":
@@ -96,7 +99,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v41 (2026-11-16)"
+BUILD_TAG = "short-v42 (2026-11-16)"
 
 
 def _ema920_line(info15, info75):
@@ -165,6 +168,17 @@ _SECTOR_FALLBACK = {
     "IOC": "Oil & Gas", "ONGC": "Oil & Gas", "NYKAA": "Consumer Services", "DIXON": "Consumer Durables",
 }
 _INDUSTRY_MAP = None
+
+
+def _orb_tag(s):
+    """' · 🔀 30m range ⬆️' when the alert candle crossed the 1st 30-min range in its direction (visible line)."""
+    try:
+        f = (s.get("positions") or {}).get("first30")
+        if f and f.get("cross_ago") == 0:
+            return " · 🔀 30m range " + ("⬆️" if s["direction"] == "BULLISH" else "⬇️")
+    except Exception:
+        pass
+    return ""
 
 
 def _count_txt(s):
@@ -343,7 +357,16 @@ def _build_compact_alert_text(signal, parts=False):
     if signal.get("vwap") is not None and signal.get("vwap_note"):
         vn = signal["vwap_note"]
         tail = vn.split("(", 1)[-1].rstrip(")") if "(" in vn else ""
-        rows.append(f"{mark('VWAP')}<b>VWAP:</b> {signal['vwap']} {tail}".rstrip())
+        vca = signal.get("vwap_cross_ago")
+        vx = "" if vca is None else (" · 🔀 crossed just now" if vca == 0 else f" · 🔀 crossed {vca} candle{'s' if vca != 1 else ''} ago")
+        rows.append(f"{mark('VWAP')}<b>VWAP:</b> {signal['vwap']} {tail}{vx}".rstrip())
+
+    # 7a) 1st 30-min range (stock cross 1st 30-min range)
+    f30 = pos.get("first30")
+    if f30:
+        line = _position_line("1st 30-min", f30, direction, close, kind="day").strip()
+        if line:
+            rows.append(line)
 
     # 7) 1st 15-min
     f15 = pos.get("first15")
@@ -422,7 +445,7 @@ def flush_pending_alerts():
                 body = "\n".join(p["rows"])
                 line = (f"{'🟢' if s['direction'] == 'BULLISH' else '🔴'} <b>{s['symbol']}</b>{_sec}"
                         + ("  " + "  ·  ".join(links) if links else "")
-                        + f"\n{score.strip()} · {_p(float(s['close']))}{dc_txt}{_count_txt(s)}")
+                        + f"\n{score.strip()} · {_p(float(s['close']))}{dc_txt}{_count_txt(s)}{_orb_tag(s)}")
                 # first 3 lines of the block (the only ones Telegram shows collapsed) are a short
                 # label + two invisible lines, so nothing readable shows before the tap
                 items.append(f"{line}\n<blockquote expandable>{body}</blockquote>")

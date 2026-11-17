@@ -944,6 +944,7 @@ ENABLED_SCAN_MODES = {
     "daily_scan",
     "eod_report",
     "oversold_report", "oversold_eod", "opening_bias_report_1h",
+    "opening_bias_report_30m",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -970,6 +971,7 @@ ALERT_REQUIRE_STILL_VALID = True
 ALERT_STRENGTH_WEIGHTS = {
     "macd_zero": 1, "rsi": 1, "ema75": 1, "vwap": 1, "first15": 1,
     "volume": 1, "delivery": 1, "candle_volume": 1, "ema920": 1,
+    "first30": 1,
 }
 # These checks MUST pass or no alert is sent, whatever the other points add up to
 # (per request 2026-10-21 — "MACD RSI lagbei"). A check whose data is missing never blocks.
@@ -1095,3 +1097,25 @@ OVERSOLD_EOD_RUN_AFTER = "15:40"        # IST
 # report. Sent automatically by the first normal run at/after OPENING_1H_RUN_AFTER (no new cron job).
 OPENING_1H_REPORT_ENABLED = True
 OPENING_1H_RUN_AFTER = "10:17"   # IST (the 10:15 candle needs a minute or two to be final)
+
+
+# ---------- 1st 30-MIN Open=Low/High + sector report (ADDED 2026-11-16, "Opening 30 minit report") ----------
+# Same as the 9:30 "1st 15-min" and the 10:17 "1st 1-hour" reports, but for the first 30 minutes
+# (09:15-09:45): F&O stocks with Open=Low (bullish) / Open=High (bearish) over the whole 30 minutes,
+# sector wise, + a sector-performance report for the 1st 30 min. Sent automatically by the first normal
+# run at/after OPENING_30M_RUN_AFTER (no new cron job needed). Or on demand: SCAN_MODE=opening_bias_report_30m.
+OPENING_30M_REPORT_ENABLED = True
+OPENING_30M_RUN_AFTER = "09:47"   # IST (the 09:30 candle closes at 09:45; needs a minute or two to be final)
+
+# ---------- 15-min alert: "stock cross 1st 30-min range" (ADDED 2026-11-16) ----------
+# The alert's opening-range check/line now uses the 1st 30-MIN high/low (09:15-09:45) instead of the
+# 1st 15-min candle. BULLISH needs the alert candle's close ABOVE that high, BEARISH BELOW that low.
+# A "crossed" tag is shown when the close crossed the range on this very candle (or N candles ago).
+# 30 = 1st 30-min range (default).  15 = go back to the old 1st 15-min candle check.
+ALERT_OPENING_RANGE_MINUTES = 30
+
+# ---------- 15-min alert: "price above VWAP or cross" (ADDED 2026-11-16) ----------
+# The VWAP check passes when price is on the right side of the session VWAP (above for BULLISH,
+# below for BEARISH). On top of that the alert says whether price CROSSED the VWAP on this candle,
+# or within the last VWAP_CROSS_LOOKBACK_CANDLES candles (e.g. "🔀 crossed VWAP just now").
+VWAP_CROSS_LOOKBACK_CANDLES = 4

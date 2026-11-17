@@ -184,6 +184,31 @@ def _compute_vwap_at(df, idx):
     return float((typical_price * window["volume"]).sum() / cum_vol)
 
 
+def _vwap_cross_ago(df, idx, bullish, lookback):
+    """How many candles ago price CROSSED the session VWAP in the alert direction
+    (0 = on candle `idx` itself), looking back `lookback` candles of the SAME day.
+    BULLISH = close moved from <= VWAP to > VWAP; BEARISH = from >= VWAP to < VWAP.
+    None if no cross in the window / data unusable. Never raises."""
+    try:
+        for k in range(max(1, int(lookback))):
+            i = idx - k
+            if i < 1:
+                break
+            if df["timestamp"].iloc[i].date() != df["timestamp"].iloc[i - 1].date():
+                break   # VWAP resets each session
+            v_now, v_prev = _compute_vwap_at(df, i), _compute_vwap_at(df, i - 1)
+            if not v_now or not v_prev:
+                continue
+            c_now, c_prev = float(df["close"].iloc[i]), float(df["close"].iloc[i - 1])
+            if bullish and c_prev <= v_prev and c_now > v_now:
+                return k
+            if (not bullish) and c_prev >= v_prev and c_now < v_now:
+                return k
+    except Exception:
+        pass
+    return None
+
+
 def _find_swing_points(df, end_idx, lookback, strength):
     """
     Fractal swing-point finder used by detect_trendline_break().
@@ -774,6 +799,8 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         vwap_diff_pct = round((close_price - vwap) / vwap * 100, 2)
         position = "Above VWAP" if close_price >= vwap else "Below VWAP"
         vwap_note = f"{position} ({vwap_diff_pct:+.2f}%)"
+    # "price above VWAP or cross": did price CROSS the VWAP on this candle / recently?
+    vwap_cross_ago = _vwap_cross_ago(df, idx, bullish, getattr(config, "VWAP_CROSS_LOOKBACK_CANDLES", 4)) if vwap else None
 
     # VWAP direction condition — MANDATORY when require_vwap_confirmation
     # =True (added, per request): close must sit on the side of VWAP
@@ -882,6 +909,7 @@ def _evaluate_candle(df, idx, symbol, r3, s3, require_trend_confirmation=True, p
         "day_change_pct": day_change_pct,
         "vwap": round(vwap, 2) if vwap is not None else None,
         "vwap_note": vwap_note,
+        "vwap_cross_ago": vwap_cross_ago,
         "macd_line": round(float(curr["macd_line"]), 2),
         "macd_signal": round(float(curr["macd_signal"]), 2),
         "macd_hist": round(float(curr["macd_hist"]), 2),
@@ -1056,9 +1084,14 @@ def compute_alert_strength(signal):
     if note:
         add("vwap", "VWAP " + ("above" if bull else "below"), note.startswith("Above") == bull)
 
-    f15 = pos.get("first15")
-    if f15 and f15.get("state") in ("ABOVE", "BELOW", "INSIDE"):
-        add("first15", "1st 15-min " + ("above high" if bull else "below low"), f15["state"] == ("ABOVE" if bull else "BELOW"))
+    if int(getattr(config, "ALERT_OPENING_RANGE_MINUTES", 30)) == 30:
+        f30 = pos.get("first30")
+        if f30 and f30.get("state") in ("ABOVE", "BELOW", "INSIDE"):
+            add("first30", "1st 30-min " + ("above high" if bull else "below low"), f30["state"] == ("ABOVE" if bull else "BELOW"))
+    else:
+        f15 = pos.get("first15")
+        if f15 and f15.get("state") in ("ABOVE", "BELOW", "INSIDE"):
+            add("first15", "1st 15-min " + ("above high" if bull else "below low"), f15["state"] == ("ABOVE" if bull else "BELOW"))
 
     dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
     if dp is not None and avg_d:
@@ -1315,6 +1348,43 @@ def _range_position(close, high, low):
     }
 
 
+def _opening_range_position(df15, sig_ts, close, bullish, minutes=30):
+    """Where the alert candle's CLOSE sits vs the day's opening range (first `minutes` minutes, from
+    the 09:15 candle). state SELF while the alert candle is still inside that window; otherwise
+    ABOVE / BELOW / INSIDE (see _range_position). Adds window_min and cross_ago: how many 15-min
+    candles ago the close crossed the range in the alert direction (0 = this candle), or None."""
+    day = sig_ts.date()
+    rows = df15[(df15["timestamp"].dt.date == day) & (df15["timestamp"] <= sig_ts)]
+    if rows.empty:
+        return None
+    t0 = rows.iloc[0]["timestamp"]
+    win_end = t0 + pd.Timedelta(minutes=minutes)
+    win = rows[rows["timestamp"] < win_end]
+    hi, lo = float(win["high"].max()), float(win["low"].min())
+    if sig_ts < win_end:
+        return {"state": "SELF", "high": round(hi, 2), "low": round(lo, 2), "window_min": minutes, "cross_ago": None}
+    info = _range_position(close, hi, lo)
+    if info is None:
+        return None
+    info["window_min"] = minutes
+    # cross: last candle after the window whose close was outside the range while the one before was not
+    cross_ago = None
+    after = rows[rows["timestamp"] >= win_end]
+    closes = after["close"].astype(float).tolist()
+    prev_c = float(win.iloc[-1]["close"])
+    seq = [prev_c] + closes
+    for k in range(len(closes) - 1, -1, -1):
+        c_now, c_prev = seq[k + 1], seq[k]
+        if bullish and c_now > hi and c_prev <= hi:
+            cross_ago = len(closes) - 1 - k
+            break
+        if (not bullish) and c_now < lo and c_prev >= lo:
+            cross_ago = len(closes) - 1 - k
+            break
+    info["cross_ago"] = cross_ago if ((bullish and info["state"] == "ABOVE") or (not bullish and info["state"] == "BELOW")) else None
+    return info
+
+
 def compute_position_info(df15, df75, signal, mv=None):
     """
     "Position" lines for the alert (ADDED 2026-10-19, per request —
@@ -1337,7 +1407,7 @@ def compute_position_info(df15, df75, signal, mv=None):
     opening candles. Any part with missing data is simply None (the
     message leaves that line out) — this never raises or blocks an alert.
     """
-    out = {"first15": None, "first75": None, "month": None, "ema75": None}
+    out = {"first15": None, "first30": None, "first75": None, "month": None, "ema75": None}
     try:
         close = float(signal["close"])
         sig_ts = pd.Timestamp(signal["candle_time"])
@@ -1355,6 +1425,12 @@ def compute_position_info(df15, df75, signal, mv=None):
                     out["first15"] = _range_position(close, hi, lo)
                 if out["first15"] is not None:
                     out["first15"]["bias"] = signal.get("opening_candle_bias")
+
+        # ---- 1st 30-min range (09:15-09:45) — "stock cross 1st 30 min range" ----
+        if df15 is not None and not df15.empty:
+            out["first30"] = _opening_range_position(df15, sig_ts, close, bullish=(signal.get("direction") == "BULLISH"), minutes=30)
+            if out["first30"] is not None:
+                out["first30"]["bias"] = None
 
         # ---- 75-min ----
         # config.POSITION_75MIN_REFERENCE:
