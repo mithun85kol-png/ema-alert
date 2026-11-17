@@ -2958,6 +2958,22 @@ def check_daily_macd_rsi_scan(history, symbol, delivery_pct=None, delivery_avg_1
         if diff.iloc[i - 1] >= 0 > diff.iloc[i] and diff.iloc[-1] < 0:
             direction, cross_idx = "BEARISH", i
             break
+    trigger = "MACD"
+    # 2nd trigger (2026-11-17): daily RSI crossing 55 (bearish mirror: down through 45).
+    if direction is None and getattr(config, "DAILY_RSI_CROSS_ENABLED", False):
+        lvl_up = float(getattr(config, "DAILY_RSI_CROSS_LEVEL", 55))
+        lvl_dn = float(config.ALERT_STRONG_RSI_BEARISH)
+        rs = df["rsi"]
+        for k in range(0, look):
+            i = len(df) - 1 - k
+            if i < 1 or pd.isna(rs.iloc[i]) or pd.isna(rs.iloc[i - 1]):
+                break
+            if rs.iloc[i - 1] < lvl_up <= rs.iloc[i] and rs.iloc[-1] >= lvl_up:
+                direction, cross_idx, trigger = "BULLISH", i, "RSI"
+                break
+            if rs.iloc[i - 1] > lvl_dn >= rs.iloc[i] and rs.iloc[-1] <= lvl_dn:
+                direction, cross_idx, trigger = "BEARISH", i, "RSI"
+                break
     if direction is None:
         return None
     bull = direction == "BULLISH"
@@ -3005,6 +3021,7 @@ def check_daily_macd_rsi_scan(history, symbol, delivery_pct=None, delivery_avg_1
     return {
         "symbol": symbol,
         "direction": direction,
+        "trigger": trigger,
         "date": df["date"].iloc[cross_idx].strftime("%Y-%m-%d"),
         "cross_days_ago": len(df) - 1 - cross_idx,
         "candle_date": df["date"].iloc[-1].strftime("%Y-%m-%d"),

@@ -1119,3 +1119,19 @@ ALERT_OPENING_RANGE_MINUTES = 30
 # below for BEARISH). On top of that the alert says whether price CROSSED the VWAP on this candle,
 # or within the last VWAP_CROSS_LOOKBACK_CANDLES candles (e.g. "🔀 crossed VWAP just now").
 VWAP_CROSS_LOOKBACK_CANDLES = 4
+
+# ---------- Daily RSI 55 cross alert (ADDED 2026-11-17, "daily rsi o alert dao 55 crossed with all conditions") ----------
+# The DAILY alert (SCAN_MODE=daily_scan / the morning run) now has a SECOND trigger besides the daily
+# MACD cross: the daily RSI(14) CROSSING 55 (previous daily RSI < 55, now >= 55) on the last daily candle
+# or up to DAILY_ALERT_CROSS_LOOKBACK-1 candles earlier (RSI still >= 55 now). BEARISH mirror: RSI
+# crossing DOWN through ALERT_STRONG_RSI_BEARISH (45) — only if DAILY_ALERT_BULLISH_ONLY is False.
+# "All conditions" = exactly the same mandatory checks + minimum score as the MACD-cross daily alert
+# (MACD on the right side of zero, RSI, volume, EMA50/200, EMA 9/20, 20-day high, delivery ...).
+DAILY_RSI_CROSS_ENABLED = True
+DAILY_RSI_CROSS_LEVEL = 55
+
+# ---------- NIFTY 50 / NIFTY BANK / SENSEX in the normal run (ADDED 2026-11-17, "nifty sensex e asche na") ----------
+# Before: the normal (full) run SKIPPED the 3 indices and only the separate SCAN_MODE=index cron job
+# evaluated them. If that cron isn't running, indices never alert. True = the normal run also evaluates
+# them (same 15-min MACD alert rules). Dedupe (alert_state) still stops duplicates.
+INDEX_ALERTS_IN_FULL_RUN = True

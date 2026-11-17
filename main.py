@@ -2279,7 +2279,7 @@ def run_fo_scan(now_ist, index_only=False):
             # is NOT the dedicated index_only run closes that window:
             # each index candle is now only ever evaluated by ONE cron
             # trigger, never two.
-            if symbol in index_symbols and not index_only:
+            if symbol in index_symbols and not index_only and not getattr(config, "INDEX_ALERTS_IN_FULL_RUN", False):
                 continue
 
             # Consolidation Breakout — LIVE (added, per request:
@@ -3954,7 +3954,12 @@ def send_daily_macd_rsi_summary(hits, now_ist):
         missing = [n for n, ok in h["checks"] if not ok]
         miss = ("\n\u274C " + ", ".join(missing)) if missing else ""
         vd = []
-        if h.get("cross_days_ago"):
+        _lbl = "RSI crossed 55" if h.get("trigger") == "RSI" else None
+        if h.get("trigger") == "RSI" and h["direction"] != "BULLISH":
+            _lbl = f"RSI crossed {config.ALERT_STRONG_RSI_BEARISH} (down)"
+        if _lbl:
+            vd.append("\U0001F500 " + _lbl + (f" {h['cross_days_ago']}d ago" if h.get("cross_days_ago") else " today"))
+        elif h.get("cross_days_ago"):
             vd.append(f"cross {h['cross_days_ago']}d ago")
         if h.get("volume_vs_avg_pct") is not None:
             vd.append(f"Vol {h['volume_vs_avg_pct']:+.0f}%")
