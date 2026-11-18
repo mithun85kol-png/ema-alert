@@ -1,30 +1,6 @@
 {
   "date": "2026-11-18",
   "data": {
-    "NIFTY 50": {
-      "month_high": 25501.35,
-      "month_low": 22372.0,
-      "four_week_high_close": 25387.4,
-      "prev_day_volume": 0,
-      "volume_5day_ago": 0,
-      "volume_avg_1m": 0.0,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 23801.34,
-        "ema200": 24152.74,
-        "cross_date": "2026-01-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 25501.35,
-        "2": 25501.35,
-        "3": 25501.35,
-        "4": 25501.35,
-        "5": 25501.35,
-        "6": 25501.35
-      },
-      "consolidation_window": null
-    },
     "NIFTY BANK": {
       "month_high": 62442.2,
       "month_low": 53626.15,
@@ -70,6 +46,30 @@
         "4": 82897.49,
         "5": 82897.49,
         "6": 82897.49
+      },
+      "consolidation_window": null
+    },
+    "NIFTY 50": {
+      "month_high": 25501.35,
+      "month_low": 22372.0,
+      "four_week_high_close": 25387.4,
+      "prev_day_volume": 0,
+      "volume_5day_ago": 0,
+      "volume_avg_1m": 0.0,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 23801.34,
+        "ema200": 24152.74,
+        "cross_date": "2026-01-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 25501.35,
+        "2": 25501.35,
+        "3": 25501.35,
+        "4": 25501.35,
+        "5": 25501.35,
+        "6": 25501.35
       },
       "consolidation_window": null
     },
@@ -241,30 +241,6 @@
       },
       "consolidation_window": null
     },
-    "SHREECEM": {
-      "month_high": 25450.0,
-      "month_low": 21770.0,
-      "four_week_high_close": 25270.0,
-      "prev_day_volume": 16495,
-      "volume_5day_ago": 23182,
-      "volume_avg_1m": 22771.75,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 23717.52,
-        "ema200": 24666.4,
-        "cross_date": "2026-08-17",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 25450.0,
-        "2": 25450.0,
-        "3": 25450.0,
-        "4": 27550.0,
-        "5": 27550.0,
-        "6": 27550.0
-      },
-      "consolidation_window": null
-    },
     "JINDALSTEL": {
       "month_high": 1175.5,
       "month_low": 1000.8,
@@ -286,6 +262,30 @@
         "4": 1196.4,
         "5": 1196.4,
         "6": 1254.9
+      },
+      "consolidation_window": null
+    },
+    "SHREECEM": {
+      "month_high": 25450.0,
+      "month_low": 21770.0,
+      "four_week_high_close": 25270.0,
+      "prev_day_volume": 16495,
+      "volume_5day_ago": 23182,
+      "volume_avg_1m": 22771.75,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 23717.52,
+        "ema200": 24666.4,
+        "cross_date": "2026-08-17",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 25450.0,
+        "2": 25450.0,
+        "3": 25450.0,
+        "4": 27550.0,
+        "5": 27550.0,
+        "6": 27550.0
       },
       "consolidation_window": null
     },
@@ -409,30 +409,6 @@
       },
       "consolidation_window": null
     },
-    "GODREJCP": {
-      "month_high": 907.15,
-      "month_low": 777.2,
-      "four_week_high_close": 894.5,
-      "prev_day_volume": 921795,
-      "volume_5day_ago": 1249612,
-      "volume_avg_1m": 1464938.25,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 876.03,
-        "ema200": 993.5,
-        "cross_date": "2026-01-27",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 907.15,
-        "2": 907.15,
-        "3": 948.0,
-        "4": 1100.0,
-        "5": 1118.0,
-        "6": 1118.0
-      },
-      "consolidation_window": null
-    },
     "PFC": {
       "month_high": 347.65,
       "month_low": 310.3,
@@ -481,6 +457,30 @@
       },
       "consolidation_window": null
     },
+    "GODREJCP": {
+      "month_high": 907.15,
+      "month_low": 777.2,
+      "four_week_high_close": 894.5,
+      "prev_day_volume": 921795,
+      "volume_5day_ago": 1249612,
+      "volume_avg_1m": 1464938.25,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 876.03,
+        "ema200": 993.5,
+        "cross_date": "2026-01-27",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 907.15,
+        "2": 907.15,
+        "3": 948.0,
+        "4": 1100.0,
+        "5": 1118.0,
+        "6": 1118.0
+      },
+      "consolidation_window": null
+    },
     "NAVINFLUOR": {
       "month_high": 10165.0,
       "month_low": 7510.5,
@@ -502,54 +502,6 @@
         "4": 10165.0,
         "5": 10165.0,
         "6": 10165.0
-      },
-      "consolidation_window": null
-    },
-    "KAYNES": {
-      "month_high": 3557.0,
-      "month_low": 2744.0,
-      "four_week_high_close": 3484.0,
-      "prev_day_volume": 4219295,
-      "volume_5day_ago": 392272,
-      "volume_avg_1m": 1300708.75,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 3341.25,
-        "ema200": 3542.12,
-        "cross_date": "2026-05-19",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 3557.0,
-        "2": 3707.2,
-        "3": 4117.9,
-        "4": 4117.9,
-        "5": 4117.9,
-        "6": 4117.9
-      },
-      "consolidation_window": null
-    },
-    "BIOCON": {
-      "month_high": 375.45,
-      "month_low": 318.4,
-      "four_week_high_close": 370.95,
-      "prev_day_volume": 1968820,
-      "volume_5day_ago": 2955204,
-      "volume_avg_1m": 3262000.2,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 367.16,
-        "ema200": 387.24,
-        "cross_date": "2026-10-01",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 375.45,
-        "2": 397.2,
-        "3": 421.6,
-        "4": 442.6,
-        "5": 447.15,
-        "6": 447.15
       },
       "consolidation_window": null
     },
@@ -577,6 +529,30 @@
       },
       "consolidation_window": null
     },
+    "KAYNES": {
+      "month_high": 3557.0,
+      "month_low": 2744.0,
+      "four_week_high_close": 3484.0,
+      "prev_day_volume": 4219295,
+      "volume_5day_ago": 392272,
+      "volume_avg_1m": 1300708.75,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 3341.25,
+        "ema200": 3542.12,
+        "cross_date": "2026-05-19",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 3557.0,
+        "2": 3707.2,
+        "3": 4117.9,
+        "4": 4117.9,
+        "5": 4117.9,
+        "6": 4117.9
+      },
+      "consolidation_window": null
+    },
     "BHARATFORG": {
       "month_high": 1884.7,
       "month_low": 1680.1,
@@ -598,6 +574,30 @@
         "4": 2295.0,
         "5": 2295.0,
         "6": 2295.0
+      },
+      "consolidation_window": null
+    },
+    "BIOCON": {
+      "month_high": 375.45,
+      "month_low": 318.4,
+      "four_week_high_close": 370.95,
+      "prev_day_volume": 1968820,
+      "volume_5day_ago": 2955204,
+      "volume_avg_1m": 3262000.2,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 367.16,
+        "ema200": 387.24,
+        "cross_date": "2026-10-01",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 375.45,
+        "2": 397.2,
+        "3": 421.6,
+        "4": 442.6,
+        "5": 447.15,
+        "6": 447.15
       },
       "consolidation_window": null
     },
@@ -847,54 +847,6 @@
       },
       "consolidation_window": null
     },
-    "BANKBARODA": {
-      "month_high": 276.85,
-      "month_low": 227.2,
-      "four_week_high_close": 276.15,
-      "prev_day_volume": 17391807,
-      "volume_5day_ago": 18123757,
-      "volume_avg_1m": 11726463.0,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 246.46,
-        "ema200": 259.68,
-        "cross_date": "2026-01-08",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 276.85,
-        "2": 276.85,
-        "3": 276.85,
-        "4": 276.85,
-        "5": 287.2,
-        "6": 287.2
-      },
-      "consolidation_window": null
-    },
-    "LODHA": {
-      "month_high": 1242.6,
-      "month_low": 937.1,
-      "four_week_high_close": 1226.0,
-      "prev_day_volume": 1134282,
-      "volume_5day_ago": 1048831,
-      "volume_avg_1m": 1431840.35,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1122.26,
-        "ema200": 1077.04,
-        "cross_date": "2026-07-15",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 1242.6,
-        "2": 1242.6,
-        "3": 1306.9,
-        "4": 1344.95,
-        "5": 1344.95,
-        "6": 1344.95
-      },
-      "consolidation_window": null
-    },
     "HEROMOTOCO": {
       "month_high": 5550.0,
       "month_low": 4976.5,
@@ -925,6 +877,30 @@
         "days": 10
       }
     },
+    "BANKBARODA": {
+      "month_high": 276.85,
+      "month_low": 227.2,
+      "four_week_high_close": 276.15,
+      "prev_day_volume": 17391807,
+      "volume_5day_ago": 18123757,
+      "volume_avg_1m": 11726463.0,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 246.46,
+        "ema200": 259.68,
+        "cross_date": "2026-01-08",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 276.85,
+        "2": 276.85,
+        "3": 276.85,
+        "4": 276.85,
+        "5": 287.2,
+        "6": 287.2
+      },
+      "consolidation_window": null
+    },
     "UNOMINDA": {
       "month_high": 1406.5,
       "month_low": 1030.0,
@@ -946,6 +922,30 @@
         "4": 1406.5,
         "5": 1406.5,
         "6": 1406.5
+      },
+      "consolidation_window": null
+    },
+    "LODHA": {
+      "month_high": 1242.6,
+      "month_low": 937.1,
+      "four_week_high_close": 1226.0,
+      "prev_day_volume": 1134282,
+      "volume_5day_ago": 1048831,
+      "volume_avg_1m": 1431840.35,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1122.26,
+        "ema200": 1077.04,
+        "cross_date": "2026-07-15",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1242.6,
+        "2": 1242.6,
+        "3": 1306.9,
+        "4": 1344.95,
+        "5": 1344.95,
+        "6": 1344.95
       },
       "consolidation_window": null
     },
@@ -1189,54 +1189,6 @@
       },
       "consolidation_window": null
     },
-    "COROMANDEL": {
-      "month_high": 2054.0,
-      "month_low": 1655.1,
-      "four_week_high_close": 1992.0,
-      "prev_day_volume": 110132,
-      "volume_5day_ago": 286034,
-      "volume_avg_1m": 227524.95,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1861.62,
-        "ema200": 1980.12,
-        "cross_date": "2026-03-02",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 2054.0,
-        "2": 2054.0,
-        "3": 2104.8,
-        "4": 2129.9,
-        "5": 2129.9,
-        "6": 2129.9
-      },
-      "consolidation_window": null
-    },
-    "TRENT": {
-      "month_high": 3262.0,
-      "month_low": 2676.2,
-      "four_week_high_close": 3222.7,
-      "prev_day_volume": 747920,
-      "volume_5day_ago": 960820,
-      "volume_avg_1m": 969603.05,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2955.61,
-        "ema200": 2878.94,
-        "cross_date": "2026-10-30",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 3262.0,
-        "2": 3262.0,
-        "3": 3262.0,
-        "4": 3262.0,
-        "5": 3399.7,
-        "6": 3399.7
-      },
-      "consolidation_window": null
-    },
     "TECHM": {
       "month_high": 1860.0,
       "month_low": 1733.2,
@@ -1261,6 +1213,30 @@
       },
       "consolidation_window": null
     },
+    "COROMANDEL": {
+      "month_high": 2054.0,
+      "month_low": 1655.1,
+      "four_week_high_close": 1992.0,
+      "prev_day_volume": 110132,
+      "volume_5day_ago": 286034,
+      "volume_avg_1m": 227524.95,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1861.62,
+        "ema200": 1980.12,
+        "cross_date": "2026-03-02",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 2054.0,
+        "2": 2054.0,
+        "3": 2104.8,
+        "4": 2129.9,
+        "5": 2129.9,
+        "6": 2129.9
+      },
+      "consolidation_window": null
+    },
     "BRITANNIA": {
       "month_high": 5098.3,
       "month_low": 4499.9,
@@ -1282,6 +1258,30 @@
         "4": 5689.5,
         "5": 5689.5,
         "6": 5689.5
+      },
+      "consolidation_window": null
+    },
+    "TRENT": {
+      "month_high": 3262.0,
+      "month_low": 2676.2,
+      "four_week_high_close": 3222.7,
+      "prev_day_volume": 747920,
+      "volume_5day_ago": 960820,
+      "volume_avg_1m": 969603.05,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2955.61,
+        "ema200": 2878.94,
+        "cross_date": "2026-10-30",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 3262.0,
+        "2": 3262.0,
+        "3": 3262.0,
+        "4": 3262.0,
+        "5": 3399.7,
+        "6": 3399.7
       },
       "consolidation_window": null
     },
@@ -1861,30 +1861,6 @@
       },
       "consolidation_window": null
     },
-    "COCHINSHIP": {
-      "month_high": 1293.1,
-      "month_low": 1101.2,
-      "four_week_high_close": 1290.0,
-      "prev_day_volume": 1183066,
-      "volume_5day_ago": 1742760,
-      "volume_avg_1m": 1381269.7,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1264.45,
-        "ema200": 1413.77,
-        "cross_date": "2026-05-18",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 1293.1,
-        "2": 1411.0,
-        "3": 1577.9,
-        "4": 1577.9,
-        "5": 1577.9,
-        "6": 1577.9
-      },
-      "consolidation_window": null
-    },
     "IRFC": {
       "month_high": 89.93,
       "month_low": 73.05,
@@ -1930,6 +1906,30 @@
         "4": 2766.5,
         "5": 2838.4,
         "6": 2838.4
+      },
+      "consolidation_window": null
+    },
+    "COCHINSHIP": {
+      "month_high": 1293.1,
+      "month_low": 1101.2,
+      "four_week_high_close": 1290.0,
+      "prev_day_volume": 1183066,
+      "volume_5day_ago": 1742760,
+      "volume_avg_1m": 1381269.7,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1264.45,
+        "ema200": 1413.77,
+        "cross_date": "2026-05-18",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1293.1,
+        "2": 1411.0,
+        "3": 1577.9,
+        "4": 1577.9,
+        "5": 1577.9,
+        "6": 1577.9
       },
       "consolidation_window": null
     },
@@ -2395,30 +2395,6 @@
         "days": 10
       }
     },
-    "DATAPATTNS": {
-      "month_high": 4324.4,
-      "month_low": 3602.0,
-      "four_week_high_close": 4268.0,
-      "prev_day_volume": 335719,
-      "volume_5day_ago": 3663560,
-      "volume_avg_1m": 751162.8,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 4156.29,
-        "ema200": 3938.4,
-        "cross_date": "2026-02-16",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 4324.4,
-        "2": 4640.0,
-        "3": 5000.0,
-        "4": 5000.0,
-        "5": 5000.0,
-        "6": 5000.0
-      },
-      "consolidation_window": null
-    },
     "COALINDIA": {
       "month_high": 415.7,
       "month_low": 380.4,
@@ -2488,6 +2464,30 @@
         "4": 98.7,
         "5": 114.29,
         "6": 114.29
+      },
+      "consolidation_window": null
+    },
+    "DATAPATTNS": {
+      "month_high": 4324.4,
+      "month_low": 3602.0,
+      "four_week_high_close": 4268.0,
+      "prev_day_volume": 335719,
+      "volume_5day_ago": 3663560,
+      "volume_avg_1m": 751162.8,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 4156.29,
+        "ema200": 3938.4,
+        "cross_date": "2026-02-16",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 4324.4,
+        "2": 4640.0,
+        "3": 5000.0,
+        "4": 5000.0,
+        "5": 5000.0,
+        "6": 5000.0
       },
       "consolidation_window": null
     },
@@ -2563,30 +2563,6 @@
       },
       "consolidation_window": null
     },
-    "AMBUJACEM": {
-      "month_high": 396.95,
-      "month_low": 346.6,
-      "four_week_high_close": 395.65,
-      "prev_day_volume": 2953947,
-      "volume_5day_ago": 2937929,
-      "volume_avg_1m": 4575900.55,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 379.79,
-        "ema200": 428.69,
-        "cross_date": "2026-01-08",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 396.95,
-        "2": 396.95,
-        "3": 422.8,
-        "4": 450.5,
-        "5": 450.5,
-        "6": 462.0
-      },
-      "consolidation_window": null
-    },
     "PGEL": {
       "month_high": 579.75,
       "month_low": 454.5,
@@ -2608,6 +2584,30 @@
         "4": 643.95,
         "5": 643.95,
         "6": 643.95
+      },
+      "consolidation_window": null
+    },
+    "AMBUJACEM": {
+      "month_high": 396.95,
+      "month_low": 346.6,
+      "four_week_high_close": 395.65,
+      "prev_day_volume": 2953947,
+      "volume_5day_ago": 2937929,
+      "volume_avg_1m": 4575900.55,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 379.79,
+        "ema200": 428.69,
+        "cross_date": "2026-01-08",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 396.95,
+        "2": 396.95,
+        "3": 422.8,
+        "4": 450.5,
+        "5": 450.5,
+        "6": 462.0
       },
       "consolidation_window": null
     },
@@ -2659,54 +2659,6 @@
       },
       "consolidation_window": null
     },
-    "CROMPTON": {
-      "month_high": 223.45,
-      "month_low": 191.55,
-      "four_week_high_close": 218.9,
-      "prev_day_volume": 2772396,
-      "volume_5day_ago": 5357679,
-      "volume_avg_1m": 4376267.15,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 215.64,
-        "ema200": 239.14,
-        "cross_date": "2026-08-20",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 223.45,
-        "2": 227.12,
-        "3": 259.0,
-        "4": 271.0,
-        "5": 281.5,
-        "6": 299.9
-      },
-      "consolidation_window": null
-    },
-    "HDFCBANK": {
-      "month_high": 821.0,
-      "month_low": 669.2,
-      "four_week_high_close": 816.5,
-      "prev_day_volume": 34909357,
-      "volume_5day_ago": 64826814,
-      "volume_avg_1m": 37861102.9,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 741.11,
-        "ema200": 787.9,
-        "cross_date": "2026-01-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 821.0,
-        "2": 821.0,
-        "3": 821.0,
-        "4": 821.0,
-        "5": 843.0,
-        "6": 843.0
-      },
-      "consolidation_window": null
-    },
     "GVT&D": {
       "month_high": 4464.8,
       "month_low": 3533.4,
@@ -2728,6 +2680,30 @@
         "4": 4825.0,
         "5": 5650.0,
         "6": 5650.0
+      },
+      "consolidation_window": null
+    },
+    "CROMPTON": {
+      "month_high": 223.45,
+      "month_low": 191.55,
+      "four_week_high_close": 218.9,
+      "prev_day_volume": 2772396,
+      "volume_5day_ago": 5357679,
+      "volume_avg_1m": 4376267.15,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 215.64,
+        "ema200": 239.14,
+        "cross_date": "2026-08-20",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 223.45,
+        "2": 227.12,
+        "3": 259.0,
+        "4": 271.0,
+        "5": 281.5,
+        "6": 299.9
       },
       "consolidation_window": null
     },
@@ -2755,6 +2731,30 @@
       },
       "consolidation_window": null
     },
+    "HDFCBANK": {
+      "month_high": 821.0,
+      "month_low": 669.2,
+      "four_week_high_close": 816.5,
+      "prev_day_volume": 34909357,
+      "volume_5day_ago": 64826814,
+      "volume_avg_1m": 37861102.9,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 741.11,
+        "ema200": 787.9,
+        "cross_date": "2026-01-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 821.0,
+        "2": 821.0,
+        "3": 821.0,
+        "4": 821.0,
+        "5": 843.0,
+        "6": 843.0
+      },
+      "consolidation_window": null
+    },
     "PIIND": {
       "month_high": 2215.0,
       "month_low": 1667.6,
@@ -2776,30 +2776,6 @@
         "4": 2845.0,
         "5": 2856.6,
         "6": 3194.1
-      },
-      "consolidation_window": null
-    },
-    "IREDA": {
-      "month_high": 123.99,
-      "month_low": 98.78,
-      "four_week_high_close": 120.2,
-      "prev_day_volume": 20191579,
-      "volume_5day_ago": 46171717,
-      "volume_avg_1m": 8821311.7,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 110.96,
-        "ema200": 120.49,
-        "cross_date": "2026-01-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 123.99,
-        "2": 123.99,
-        "3": 123.99,
-        "4": 123.99,
-        "5": 133.19,
-        "6": 135.5
       },
       "consolidation_window": null
     },
@@ -2851,6 +2827,30 @@
       },
       "consolidation_window": null
     },
+    "IREDA": {
+      "month_high": 123.99,
+      "month_low": 98.78,
+      "four_week_high_close": 120.2,
+      "prev_day_volume": 20191579,
+      "volume_5day_ago": 46171717,
+      "volume_avg_1m": 8821311.7,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 110.96,
+        "ema200": 120.49,
+        "cross_date": "2026-01-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 123.99,
+        "2": 123.99,
+        "3": 123.99,
+        "4": 123.99,
+        "5": 133.19,
+        "6": 135.5
+      },
+      "consolidation_window": null
+    },
     "POWERGRID": {
       "month_high": 270.2,
       "month_low": 242.3,
@@ -2872,30 +2872,6 @@
         "4": 294.1,
         "5": 295.25,
         "6": 304.5
-      },
-      "consolidation_window": null
-    },
-    "DLF": {
-      "month_high": 773.65,
-      "month_low": 647.6,
-      "four_week_high_close": 769.3,
-      "prev_day_volume": 3078092,
-      "volume_5day_ago": 1780501,
-      "volume_avg_1m": 2864006.3,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 694.73,
-        "ema200": 659.16,
-        "cross_date": "2026-07-30",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 773.65,
-        "2": 773.65,
-        "3": 773.65,
-        "4": 773.65,
-        "5": 773.65,
-        "6": 773.65
       },
       "consolidation_window": null
     },
@@ -2968,6 +2944,30 @@
         "4": 2488.0,
         "5": 2488.0,
         "6": 2488.0
+      },
+      "consolidation_window": null
+    },
+    "DLF": {
+      "month_high": 773.65,
+      "month_low": 647.6,
+      "four_week_high_close": 769.3,
+      "prev_day_volume": 3078092,
+      "volume_5day_ago": 1780501,
+      "volume_avg_1m": 2864006.3,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 694.73,
+        "ema200": 659.16,
+        "cross_date": "2026-07-30",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 773.65,
+        "2": 773.65,
+        "3": 773.65,
+        "4": 773.65,
+        "5": 773.65,
+        "6": 773.65
       },
       "consolidation_window": null
     },
@@ -3289,36 +3289,6 @@
       },
       "consolidation_window": null
     },
-    "DMART": {
-      "month_high": 3484.1,
-      "month_low": 3102.3,
-      "four_week_high_close": 3470.0,
-      "prev_day_volume": 136879,
-      "volume_5day_ago": 259554,
-      "volume_avg_1m": 500937.4,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 3514.63,
-        "ema200": 3795.47,
-        "cross_date": "2026-09-02",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 3484.1,
-        "2": 3880.0,
-        "3": 4070.0,
-        "4": 4124.9,
-        "5": 4429.4,
-        "6": 4429.4
-      },
-      "consolidation_window": {
-        "range_low": 3322.1,
-        "range_high": 3484.1,
-        "range_pct": 4.7,
-        "avg_volume": 322476.3,
-        "days": 10
-      }
-    },
     "MOTHERSON": {
       "month_high": 169.69,
       "month_low": 147.27,
@@ -3370,6 +3340,36 @@
         "range_high": 1421.4,
         "range_pct": 2.81,
         "avg_volume": 1258327.4,
+        "days": 10
+      }
+    },
+    "DMART": {
+      "month_high": 3484.1,
+      "month_low": 3102.3,
+      "four_week_high_close": 3470.0,
+      "prev_day_volume": 136879,
+      "volume_5day_ago": 259554,
+      "volume_avg_1m": 500937.4,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 3514.63,
+        "ema200": 3795.47,
+        "cross_date": "2026-09-02",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 3484.1,
+        "2": 3880.0,
+        "3": 4070.0,
+        "4": 4124.9,
+        "5": 4429.4,
+        "6": 4429.4
+      },
+      "consolidation_window": {
+        "range_low": 3322.1,
+        "range_high": 3484.1,
+        "range_pct": 4.7,
+        "avg_volume": 322476.3,
         "days": 10
       }
     },
@@ -3469,30 +3469,6 @@
       },
       "consolidation_window": null
     },
-    "AUBANK": {
-      "month_high": 1000.0,
-      "month_low": 845.1,
-      "four_week_high_close": 993.1,
-      "prev_day_volume": 2187665,
-      "volume_5day_ago": 1284118,
-      "volume_avg_1m": 2648279.9,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 972.32,
-        "ema200": 1000.36,
-        "cross_date": "2026-10-26",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 1000.0,
-        "2": 1058.6,
-        "3": 1144.1,
-        "4": 1144.1,
-        "5": 1144.1,
-        "6": 1144.1
-      },
-      "consolidation_window": null
-    },
     "OFSS": {
       "month_high": 10374.0,
       "month_low": 9540.0,
@@ -3541,27 +3517,27 @@
       },
       "consolidation_window": null
     },
-    "TITAN": {
-      "month_high": 5056.6,
-      "month_low": 4209.0,
-      "four_week_high_close": 5005.0,
-      "prev_day_volume": 438916,
-      "volume_5day_ago": 839812,
-      "volume_avg_1m": 940018.9,
+    "AUBANK": {
+      "month_high": 1000.0,
+      "month_low": 845.1,
+      "four_week_high_close": 993.1,
+      "prev_day_volume": 2187665,
+      "volume_5day_ago": 1284118,
+      "volume_avg_1m": 2648279.9,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 4706.85,
-        "ema200": 4534.37,
-        "cross_date": "2026-01-05",
+        "bias": "BEARISH",
+        "ema50": 972.32,
+        "ema200": 1000.36,
+        "cross_date": "2026-10-26",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 5056.6,
-        "2": 5056.6,
-        "3": 5186.7,
-        "4": 5186.7,
-        "5": 5186.7,
-        "6": 5186.7
+        "1": 1000.0,
+        "2": 1058.6,
+        "3": 1144.1,
+        "4": 1144.1,
+        "5": 1144.1,
+        "6": 1144.1
       },
       "consolidation_window": null
     },
@@ -3634,6 +3610,30 @@
         "4": 514.45,
         "5": 514.45,
         "6": 514.45
+      },
+      "consolidation_window": null
+    },
+    "TITAN": {
+      "month_high": 5056.6,
+      "month_low": 4209.0,
+      "four_week_high_close": 5005.0,
+      "prev_day_volume": 438916,
+      "volume_5day_ago": 839812,
+      "volume_avg_1m": 940018.9,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 4706.85,
+        "ema200": 4534.37,
+        "cross_date": "2026-01-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 5056.6,
+        "2": 5056.6,
+        "3": 5186.7,
+        "4": 5186.7,
+        "5": 5186.7,
+        "6": 5186.7
       },
       "consolidation_window": null
     },
@@ -3877,30 +3877,6 @@
       },
       "consolidation_window": null
     },
-    "DIXON": {
-      "month_high": 13220.0,
-      "month_low": 10932.0,
-      "four_week_high_close": 13081.0,
-      "prev_day_volume": 374964,
-      "volume_5day_ago": 171649,
-      "volume_avg_1m": 368100.05,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 12717.0,
-        "ema200": 12539.59,
-        "cross_date": "2026-06-22",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 13220.0,
-        "2": 13766.0,
-        "3": 15000.0,
-        "4": 15000.0,
-        "5": 15000.0,
-        "6": 15000.0
-      },
-      "consolidation_window": null
-    },
     "HINDALCO": {
       "month_high": 971.65,
       "month_low": 851.1,
@@ -3925,27 +3901,27 @@
       },
       "consolidation_window": null
     },
-    "IOC": {
-      "month_high": 150.05,
-      "month_low": 126.5,
-      "four_week_high_close": 148.38,
-      "prev_day_volume": 10228348,
-      "volume_5day_ago": 22650357,
-      "volume_avg_1m": 13190165.45,
+    "DIXON": {
+      "month_high": 13220.0,
+      "month_low": 10932.0,
+      "four_week_high_close": 13081.0,
+      "prev_day_volume": 374964,
+      "volume_5day_ago": 171649,
+      "volume_avg_1m": 368100.05,
       "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 137.32,
-        "ema200": 143.58,
-        "cross_date": "2026-03-18",
+        "bias": "BULLISH",
+        "ema50": 12717.0,
+        "ema200": 12539.59,
+        "cross_date": "2026-06-22",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 150.05,
-        "2": 150.05,
-        "3": 150.05,
-        "4": 150.05,
-        "5": 150.05,
-        "6": 150.05
+        "1": 13220.0,
+        "2": 13766.0,
+        "3": 15000.0,
+        "4": 15000.0,
+        "5": 15000.0,
+        "6": 15000.0
       },
       "consolidation_window": null
     },
@@ -3973,27 +3949,27 @@
       },
       "consolidation_window": null
     },
-    "KPITTECH": {
-      "month_high": 571.4,
-      "month_low": 510.5,
-      "four_week_high_close": 558.05,
-      "prev_day_volume": 931955,
-      "volume_5day_ago": 1010010,
-      "volume_avg_1m": 1834307.5,
+    "IOC": {
+      "month_high": 150.05,
+      "month_low": 126.5,
+      "four_week_high_close": 148.38,
+      "prev_day_volume": 10228348,
+      "volume_5day_ago": 22650357,
+      "volume_avg_1m": 13190165.45,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 543.63,
-        "ema200": 684.99,
-        "cross_date": "2026-01-21",
+        "ema50": 137.32,
+        "ema200": 143.58,
+        "cross_date": "2026-03-18",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 571.4,
-        "2": 571.4,
-        "3": 613.45,
-        "4": 662.65,
-        "5": 770.95,
-        "6": 826.0
+        "1": 150.05,
+        "2": 150.05,
+        "3": 150.05,
+        "4": 150.05,
+        "5": 150.05,
+        "6": 150.05
       },
       "consolidation_window": null
     },
@@ -4042,6 +4018,30 @@
         "4": 416.35,
         "5": 435.0,
         "6": 435.0
+      },
+      "consolidation_window": null
+    },
+    "KPITTECH": {
+      "month_high": 571.4,
+      "month_low": 510.5,
+      "four_week_high_close": 558.05,
+      "prev_day_volume": 931955,
+      "volume_5day_ago": 1010010,
+      "volume_avg_1m": 1834307.5,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 543.63,
+        "ema200": 684.99,
+        "cross_date": "2026-01-21",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 571.4,
+        "2": 571.4,
+        "3": 613.45,
+        "4": 662.65,
+        "5": 770.95,
+        "6": 826.0
       },
       "consolidation_window": null
     },
@@ -4123,30 +4123,6 @@
       },
       "consolidation_window": null
     },
-    "CUB": {
-      "month_high": 239.0,
-      "month_low": 206.41,
-      "four_week_high_close": 235.89,
-      "prev_day_volume": 2708025,
-      "volume_5day_ago": 1955283,
-      "volume_avg_1m": 3557247.9,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 223.46,
-        "ema200": 215.65,
-        "cross_date": "2026-07-15",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 239.0,
-        "2": 239.0,
-        "3": 248.85,
-        "4": 248.85,
-        "5": 248.85,
-        "6": 248.85
-      },
-      "consolidation_window": null
-    },
     "HCLTECH": {
       "month_high": 1469.0,
       "month_low": 1350.6,
@@ -4219,6 +4195,30 @@
       },
       "consolidation_window": null
     },
+    "CUB": {
+      "month_high": 239.0,
+      "month_low": 206.41,
+      "four_week_high_close": 235.89,
+      "prev_day_volume": 2708025,
+      "volume_5day_ago": 1955283,
+      "volume_avg_1m": 3557247.9,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 223.46,
+        "ema200": 215.65,
+        "cross_date": "2026-07-15",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 239.0,
+        "2": 239.0,
+        "3": 248.85,
+        "4": 248.85,
+        "5": 248.85,
+        "6": 248.85
+      },
+      "consolidation_window": null
+    },
     "MAHABANK": {
       "month_high": 96.1,
       "month_low": 72.77,
@@ -4264,30 +4264,6 @@
         "4": 371.7,
         "5": 371.7,
         "6": 371.7
-      },
-      "consolidation_window": null
-    },
-    "RBLBANK": {
-      "month_high": 394.55,
-      "month_low": 338.55,
-      "four_week_high_close": 390.1,
-      "prev_day_volume": 2511076,
-      "volume_5day_ago": 3004804,
-      "volume_avg_1m": 3698888.9,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 381.34,
-        "ema200": 362.8,
-        "cross_date": "2026-05-06",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 394.55,
-        "2": 429.6,
-        "3": 429.6,
-        "4": 429.6,
-        "5": 429.6,
-        "6": 429.6
       },
       "consolidation_window": null
     },
@@ -4339,27 +4315,27 @@
       },
       "consolidation_window": null
     },
-    "KEI": {
-      "month_high": 4454.0,
-      "month_low": 3666.1,
-      "four_week_high_close": 4230.4,
-      "prev_day_volume": 782269,
-      "volume_5day_ago": 216244,
-      "volume_avg_1m": 621744.45,
+    "RBLBANK": {
+      "month_high": 394.55,
+      "month_low": 338.55,
+      "four_week_high_close": 390.1,
+      "prev_day_volume": 2511076,
+      "volume_5day_ago": 3004804,
+      "volume_avg_1m": 3698888.9,
       "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 4344.85,
-        "ema200": 4709.58,
-        "cross_date": "2026-10-09",
+        "bias": "BULLISH",
+        "ema50": 381.34,
+        "ema200": 362.8,
+        "cross_date": "2026-05-06",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 4520.5,
-        "2": 4760.0,
-        "3": 5899.0,
-        "4": 5899.0,
-        "5": 5899.0,
-        "6": 5899.0
+        "1": 394.55,
+        "2": 429.6,
+        "3": 429.6,
+        "4": 429.6,
+        "5": 429.6,
+        "6": 429.6
       },
       "consolidation_window": null
     },
@@ -4411,51 +4387,27 @@
       },
       "consolidation_window": null
     },
-    "POLICYBZR": {
-      "month_high": 1121.4,
-      "month_low": 916.0,
-      "four_week_high_close": 1105.0,
-      "prev_day_volume": 2649345,
-      "volume_5day_ago": 2307307,
-      "volume_avg_1m": 3167935.25,
+    "KEI": {
+      "month_high": 4454.0,
+      "month_low": 3666.1,
+      "four_week_high_close": 4230.4,
+      "prev_day_volume": 782269,
+      "volume_5day_ago": 216244,
+      "volume_avg_1m": 621744.45,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 1185.08,
-        "ema200": 1478.13,
-        "cross_date": "2026-09-29",
+        "ema50": 4344.85,
+        "ema200": 4709.58,
+        "cross_date": "2026-10-09",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 1121.4,
-        "2": 1904.9,
-        "3": 1904.9,
-        "4": 1904.9,
-        "5": 1904.9,
-        "6": 1904.9
-      },
-      "consolidation_window": null
-    },
-    "RVNL": {
-      "month_high": 220.32,
-      "month_low": 177.86,
-      "four_week_high_close": 209.4,
-      "prev_day_volume": 6287533,
-      "volume_5day_ago": 9594891,
-      "volume_avg_1m": 7781730.7,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 199.66,
-        "ema200": 244.24,
-        "cross_date": "2026-01-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 220.32,
-        "2": 220.32,
-        "3": 231.38,
-        "4": 236.76,
-        "5": 251.38,
-        "6": 278.3
+        "1": 4520.5,
+        "2": 4760.0,
+        "3": 5899.0,
+        "4": 5899.0,
+        "5": 5899.0,
+        "6": 5899.0
       },
       "consolidation_window": null
     },
@@ -4483,6 +4435,30 @@
       },
       "consolidation_window": null
     },
+    "POLICYBZR": {
+      "month_high": 1121.4,
+      "month_low": 916.0,
+      "four_week_high_close": 1105.0,
+      "prev_day_volume": 2649345,
+      "volume_5day_ago": 2307307,
+      "volume_avg_1m": 3167935.25,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1185.08,
+        "ema200": 1478.13,
+        "cross_date": "2026-09-29",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1121.4,
+        "2": 1904.9,
+        "3": 1904.9,
+        "4": 1904.9,
+        "5": 1904.9,
+        "6": 1904.9
+      },
+      "consolidation_window": null
+    },
     "LTM": {
       "month_high": 4515.6,
       "month_low": 3926.0,
@@ -4507,6 +4483,30 @@
       },
       "consolidation_window": null
     },
+    "RVNL": {
+      "month_high": 220.32,
+      "month_low": 177.86,
+      "four_week_high_close": 209.4,
+      "prev_day_volume": 6287533,
+      "volume_5day_ago": 9594891,
+      "volume_avg_1m": 7781730.7,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 199.66,
+        "ema200": 244.24,
+        "cross_date": "2026-01-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 220.32,
+        "2": 220.32,
+        "3": 231.38,
+        "4": 236.76,
+        "5": 251.38,
+        "6": 278.3
+      },
+      "consolidation_window": null
+    },
     "HAVELLS": {
       "month_high": 1192.0,
       "month_low": 999.2,
@@ -4528,30 +4528,6 @@
         "4": 1315.0,
         "5": 1315.0,
         "6": 1315.0
-      },
-      "consolidation_window": null
-    },
-    "BANDHANBNK": {
-      "month_high": 178.5,
-      "month_low": 143.69,
-      "four_week_high_close": 175.78,
-      "prev_day_volume": 7582802,
-      "volume_5day_ago": 11793182,
-      "volume_avg_1m": 10070623.2,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 168.15,
-        "ema200": 172.08,
-        "cross_date": "2026-10-15",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 178.5,
-        "2": 193.0,
-        "3": 193.0,
-        "4": 215.92,
-        "5": 220.76,
-        "6": 220.76
       },
       "consolidation_window": null
     },
@@ -4600,6 +4576,30 @@
         "4": 22700.0,
         "5": 22700.0,
         "6": 22700.0
+      },
+      "consolidation_window": null
+    },
+    "BANDHANBNK": {
+      "month_high": 178.5,
+      "month_low": 143.69,
+      "four_week_high_close": 175.78,
+      "prev_day_volume": 7582802,
+      "volume_5day_ago": 11793182,
+      "volume_avg_1m": 10070623.2,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 168.15,
+        "ema200": 172.08,
+        "cross_date": "2026-10-15",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 178.5,
+        "2": 193.0,
+        "3": 193.0,
+        "4": 215.92,
+        "5": 220.76,
+        "6": 220.76
       },
       "consolidation_window": null
     },
@@ -4699,30 +4699,6 @@
       },
       "consolidation_window": null
     },
-    "M&M": {
-      "month_high": 3465.0,
-      "month_low": 2802.4,
-      "four_week_high_close": 3465.0,
-      "prev_day_volume": 2572772,
-      "volume_5day_ago": 2293597,
-      "volume_avg_1m": 2907202.8,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 3089.44,
-        "ema200": 3223.68,
-        "cross_date": "2026-01-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 3465.0,
-        "2": 3465.0,
-        "3": 3465.0,
-        "4": 3534.6,
-        "5": 3534.6,
-        "6": 3534.6
-      },
-      "consolidation_window": null
-    },
     "ASHOKLEY": {
       "month_high": 178.83,
       "month_low": 140.01,
@@ -4768,6 +4744,30 @@
         "4": 729.35,
         "5": 729.35,
         "6": 729.35
+      },
+      "consolidation_window": null
+    },
+    "M&M": {
+      "month_high": 3465.0,
+      "month_low": 2802.4,
+      "four_week_high_close": 3465.0,
+      "prev_day_volume": 2572772,
+      "volume_5day_ago": 2293597,
+      "volume_avg_1m": 2907202.8,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 3089.44,
+        "ema200": 3223.68,
+        "cross_date": "2026-01-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 3465.0,
+        "2": 3465.0,
+        "3": 3465.0,
+        "4": 3534.6,
+        "5": 3534.6,
+        "6": 3534.6
       },
       "consolidation_window": null
     },
@@ -4987,30 +4987,6 @@
       },
       "consolidation_window": null
     },
-    "ADANIENT": {
-      "month_high": 2785.8,
-      "month_low": 2430.7,
-      "four_week_high_close": 2745.8,
-      "prev_day_volume": 2015270,
-      "volume_5day_ago": 854200,
-      "volume_avg_1m": 1319836.45,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 2750.36,
-        "ema200": 2689.98,
-        "cross_date": "2026-05-08",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 2785.8,
-        "2": 3026.1,
-        "3": 3173.7,
-        "4": 3213.5,
-        "5": 3245.0,
-        "6": 3245.0
-      },
-      "consolidation_window": null
-    },
     "COLPAL": {
       "month_high": 1758.6,
       "month_low": 1563.9,
@@ -5056,6 +5032,30 @@
         "4": 36590.0,
         "5": 37335.0,
         "6": 38785.0
+      },
+      "consolidation_window": null
+    },
+    "ADANIENT": {
+      "month_high": 2785.8,
+      "month_low": 2430.7,
+      "four_week_high_close": 2745.8,
+      "prev_day_volume": 2015270,
+      "volume_5day_ago": 854200,
+      "volume_avg_1m": 1319836.45,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 2750.36,
+        "ema200": 2689.98,
+        "cross_date": "2026-05-08",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 2785.8,
+        "2": 3026.1,
+        "3": 3173.7,
+        "4": 3213.5,
+        "5": 3245.0,
+        "6": 3245.0
       },
       "consolidation_window": null
     },
@@ -5275,6 +5275,30 @@
       },
       "consolidation_window": null
     },
+    "SYRMA": {
+      "month_high": 1686.0,
+      "month_low": 1399.9,
+      "four_week_high_close": 1669.0,
+      "prev_day_volume": 1022718,
+      "volume_5day_ago": 960712,
+      "volume_avg_1m": 1627136.15,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1541.77,
+        "ema200": 1298.75,
+        "cross_date": "2026-02-06",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1686.0,
+        "2": 1822.6,
+        "3": 1822.6,
+        "4": 1822.6,
+        "5": 1822.6,
+        "6": 1822.6
+      },
+      "consolidation_window": null
+    },
     "VBL": {
       "month_high": 443.4,
       "month_low": 385.8,
@@ -5299,27 +5323,20 @@
       },
       "consolidation_window": null
     },
-    "SYRMA": {
-      "month_high": 1686.0,
-      "month_low": 1399.9,
-      "four_week_high_close": 1669.0,
-      "prev_day_volume": 1022718,
-      "volume_5day_ago": 960712,
-      "volume_avg_1m": 1627136.15,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1541.77,
-        "ema200": 1298.75,
-        "cross_date": "2026-02-06",
-        "latest_date": "2026-11-17"
-      },
+    "SILVER": {
+      "month_high": 2101.0,
+      "month_low": 1676.0,
+      "four_week_high_close": 2010.0,
+      "prev_day_volume": 37764,
+      "volume_5day_ago": 26006,
+      "volume_avg_1m": 39488.5,
+      "ema_cross": null,
       "multi_month_highs": {
-        "1": 1686.0,
-        "2": 1822.6,
-        "3": 1822.6,
-        "4": 1822.6,
-        "5": 1822.6,
-        "6": 1822.6
+        "1": 2126.0,
+        "2": 2433.0,
+        "3": 2571.0,
+        "4": 2571.0,
+        "5": 2571.0
       },
       "consolidation_window": null
     },
@@ -5361,23 +5378,6 @@
         "3": 16828.0,
         "4": 16828.0,
         "5": 16828.0
-      },
-      "consolidation_window": null
-    },
-    "SILVER": {
-      "month_high": 2101.0,
-      "month_low": 1676.0,
-      "four_week_high_close": 2010.0,
-      "prev_day_volume": 37764,
-      "volume_5day_ago": 26006,
-      "volume_avg_1m": 39488.5,
-      "ema_cross": null,
-      "multi_month_highs": {
-        "1": 2126.0,
-        "2": 2433.0,
-        "3": 2571.0,
-        "4": 2571.0,
-        "5": 2571.0
       },
       "consolidation_window": null
     },
@@ -5589,30 +5589,6 @@
       },
       "consolidation_window": null
     },
-    "EMMVEE": {
-      "month_high": 280.58,
-      "month_low": 225.54,
-      "four_week_high_close": 277.09,
-      "prev_day_volume": 2593844,
-      "volume_5day_ago": 1648308,
-      "volume_avg_1m": 2327820.05,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 280.82,
-        "ema200": 277.63,
-        "cross_date": "2026-01-06",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 280.65,
-        "2": 354.8,
-        "3": 354.8,
-        "4": 354.8,
-        "5": 371.55,
-        "6": 371.55
-      },
-      "consolidation_window": null
-    },
     "LALPATHLAB": {
       "month_high": 2079.0,
       "month_low": 1797.8,
@@ -5658,6 +5634,30 @@
         "4": 168.0,
         "5": 168.0,
         "6": 168.0
+      },
+      "consolidation_window": null
+    },
+    "EMMVEE": {
+      "month_high": 280.58,
+      "month_low": 225.54,
+      "four_week_high_close": 277.09,
+      "prev_day_volume": 2593844,
+      "volume_5day_ago": 1648308,
+      "volume_avg_1m": 2327820.05,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 280.82,
+        "ema200": 277.63,
+        "cross_date": "2026-01-06",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 280.65,
+        "2": 354.8,
+        "3": 354.8,
+        "4": 354.8,
+        "5": 371.55,
+        "6": 371.55
       },
       "consolidation_window": null
     },
@@ -5953,30 +5953,6 @@
       },
       "consolidation_window": null
     },
-    "SARDAEN": {
-      "month_high": 482.4,
-      "month_low": 424.05,
-      "four_week_high_close": 464.15,
-      "prev_day_volume": 286593,
-      "volume_5day_ago": 159162,
-      "volume_avg_1m": 230521.1,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 470.17,
-        "ema200": 503.02,
-        "cross_date": "2026-07-07",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 492.8,
-        "2": 525.0,
-        "3": 555.0,
-        "4": 555.0,
-        "5": 555.0,
-        "6": 578.8
-      },
-      "consolidation_window": null
-    },
     "ENGINERSIN": {
       "month_high": 323.65,
       "month_low": 236.75,
@@ -6049,27 +6025,27 @@
       },
       "consolidation_window": null
     },
-    "ANTHEM": {
-      "month_high": 989.1,
-      "month_low": 783.35,
-      "four_week_high_close": 958.15,
-      "prev_day_volume": 328614,
-      "volume_5day_ago": 1725432,
-      "volume_avg_1m": 432190.75,
+    "SARDAEN": {
+      "month_high": 482.4,
+      "month_low": 424.05,
+      "four_week_high_close": 464.15,
+      "prev_day_volume": 286593,
+      "volume_5day_ago": 159162,
+      "volume_avg_1m": 230521.1,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 879.72,
-        "ema200": 803.97,
-        "cross_date": "2026-02-23",
+        "bias": "BEARISH",
+        "ema50": 470.17,
+        "ema200": 503.02,
+        "cross_date": "2026-07-07",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 989.1,
-        "2": 989.1,
-        "3": 989.1,
-        "4": 989.1,
-        "5": 989.1,
-        "6": 989.1
+        "1": 492.8,
+        "2": 525.0,
+        "3": 555.0,
+        "4": 555.0,
+        "5": 555.0,
+        "6": 578.8
       },
       "consolidation_window": null
     },
@@ -6118,6 +6094,30 @@
         "4": 586.75,
         "5": 586.75,
         "6": 587.0
+      },
+      "consolidation_window": null
+    },
+    "ANTHEM": {
+      "month_high": 989.1,
+      "month_low": 783.35,
+      "four_week_high_close": 958.15,
+      "prev_day_volume": 328614,
+      "volume_5day_ago": 1725432,
+      "volume_avg_1m": 432190.75,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 879.72,
+        "ema200": 803.97,
+        "cross_date": "2026-02-23",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 989.1,
+        "2": 989.1,
+        "3": 989.1,
+        "4": 989.1,
+        "5": 989.1,
+        "6": 989.1
       },
       "consolidation_window": null
     },
@@ -6265,30 +6265,6 @@
       },
       "consolidation_window": null
     },
-    "SYNGENE": {
-      "month_high": 453.8,
-      "month_low": 358.25,
-      "four_week_high_close": 447.8,
-      "prev_day_volume": 424539,
-      "volume_5day_ago": 1274265,
-      "volume_avg_1m": 2627194.85,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 402.81,
-        "ema200": 442.75,
-        "cross_date": "2026-01-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 453.8,
-        "2": 453.8,
-        "3": 453.8,
-        "4": 453.8,
-        "5": 454.5,
-        "6": 479.1
-      },
-      "consolidation_window": null
-    },
     "BAJAJHLDNG": {
       "month_high": 11425.0,
       "month_low": 10031.0,
@@ -6334,6 +6310,30 @@
         "4": 874.35,
         "5": 874.35,
         "6": 874.35
+      },
+      "consolidation_window": null
+    },
+    "SYNGENE": {
+      "month_high": 453.8,
+      "month_low": 358.25,
+      "four_week_high_close": 447.8,
+      "prev_day_volume": 424539,
+      "volume_5day_ago": 1274265,
+      "volume_avg_1m": 2627194.85,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 402.81,
+        "ema200": 442.75,
+        "cross_date": "2026-01-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 453.8,
+        "2": 453.8,
+        "3": 453.8,
+        "4": 453.8,
+        "5": 454.5,
+        "6": 479.1
       },
       "consolidation_window": null
     },
@@ -6858,30 +6858,6 @@
       },
       "consolidation_window": null
     },
-    "FACT": {
-      "month_high": 844.6,
-      "month_low": 658.8,
-      "four_week_high_close": 813.25,
-      "prev_day_volume": 102670,
-      "volume_5day_ago": 28074,
-      "volume_avg_1m": 444674.95,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 758.45,
-        "ema200": 812.8,
-        "cross_date": "2026-07-22",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 844.6,
-        "2": 844.6,
-        "3": 920.0,
-        "4": 920.0,
-        "5": 977.3,
-        "6": 1058.6
-      },
-      "consolidation_window": null
-    },
     "PFOCUS": {
       "month_high": 311.15,
       "month_low": 261.1,
@@ -6930,27 +6906,27 @@
       },
       "consolidation_window": null
     },
-    "AIAENG": {
-      "month_high": 3747.0,
-      "month_low": 3082.7,
-      "four_week_high_close": 3637.5,
-      "prev_day_volume": 113607,
-      "volume_5day_ago": 187765,
-      "volume_avg_1m": 126330.3,
+    "FACT": {
+      "month_high": 844.6,
+      "month_low": 658.8,
+      "four_week_high_close": 813.25,
+      "prev_day_volume": 102670,
+      "volume_5day_ago": 28074,
+      "volume_avg_1m": 444674.95,
       "ema_cross": {
         "bias": "BEARISH",
-        "ema50": 3655.78,
-        "ema200": 4020.38,
-        "cross_date": "2026-09-30",
+        "ema50": 758.45,
+        "ema200": 812.8,
+        "cross_date": "2026-07-22",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 3747.0,
-        "2": 4039.8,
-        "3": 4535.8,
-        "4": 4885.9,
-        "5": 5180.0,
-        "6": 5180.0
+        "1": 844.6,
+        "2": 844.6,
+        "3": 920.0,
+        "4": 920.0,
+        "5": 977.3,
+        "6": 1058.6
       },
       "consolidation_window": null
     },
@@ -6999,6 +6975,30 @@
         "4": 4849.9,
         "5": 4849.9,
         "6": 4849.9
+      },
+      "consolidation_window": null
+    },
+    "AIAENG": {
+      "month_high": 3747.0,
+      "month_low": 3082.7,
+      "four_week_high_close": 3637.5,
+      "prev_day_volume": 113607,
+      "volume_5day_ago": 187765,
+      "volume_avg_1m": 126330.3,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 3655.78,
+        "ema200": 4020.38,
+        "cross_date": "2026-09-30",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 3747.0,
+        "2": 4039.8,
+        "3": 4535.8,
+        "4": 4885.9,
+        "5": 5180.0,
+        "6": 5180.0
       },
       "consolidation_window": null
     },
@@ -7242,30 +7242,6 @@
       },
       "consolidation_window": null
     },
-    "HFCL": {
-      "month_high": 282.25,
-      "month_low": 185.44,
-      "four_week_high_close": 264.78,
-      "prev_day_volume": 9953953,
-      "volume_5day_ago": 11349605,
-      "volume_avg_1m": 7745155.1,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 226.2,
-        "ema200": 181.02,
-        "cross_date": "2026-02-12",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 282.25,
-        "2": 282.25,
-        "3": 282.25,
-        "4": 282.25,
-        "5": 282.25,
-        "6": 282.25
-      },
-      "consolidation_window": null
-    },
     "DEEPAKFERT": {
       "month_high": 1460.0,
       "month_low": 1092.6,
@@ -7290,27 +7266,27 @@
       },
       "consolidation_window": null
     },
-    "RHIM": {
-      "month_high": 374.0,
-      "month_low": 326.2,
-      "four_week_high_close": 365.1,
-      "prev_day_volume": 976168,
-      "volume_5day_ago": 208613,
-      "volume_avg_1m": 393287.75,
+    "HFCL": {
+      "month_high": 282.25,
+      "month_low": 185.44,
+      "four_week_high_close": 264.78,
+      "prev_day_volume": 9953953,
+      "volume_5day_ago": 11349605,
+      "volume_avg_1m": 7745155.1,
       "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 365.31,
-        "ema200": 390.36,
-        "cross_date": "2026-01-21",
+        "bias": "BULLISH",
+        "ema50": 226.2,
+        "ema200": 181.02,
+        "cross_date": "2026-02-12",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 374.0,
-        "2": 401.0,
-        "3": 401.0,
-        "4": 433.0,
-        "5": 443.8,
-        "6": 443.8
+        "1": 282.25,
+        "2": 282.25,
+        "3": 282.25,
+        "4": 282.25,
+        "5": 282.25,
+        "6": 282.25
       },
       "consolidation_window": null
     },
@@ -7359,6 +7335,30 @@
         "4": 1448.0,
         "5": 1490.0,
         "6": 1543.9
+      },
+      "consolidation_window": null
+    },
+    "RHIM": {
+      "month_high": 374.0,
+      "month_low": 326.2,
+      "four_week_high_close": 365.1,
+      "prev_day_volume": 976168,
+      "volume_5day_ago": 208613,
+      "volume_avg_1m": 393287.75,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 365.31,
+        "ema200": 390.36,
+        "cross_date": "2026-01-21",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 374.0,
+        "2": 401.0,
+        "3": 401.0,
+        "4": 433.0,
+        "5": 443.8,
+        "6": 443.8
       },
       "consolidation_window": null
     },
@@ -7590,30 +7590,6 @@
       },
       "consolidation_window": null
     },
-    "AFFLE": {
-      "month_high": 1658.0,
-      "month_low": 1283.0,
-      "four_week_high_close": 1626.1,
-      "prev_day_volume": 177245,
-      "volume_5day_ago": 272248,
-      "volume_avg_1m": 413464.4,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1521.82,
-        "ema200": 1551.11,
-        "cross_date": "2026-10-01",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 1658.0,
-        "2": 1658.0,
-        "3": 1748.2,
-        "4": 1748.2,
-        "5": 1748.2,
-        "6": 1748.2
-      },
-      "consolidation_window": null
-    },
     "HONAUT": {
       "month_high": 31815.0,
       "month_low": 28800.0,
@@ -7659,6 +7635,30 @@
         "4": 2038.0,
         "5": 2038.0,
         "6": 2038.0
+      },
+      "consolidation_window": null
+    },
+    "AFFLE": {
+      "month_high": 1658.0,
+      "month_low": 1283.0,
+      "four_week_high_close": 1626.1,
+      "prev_day_volume": 177245,
+      "volume_5day_ago": 272248,
+      "volume_avg_1m": 413464.4,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1521.82,
+        "ema200": 1551.11,
+        "cross_date": "2026-10-01",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1658.0,
+        "2": 1658.0,
+        "3": 1748.2,
+        "4": 1748.2,
+        "5": 1748.2,
+        "6": 1748.2
       },
       "consolidation_window": null
     },
@@ -7710,23 +7710,6 @@
       },
       "consolidation_window": null
     },
-    "VISL": {
-      "month_high": 29.53,
-      "month_low": 25.24,
-      "four_week_high_close": 28.1,
-      "prev_day_volume": 10198489,
-      "volume_5day_ago": 10896166,
-      "volume_avg_1m": 17156924.95,
-      "ema_cross": null,
-      "multi_month_highs": {
-        "1": 29.53,
-        "2": 34.49,
-        "3": 40.38,
-        "4": 40.7,
-        "5": 44.78
-      },
-      "consolidation_window": null
-    },
     "CAPLIPOINT": {
       "month_high": 2597.5,
       "month_low": 2176.2,
@@ -7751,27 +7734,20 @@
       },
       "consolidation_window": null
     },
-    "FSL": {
-      "month_high": 319.0,
-      "month_low": 275.8,
-      "four_week_high_close": 307.95,
-      "prev_day_volume": 211481,
-      "volume_5day_ago": 786372,
-      "volume_avg_1m": 1308563.55,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 281.74,
-        "ema200": 276.34,
-        "cross_date": "2026-10-28",
-        "latest_date": "2026-11-17"
-      },
+    "VISL": {
+      "month_high": 29.53,
+      "month_low": 25.24,
+      "four_week_high_close": 28.1,
+      "prev_day_volume": 10198489,
+      "volume_5day_ago": 10896166,
+      "volume_avg_1m": 17156924.95,
+      "ema_cross": null,
       "multi_month_highs": {
-        "1": 319.0,
-        "2": 319.0,
-        "3": 319.0,
-        "4": 341.9,
-        "5": 341.9,
-        "6": 341.9
+        "1": 29.53,
+        "2": 34.49,
+        "3": 40.38,
+        "4": 40.7,
+        "5": 44.78
       },
       "consolidation_window": null
     },
@@ -7820,6 +7796,30 @@
         "4": 1134.6,
         "5": 1134.6,
         "6": 1134.6
+      },
+      "consolidation_window": null
+    },
+    "FSL": {
+      "month_high": 319.0,
+      "month_low": 275.8,
+      "four_week_high_close": 307.95,
+      "prev_day_volume": 211481,
+      "volume_5day_ago": 786372,
+      "volume_avg_1m": 1308563.55,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 281.74,
+        "ema200": 276.34,
+        "cross_date": "2026-10-28",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 319.0,
+        "2": 319.0,
+        "3": 319.0,
+        "4": 341.9,
+        "5": 341.9,
+        "6": 341.9
       },
       "consolidation_window": null
     },
@@ -7943,30 +7943,6 @@
       },
       "consolidation_window": null
     },
-    "SWANCORP": {
-      "month_high": 259.99,
-      "month_low": 221.85,
-      "four_week_high_close": 248.74,
-      "prev_day_volume": 288112,
-      "volume_5day_ago": 363046,
-      "volume_avg_1m": 678938.25,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 260.04,
-        "ema200": 317.3,
-        "cross_date": "2026-01-08",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 264.6,
-        "2": 311.0,
-        "3": 315.35,
-        "4": 317.25,
-        "5": 345.8,
-        "6": 345.8
-      },
-      "consolidation_window": null
-    },
     "CONCORDBIO": {
       "month_high": 697.0,
       "month_low": 553.5,
@@ -8012,6 +7988,30 @@
         "4": 654.15,
         "5": 749.0,
         "6": 787.6
+      },
+      "consolidation_window": null
+    },
+    "SWANCORP": {
+      "month_high": 259.99,
+      "month_low": 221.85,
+      "four_week_high_close": 248.74,
+      "prev_day_volume": 288112,
+      "volume_5day_ago": 363046,
+      "volume_avg_1m": 678938.25,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 260.04,
+        "ema200": 317.3,
+        "cross_date": "2026-01-08",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 264.6,
+        "2": 311.0,
+        "3": 315.35,
+        "4": 317.25,
+        "5": 345.8,
+        "6": 345.8
       },
       "consolidation_window": null
     },
@@ -8327,30 +8327,6 @@
       },
       "consolidation_window": null
     },
-    "HDBFS": {
-      "month_high": 575.85,
-      "month_low": 494.15,
-      "four_week_high_close": 573.6,
-      "prev_day_volume": 258108,
-      "volume_5day_ago": 457231,
-      "volume_avg_1m": 809269.25,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 580.18,
-        "ema200": 656.21,
-        "cross_date": "2026-01-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 575.85,
-        "2": 701.55,
-        "3": 712.1,
-        "4": 736.9,
-        "5": 786.55,
-        "6": 786.55
-      },
-      "consolidation_window": null
-    },
     "BLS": {
       "month_high": 232.93,
       "month_low": 203.15,
@@ -8375,27 +8351,27 @@
       },
       "consolidation_window": null
     },
-    "BEML": {
-      "month_high": 2236.0,
-      "month_low": 1806.0,
-      "four_week_high_close": 2125.5,
-      "prev_day_volume": 183749,
-      "volume_5day_ago": 142509,
-      "volume_avg_1m": 473622.35,
+    "HDBFS": {
+      "month_high": 575.85,
+      "month_low": 494.15,
+      "four_week_high_close": 573.6,
+      "prev_day_volume": 258108,
+      "volume_5day_ago": 457231,
+      "volume_avg_1m": 809269.25,
       "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1989.12,
-        "ema200": 1883.13,
-        "cross_date": "2026-08-11",
+        "bias": "BEARISH",
+        "ema50": 580.18,
+        "ema200": 656.21,
+        "cross_date": "2026-01-05",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 2236.0,
-        "2": 2236.0,
-        "3": 2236.0,
-        "4": 2236.0,
-        "5": 2236.0,
-        "6": 2236.0
+        "1": 575.85,
+        "2": 701.55,
+        "3": 712.1,
+        "4": 736.9,
+        "5": 786.55,
+        "6": 786.55
       },
       "consolidation_window": null
     },
@@ -8450,6 +8426,30 @@
         "4": 1658.0,
         "5": 1721.4,
         "6": 1721.4
+      },
+      "consolidation_window": null
+    },
+    "BEML": {
+      "month_high": 2236.0,
+      "month_low": 1806.0,
+      "four_week_high_close": 2125.5,
+      "prev_day_volume": 183749,
+      "volume_5day_ago": 142509,
+      "volume_avg_1m": 473622.35,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1989.12,
+        "ema200": 1883.13,
+        "cross_date": "2026-08-11",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 2236.0,
+        "2": 2236.0,
+        "3": 2236.0,
+        "4": 2236.0,
+        "5": 2236.0,
+        "6": 2236.0
       },
       "consolidation_window": null
     },
@@ -9077,30 +9077,6 @@
       },
       "consolidation_window": null
     },
-    "POLYMED": {
-      "month_high": 1705.6,
-      "month_low": 1401.5,
-      "four_week_high_close": 1693.1,
-      "prev_day_volume": 29322,
-      "volume_5day_ago": 44169,
-      "volume_avg_1m": 86727.2,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1613.22,
-        "ema200": 1618.36,
-        "cross_date": "2026-10-28",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 1705.6,
-        "2": 1772.0,
-        "3": 1858.0,
-        "4": 1913.7,
-        "5": 1913.7,
-        "6": 1913.7
-      },
-      "consolidation_window": null
-    },
     "ZFCVINDIA": {
       "month_high": 2422.0,
       "month_low": 2053.0,
@@ -9146,6 +9122,30 @@
         "4": 1772.5,
         "5": 1772.5,
         "6": 1772.5
+      },
+      "consolidation_window": null
+    },
+    "POLYMED": {
+      "month_high": 1705.6,
+      "month_low": 1401.5,
+      "four_week_high_close": 1693.1,
+      "prev_day_volume": 29322,
+      "volume_5day_ago": 44169,
+      "volume_avg_1m": 86727.2,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1613.22,
+        "ema200": 1618.36,
+        "cross_date": "2026-10-28",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1705.6,
+        "2": 1772.0,
+        "3": 1858.0,
+        "4": 1913.7,
+        "5": 1913.7,
+        "6": 1913.7
       },
       "consolidation_window": null
     },
@@ -9221,30 +9221,6 @@
       },
       "consolidation_window": null
     },
-    "SHYAMMETL": {
-      "month_high": 1354.0,
-      "month_low": 1098.7,
-      "four_week_high_close": 1344.4,
-      "prev_day_volume": 435052,
-      "volume_5day_ago": 409024,
-      "volume_avg_1m": 426751.7,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 1170.43,
-        "ema200": 1018.8,
-        "cross_date": "2026-05-08",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 1354.0,
-        "2": 1354.0,
-        "3": 1354.0,
-        "4": 1354.0,
-        "5": 1354.0,
-        "6": 1354.0
-      },
-      "consolidation_window": null
-    },
     "FRACTAL": {
       "month_high": 853.2,
       "month_low": 702.3,
@@ -9284,6 +9260,30 @@
         "4": 19.28,
         "5": 19.28,
         "6": 24.5
+      },
+      "consolidation_window": null
+    },
+    "SHYAMMETL": {
+      "month_high": 1354.0,
+      "month_low": 1098.7,
+      "four_week_high_close": 1344.4,
+      "prev_day_volume": 435052,
+      "volume_5day_ago": 409024,
+      "volume_avg_1m": 426751.7,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 1170.43,
+        "ema200": 1018.8,
+        "cross_date": "2026-05-08",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1354.0,
+        "2": 1354.0,
+        "3": 1354.0,
+        "4": 1354.0,
+        "5": 1354.0,
+        "6": 1354.0
       },
       "consolidation_window": null
     },
@@ -9455,30 +9455,6 @@
       },
       "consolidation_window": null
     },
-    "INDIAMART": {
-      "month_high": 1652.0,
-      "month_low": 1465.4,
-      "four_week_high_close": 1635.0,
-      "prev_day_volume": 73400,
-      "volume_5day_ago": 70351,
-      "volume_avg_1m": 93052.6,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1621.03,
-        "ema200": 1841.39,
-        "cross_date": "2026-03-11",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 1652.0,
-        "2": 1718.8,
-        "3": 1785.9,
-        "4": 1974.5,
-        "5": 2175.0,
-        "6": 2175.0
-      },
-      "consolidation_window": null
-    },
     "AZAD": {
       "month_high": 2733.9,
       "month_low": 2353.3,
@@ -9500,6 +9476,30 @@
         "4": 3127.9,
         "5": 3127.9,
         "6": 3127.9
+      },
+      "consolidation_window": null
+    },
+    "INDIAMART": {
+      "month_high": 1652.0,
+      "month_low": 1465.4,
+      "four_week_high_close": 1635.0,
+      "prev_day_volume": 73400,
+      "volume_5day_ago": 70351,
+      "volume_avg_1m": 93052.6,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1621.03,
+        "ema200": 1841.39,
+        "cross_date": "2026-03-11",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1652.0,
+        "2": 1718.8,
+        "3": 1785.9,
+        "4": 1974.5,
+        "5": 2175.0,
+        "6": 2175.0
       },
       "consolidation_window": null
     },
@@ -9532,30 +9532,6 @@
         "avg_volume": 274374.2,
         "days": 10
       }
-    },
-    "URBANCO": {
-      "month_high": 173.15,
-      "month_low": 126.51,
-      "four_week_high_close": 171.7,
-      "prev_day_volume": 28788011,
-      "volume_5day_ago": 2453528,
-      "volume_avg_1m": 5927071.8,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 157.05,
-        "ema200": 144.4,
-        "cross_date": "2026-07-02",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 173.15,
-        "2": 177.77,
-        "3": 183.97,
-        "4": 183.97,
-        "5": 183.97,
-        "6": 183.97
-      },
-      "consolidation_window": null
     },
     "SUNDARMFIN": {
       "month_high": 4430.0,
@@ -9602,6 +9578,30 @@
         "4": 493.05,
         "5": 493.05,
         "6": 493.05
+      },
+      "consolidation_window": null
+    },
+    "URBANCO": {
+      "month_high": 173.15,
+      "month_low": 126.51,
+      "four_week_high_close": 171.7,
+      "prev_day_volume": 28788011,
+      "volume_5day_ago": 2453528,
+      "volume_avg_1m": 5927071.8,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 157.05,
+        "ema200": 144.4,
+        "cross_date": "2026-07-02",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 173.15,
+        "2": 177.77,
+        "3": 183.97,
+        "4": 183.97,
+        "5": 183.97,
+        "6": 183.97
       },
       "consolidation_window": null
     },
@@ -9845,30 +9845,6 @@
       },
       "consolidation_window": null
     },
-    "NATCOPHARM": {
-      "month_high": 881.8,
-      "month_low": 773.6,
-      "four_week_high_close": 828.65,
-      "prev_day_volume": 730682,
-      "volume_5day_ago": 469465,
-      "volume_avg_1m": 818002.25,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 818.72,
-        "ema200": 887.86,
-        "cross_date": "2026-08-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 881.8,
-        "2": 881.8,
-        "3": 916.0,
-        "4": 987.55,
-        "5": 997.3,
-        "6": 1202.0
-      },
-      "consolidation_window": null
-    },
     "CLEAN": {
       "month_high": 765.5,
       "month_low": 645.05,
@@ -9914,6 +9890,30 @@
         "4": 960.0,
         "5": 960.0,
         "6": 960.0
+      },
+      "consolidation_window": null
+    },
+    "NATCOPHARM": {
+      "month_high": 881.8,
+      "month_low": 773.6,
+      "four_week_high_close": 828.65,
+      "prev_day_volume": 730682,
+      "volume_5day_ago": 469465,
+      "volume_avg_1m": 818002.25,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 818.72,
+        "ema200": 887.86,
+        "cross_date": "2026-08-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 881.8,
+        "2": 881.8,
+        "3": 916.0,
+        "4": 987.55,
+        "5": 997.3,
+        "6": 1202.0
       },
       "consolidation_window": null
     },
@@ -9989,54 +9989,6 @@
       },
       "consolidation_window": null
     },
-    "BALRAMCHIN": {
-      "month_high": 707.1,
-      "month_low": 580.7,
-      "four_week_high_close": 680.95,
-      "prev_day_volume": 327000,
-      "volume_5day_ago": 268594,
-      "volume_avg_1m": 1033998.5,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 659.41,
-        "ema200": 590.62,
-        "cross_date": "2026-02-17",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 708.3,
-        "2": 736.0,
-        "3": 780.95,
-        "4": 780.95,
-        "5": 780.95,
-        "6": 780.95
-      },
-      "consolidation_window": null
-    },
-    "SUMICHEM": {
-      "month_high": 394.4,
-      "month_low": 310.85,
-      "four_week_high_close": 384.1,
-      "prev_day_volume": 150129,
-      "volume_5day_ago": 373943,
-      "volume_avg_1m": 699943.85,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 392.92,
-        "ema200": 443.25,
-        "cross_date": "2026-10-12",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 404.05,
-        "2": 469.0,
-        "3": 566.95,
-        "4": 572.05,
-        "5": 572.05,
-        "6": 572.05
-      },
-      "consolidation_window": null
-    },
     "KPRMILL": {
       "month_high": 1247.3,
       "month_low": 991.2,
@@ -10058,6 +10010,30 @@
         "4": 1247.3,
         "5": 1334.0,
         "6": 1334.0
+      },
+      "consolidation_window": null
+    },
+    "BALRAMCHIN": {
+      "month_high": 707.1,
+      "month_low": 580.7,
+      "four_week_high_close": 680.95,
+      "prev_day_volume": 327000,
+      "volume_5day_ago": 268594,
+      "volume_avg_1m": 1033998.5,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 659.41,
+        "ema200": 590.62,
+        "cross_date": "2026-02-17",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 708.3,
+        "2": 736.0,
+        "3": 780.95,
+        "4": 780.95,
+        "5": 780.95,
+        "6": 780.95
       },
       "consolidation_window": null
     },
@@ -10109,6 +10085,30 @@
       },
       "consolidation_window": null
     },
+    "SUMICHEM": {
+      "month_high": 394.4,
+      "month_low": 310.85,
+      "four_week_high_close": 384.1,
+      "prev_day_volume": 150129,
+      "volume_5day_ago": 373943,
+      "volume_avg_1m": 699943.85,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 392.92,
+        "ema200": 443.25,
+        "cross_date": "2026-10-12",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 404.05,
+        "2": 469.0,
+        "3": 566.95,
+        "4": 572.05,
+        "5": 572.05,
+        "6": 572.05
+      },
+      "consolidation_window": null
+    },
     "RPOWER": {
       "month_high": 20.0,
       "month_low": 15.98,
@@ -10130,30 +10130,6 @@
         "4": 25.3,
         "5": 29.4,
         "6": 29.4
-      },
-      "consolidation_window": null
-    },
-    "APARINDS": {
-      "month_high": 16199.0,
-      "month_low": 13780.0,
-      "four_week_high_close": 15998.0,
-      "prev_day_volume": 157651,
-      "volume_5day_ago": 189342,
-      "volume_avg_1m": 198530.0,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 15852.83,
-        "ema200": 14088.91,
-        "cross_date": "2026-02-10",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 16199.0,
-        "2": 19265.0,
-        "3": 19265.0,
-        "4": 19265.0,
-        "5": 19265.0,
-        "6": 19265.0
       },
       "consolidation_window": null
     },
@@ -10202,6 +10178,30 @@
         "4": 222.5,
         "5": 237.95,
         "6": 245.0
+      },
+      "consolidation_window": null
+    },
+    "APARINDS": {
+      "month_high": 16199.0,
+      "month_low": 13780.0,
+      "four_week_high_close": 15998.0,
+      "prev_day_volume": 157651,
+      "volume_5day_ago": 189342,
+      "volume_avg_1m": 198530.0,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 15852.83,
+        "ema200": 14088.91,
+        "cross_date": "2026-02-10",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 16199.0,
+        "2": 19265.0,
+        "3": 19265.0,
+        "4": 19265.0,
+        "5": 19265.0,
+        "6": 19265.0
       },
       "consolidation_window": null
     },
@@ -10325,30 +10325,6 @@
       },
       "consolidation_window": null
     },
-    "BHARATCOAL": {
-      "month_high": 32.36,
-      "month_low": 28.92,
-      "four_week_high_close": 31.9,
-      "prev_day_volume": 2186315,
-      "volume_5day_ago": 1822360,
-      "volume_avg_1m": 6320892.1,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 31.91,
-        "ema200": 34.73,
-        "cross_date": "2026-07-22",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 32.36,
-        "2": 33.67,
-        "3": 35.7,
-        "4": 37.85,
-        "5": 44.4,
-        "6": 44.4
-      },
-      "consolidation_window": null
-    },
     "FLUOROCHEM": {
       "month_high": 4899.0,
       "month_low": 4086.7,
@@ -10394,6 +10370,30 @@
         "4": 4260.0,
         "5": 4429.0,
         "6": 4429.0
+      },
+      "consolidation_window": null
+    },
+    "BHARATCOAL": {
+      "month_high": 32.36,
+      "month_low": 28.92,
+      "four_week_high_close": 31.9,
+      "prev_day_volume": 2186315,
+      "volume_5day_ago": 1822360,
+      "volume_avg_1m": 6320892.1,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 31.91,
+        "ema200": 34.73,
+        "cross_date": "2026-07-22",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 32.36,
+        "2": 33.67,
+        "3": 35.7,
+        "4": 37.85,
+        "5": 44.4,
+        "6": 44.4
       },
       "consolidation_window": null
     },
@@ -10733,54 +10733,6 @@
       },
       "consolidation_window": null
     },
-    "HUDCO": {
-      "month_high": 175.21,
-      "month_low": 141.81,
-      "four_week_high_close": 171.4,
-      "prev_day_volume": 1865837,
-      "volume_5day_ago": 8391828,
-      "volume_avg_1m": 3553988.35,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 165.04,
-        "ema200": 187.86,
-        "cross_date": "2026-01-05",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 175.21,
-        "2": 179.2,
-        "3": 192.0,
-        "4": 205.15,
-        "5": 218.0,
-        "6": 218.0
-      },
-      "consolidation_window": null
-    },
-    "PPLPHARMA": {
-      "month_high": 253.9,
-      "month_low": 185.02,
-      "four_week_high_close": 246.37,
-      "prev_day_volume": 4316396,
-      "volume_5day_ago": 5461836,
-      "volume_avg_1m": 12259321.05,
-      "ema_cross": {
-        "bias": "BULLISH",
-        "ema50": 218.51,
-        "ema200": 193.23,
-        "cross_date": "2026-07-09",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 253.9,
-        "2": 253.9,
-        "3": 253.9,
-        "4": 253.9,
-        "5": 253.9,
-        "6": 253.9
-      },
-      "consolidation_window": null
-    },
     "GMDCLTD": {
       "month_high": 507.0,
       "month_low": 394.55,
@@ -10802,6 +10754,30 @@
         "4": 617.15,
         "5": 628.45,
         "6": 708.2
+      },
+      "consolidation_window": null
+    },
+    "HUDCO": {
+      "month_high": 175.21,
+      "month_low": 141.81,
+      "four_week_high_close": 171.4,
+      "prev_day_volume": 1865837,
+      "volume_5day_ago": 8391828,
+      "volume_avg_1m": 3553988.35,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 165.04,
+        "ema200": 187.86,
+        "cross_date": "2026-01-05",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 175.21,
+        "2": 179.2,
+        "3": 192.0,
+        "4": 205.15,
+        "5": 218.0,
+        "6": 218.0
       },
       "consolidation_window": null
     },
@@ -10829,27 +10805,27 @@
       },
       "consolidation_window": null
     },
-    "LTTS": {
-      "month_high": 4347.4,
-      "month_low": 3787.5,
-      "four_week_high_close": 4280.2,
-      "prev_day_volume": 56764,
-      "volume_5day_ago": 87531,
-      "volume_avg_1m": 653796.9,
+    "PPLPHARMA": {
+      "month_high": 253.9,
+      "month_low": 185.02,
+      "four_week_high_close": 246.37,
+      "prev_day_volume": 4316396,
+      "volume_5day_ago": 5461836,
+      "volume_avg_1m": 12259321.05,
       "ema_cross": {
         "bias": "BULLISH",
-        "ema50": 3832.65,
-        "ema200": 3685.27,
-        "cross_date": "2026-11-03",
+        "ema50": 218.51,
+        "ema200": 193.23,
+        "cross_date": "2026-07-09",
         "latest_date": "2026-11-17"
       },
       "multi_month_highs": {
-        "1": 4347.4,
-        "2": 4347.4,
-        "3": 4347.4,
-        "4": 4347.4,
-        "5": 4347.4,
-        "6": 4347.4
+        "1": 253.9,
+        "2": 253.9,
+        "3": 253.9,
+        "4": 253.9,
+        "5": 253.9,
+        "6": 253.9
       },
       "consolidation_window": null
     },
@@ -10900,6 +10876,30 @@
         "avg_volume": 293431.2,
         "days": 10
       }
+    },
+    "LTTS": {
+      "month_high": 4347.4,
+      "month_low": 3787.5,
+      "four_week_high_close": 4280.2,
+      "prev_day_volume": 56764,
+      "volume_5day_ago": 87531,
+      "volume_avg_1m": 653796.9,
+      "ema_cross": {
+        "bias": "BULLISH",
+        "ema50": 3832.65,
+        "ema200": 3685.27,
+        "cross_date": "2026-11-03",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 4347.4,
+        "2": 4347.4,
+        "3": 4347.4,
+        "4": 4347.4,
+        "5": 4347.4,
+        "6": 4347.4
+      },
+      "consolidation_window": null
     },
     "CHENNPETRO": {
       "month_high": 1596.4,
@@ -11093,30 +11093,6 @@
       },
       "consolidation_window": null
     },
-    "OLAELEC": {
-      "month_high": 37.47,
-      "month_low": 29.18,
-      "four_week_high_close": 36.66,
-      "prev_day_volume": 63321049,
-      "volume_5day_ago": 32657729,
-      "volume_avg_1m": 86440549.35,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 35.59,
-        "ema200": 37.07,
-        "cross_date": "2026-10-13",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 37.47,
-        "2": 44.55,
-        "3": 44.55,
-        "4": 44.55,
-        "5": 46.0,
-        "6": 49.05
-      },
-      "consolidation_window": null
-    },
     "GLAND": {
       "month_high": 3429.0,
       "month_low": 2769.8,
@@ -11162,6 +11138,30 @@
         "4": 1970.0,
         "5": 1970.0,
         "6": 1970.0
+      },
+      "consolidation_window": null
+    },
+    "OLAELEC": {
+      "month_high": 37.47,
+      "month_low": 29.18,
+      "four_week_high_close": 36.66,
+      "prev_day_volume": 63321049,
+      "volume_5day_ago": 32657729,
+      "volume_avg_1m": 86440549.35,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 35.59,
+        "ema200": 37.07,
+        "cross_date": "2026-10-13",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 37.47,
+        "2": 44.55,
+        "3": 44.55,
+        "4": 44.55,
+        "5": 46.0,
+        "6": 49.05
       },
       "consolidation_window": null
     },
@@ -11453,30 +11453,6 @@
       },
       "consolidation_window": null
     },
-    "UTIAMC": {
-      "month_high": 878.0,
-      "month_low": 781.8,
-      "four_week_high_close": 869.8,
-      "prev_day_volume": 121446,
-      "volume_5day_ago": 74034,
-      "volume_avg_1m": 102530.8,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 860.9,
-        "ema200": 935.86,
-        "cross_date": "2026-01-09",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 884.4,
-        "2": 935.95,
-        "3": 935.95,
-        "4": 946.25,
-        "5": 1035.9,
-        "6": 1035.9
-      },
-      "consolidation_window": null
-    },
     "IIFL": {
       "month_high": 694.4,
       "month_low": 512.7,
@@ -11546,6 +11522,30 @@
         "4": 3120.7,
         "5": 3120.7,
         "6": 3120.7
+      },
+      "consolidation_window": null
+    },
+    "UTIAMC": {
+      "month_high": 878.0,
+      "month_low": 781.8,
+      "four_week_high_close": 869.8,
+      "prev_day_volume": 121446,
+      "volume_5day_ago": 74034,
+      "volume_avg_1m": 102530.8,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 860.9,
+        "ema200": 935.86,
+        "cross_date": "2026-01-09",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 884.4,
+        "2": 935.95,
+        "3": 935.95,
+        "4": 946.25,
+        "5": 1035.9,
+        "6": 1035.9
       },
       "consolidation_window": null
     },
@@ -12047,30 +12047,6 @@
       },
       "consolidation_window": null
     },
-    "ECLERX": {
-      "month_high": 1979.2,
-      "month_low": 1490.0,
-      "four_week_high_close": 1930.3,
-      "prev_day_volume": 49578,
-      "volume_5day_ago": 192293,
-      "volume_avg_1m": 274947.45,
-      "ema_cross": {
-        "bias": "BEARISH",
-        "ema50": 1745.96,
-        "ema200": 1815.46,
-        "cross_date": "2026-11-03",
-        "latest_date": "2026-11-17"
-      },
-      "multi_month_highs": {
-        "1": 1979.2,
-        "2": 2022.6,
-        "3": 2062.0,
-        "4": 2062.0,
-        "5": 2062.0,
-        "6": 2062.0
-      },
-      "consolidation_window": null
-    },
     "CRAFTSMAN": {
       "month_high": 11353.0,
       "month_low": 10075.0,
@@ -12116,6 +12092,30 @@
         "4": 524.0,
         "5": 524.0,
         "6": 524.0
+      },
+      "consolidation_window": null
+    },
+    "ECLERX": {
+      "month_high": 1979.2,
+      "month_low": 1490.0,
+      "four_week_high_close": 1930.3,
+      "prev_day_volume": 49578,
+      "volume_5day_ago": 192293,
+      "volume_avg_1m": 274947.45,
+      "ema_cross": {
+        "bias": "BEARISH",
+        "ema50": 1745.96,
+        "ema200": 1815.46,
+        "cross_date": "2026-11-03",
+        "latest_date": "2026-11-17"
+      },
+      "multi_month_highs": {
+        "1": 1979.2,
+        "2": 2022.6,
+        "3": 2062.0,
+        "4": 2062.0,
+        "5": 2062.0,
+        "6": 2062.0
       },
       "consolidation_window": null
     },
