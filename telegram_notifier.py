@@ -99,7 +99,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v43 (2026-11-17)"
+BUILD_TAG = "short-v44 (2026-11-18)"
 
 
 def _ema920_line(info15, info75):
@@ -1355,6 +1355,13 @@ def send_eod_alert_report(results, now_ist):
     if allok:
         w = sum(1 for r in allok if r["pnl"] > 0)
         head.append(f"🎯 Total: {w}/{len(allok)} profit ({w / len(allok) * 100:.0f}%) · avg {sum(r['pnl'] for r in allok) / len(allok):+.2f}%")
+    oc = [r for r in results if r.get("outcome")]
+    if oc:
+        tg, sp = getattr(config, "EOD_TARGET_PCT", 0.5), getattr(config, "EOD_STOP_PCT", 0.5)
+        nt = sum(1 for r in oc if r["outcome"] == "TARGET")
+        ns = sum(1 for r in oc if r["outcome"] == "STOP")
+        nn = len(oc) - nt - ns
+        head.append(f"🎯 +{tg:g}% age ❌ -{sp:g}% : 🎯 {nt} target · 🛑 {ns} stop · ⏳ {nn} kono-ta na  (target {nt / len(oc) * 100:.0f}%)")
     head.append("<i>alert price → close · bullish e daam bar-le ✅, bearish e kome gele ✅</i>")
 
     def _line(r):
@@ -1365,6 +1372,7 @@ def send_eod_alert_report(results, now_ist):
             return f"⚪ <b>{r['symbol']}</b>{sec} {hhmm} @ {_p(r['price'])} · data nei"
         icon = "✅" if r["pnl"] > 0 else "❌"
         day = f" · Day {r['day']}" if r.get("day") else ""
+        day += {"TARGET": " · 🎯", "STOP": " · 🛑"}.get(r.get("outcome"), "")
         return (f"{icon} <b>{r['symbol']}</b>{sec} {hhmm}\n"
                 f"     {_p(r['price'])} → {_p(r['last'])} (<b>{r['pnl']:+.2f}%</b>) · max +{r['best']:.1f}% · dd {r['worst']:.1f}%{day}")
 
@@ -1466,6 +1474,79 @@ def send_oversold_eod_report(results, now_ist):
                     f"     {_p(r['price'])} → {_p(r['last'])} (<b>{r['pnl']:+.2f}%</b>) · max +{r['best']:.1f}% · dd {r['worst']:.1f}%{dchg}\n"
                     f"     RSI D {_rsi_txt(r.get('d_rsi'))} · 1H {_rsi_txt(r.get('h_rsi'))} · M {_rsi_txt(r.get('m_rsi'))}")
     _post_html_chunks(head, body, "oversold_eod")
+
+
+def send_alert_stats_report(rows, now_ist):
+    """Win-rate tables over every stored alert that has a day-end outcome (target / stop / none)."""
+    tg, sp = getattr(config, "EOD_TARGET_PCT", 0.5), getattr(config, "EOD_STOP_PCT", 0.5)
+    if not rows:
+        _post_html_chunks([f"📊 <b>ALERT STATS</b> — {now_ist.strftime('%d %b')}", "Ekhono kono alert er result jomeni."], [], "alert_stats")
+        return
+    days = sorted({r["_day"] for r in rows})
+
+    def _tbucket(r):
+        hhmm = str(r.get("time"))[11:16]
+        for lim, name in (("10:30", "09:45-10:30"), ("12:00", "10:30-12:00"), ("14:00", "12:00-14:00")):
+            if hhmm < lim:
+                return name
+        return "14:00 por"
+
+    def _score(r):
+        try:
+            return f"{int(str(r.get('score')).split('/')[0])}/9 point"
+        except Exception:
+            return "?"
+
+    def _market(r):
+        t, d = r.get("nifty"), r.get("direction")
+        if t in (None, ""):
+            return "Nifty data nei"
+        if t == "FLAT":
+            return "Nifty flat"
+        return "market er sathe" if (t == "UP") == (d == "BULLISH") else "market er biruddhe"
+
+    groups = [
+        ("Direction", lambda r: "🟢 Bullish" if r.get("direction") == "BULLISH" else "🔴 Bearish"),
+        ("Shomoy", _tbucket),
+        ("Score", _score),
+        ("Nifty trend", _market),
+        ("F&O / Cash", lambda r: "F&O" if r.get("fno") else "Cash"),
+        ("Day streak", lambda r: "Day 1" if int(r.get("day") or 1) <= 1 else "Day 2+"),
+    ]
+
+    def _line(name, rs):
+        n = len(rs)
+        t = sum(1 for r in rs if r["outcome"] == "TARGET")
+        s = sum(1 for r in rs if r["outcome"] == "STOP")
+        avg = sum(r["pnl"] for r in rs) / n
+        flag = "  ⚠️ kom data" if n < 8 else ""
+        return f"   {name}: {n} ta · 🎯 {t / n * 100:.0f}% · 🛑 {s / n * 100:.0f}% · avg {avg:+.2f}%{flag}"
+
+    nt = sum(1 for r in rows if r["outcome"] == "TARGET")
+    ns = sum(1 for r in rows if r["outcome"] == "STOP")
+    head = [f"📊 <b>ALERT STATS</b> — {len(days)} din ({days[0][5:]} → {days[-1][5:]}), {len(rows)} alert",
+            f"🎯 +{tg:g}% age: {nt} ({nt / len(rows) * 100:.0f}%)  ·  🛑 -{sp:g}% age: {ns} ({ns / len(rows) * 100:.0f}%)  ·  avg {sum(r['pnl'] for r in rows) / len(rows):+.2f}%",
+            "<i>🎯 beshi, 🛑 kom hole sei group bhalo. 8 er kom alert hole bharosha kom.</i>"]
+    body = []
+    for title, fn in groups:
+        buckets = {}
+        for r in rows:
+            buckets.setdefault(fn(r), []).append(r)
+        body.append("")
+        body.append(f"<b>{title}</b>")
+        for name in sorted(buckets):
+            body.append(_line(name, buckets[name]))
+    sec = {}
+    for r in rows:
+        if r.get("sector"):
+            sec.setdefault(r["sector"], []).append(r)
+    top = sorted(((k, v) for k, v in sec.items() if len(v) >= 3), key=lambda kv: -sum(1 for r in kv[1] if r["outcome"] == "TARGET") / len(kv[1]))
+    if top:
+        body.append("")
+        body.append("<b>Sector (3+ alert)</b>")
+        for k, v in top[:8]:
+            body.append(_line(k, v))
+    _post_html_chunks(head, body, "alert_stats")
 
 
 def send_ema_cross_report(crosses, now_ist, period_label="Fresh Cross"):

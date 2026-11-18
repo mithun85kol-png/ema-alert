@@ -185,7 +185,7 @@ def alerted_today(state, symbol, direction, candle_time, any_direction=False):
     return False
 
 
-def log_alert(state, entry, log_key="_alerts_log"):
+def log_alert(state, entry, log_key="_alerts_log", keep_days=None):
     """Remember one sent alert (price, time ...) for the end-of-day summary report.
     Stored inside alert_state.json under '_alerts_log' -> {YYYY-MM-DD: [entries]}."""
     log = state.setdefault(log_key, {})
@@ -196,7 +196,9 @@ def log_alert(state, entry, log_key="_alerts_log"):
     sig = (entry["symbol"], entry["direction"], str(entry["time"]))
     if not any((e.get("symbol"), e.get("direction"), str(e.get("time"))) == sig for e in lst):
         lst.append(entry)
-    for old in sorted(log.keys())[:-6]:      # keep the last ~6 days only
+    if keep_days is None:
+        keep_days = int(getattr(config, "ALERT_LOG_KEEP_DAYS", 30)) if log_key == "_alerts_log" else 6
+    for old in sorted(log.keys())[:-keep_days]:
         log.pop(old, None)
 
 
@@ -220,3 +222,22 @@ def last_alert_score(state, symbol, direction, day):
             if best_t is None or str(e.get("time")) >= best_t:
                 best_t, best_p = str(e.get("time")), p
     return best_p
+
+
+def update_alert_outcomes(state, day, results, log_key="_alerts_log"):
+    """Write the day-end result fields (last/pnl/best/worst/outcome) back into the stored alert
+    entries of `day`, matched by symbol+direction+time."""
+    log = state.get(log_key)
+    if not isinstance(log, dict):
+        return 0
+    n = 0
+    idx = {(e.get("symbol"), e.get("direction"), str(e.get("time"))): e for e in log.get(day) or []}
+    for r in results:
+        e = idx.get((r.get("symbol"), r.get("direction"), str(r.get("time"))))
+        if e is None or r.get("pnl") is None:
+            continue
+        for k in ("last", "pnl", "best", "worst", "outcome"):
+            if r.get(k) is not None:
+                e[k] = round(r[k], 3) if isinstance(r[k], float) else r[k]
+        n += 1
+    return n

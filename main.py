@@ -142,7 +142,7 @@ except ImportError:
     # the repo root and this feature resumes automatically.
     corporate_actions = None
 from strategy import check_signals, debug_ema_gap, get_3min_trend_info, get_sector_trend, passes_confluence_filter, compute_smart_money_signal, check_breakout_scan, check_consolidation_breakout_scan, compute_consolidation_window, check_consolidation_breakout_live, compute_session_vwap, check_trendline_scan, check_liquidity_sweep_scan, check_ma_envelope, get_opening_candle_bias, compute_intraday_checklist, get_opening_candle_buy_sell_estimate, compute_trading_score, passes_alert_gate, compute_near_high_score, compute_daily_score_scan, get_monthly_rsi_info, check_swing_entry_scan, check_daily_ema50_macd_scan, compute_position_info, check_monthly_macd_rsi_scan, check_daily_macd_rsi_scan, get_daily_support_info, compute_alert_strength
-from telegram_notifier import send_oversold_report, send_oversold_eod_report, flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_sector_performance_report, send_eod_alert_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
+from telegram_notifier import _sector_label, send_alert_stats_report, send_oversold_report, send_oversold_eod_report, flush_pending_alerts, send_alert, send_ema_cross_report, send_breakout_alert, send_consolidation_breakout_summary, send_trendline_alert, send_liquidity_sweep_alert, send_ma_envelope_alert, send_opening_bias_report, send_sector_performance_report, send_eod_alert_report, send_daily_score_report, send_trading_score_summary, send_mode_failure_notice, send_top_movers_report, send_swing_entry_summary
 from indicators import calculate_r3_s3
 
 UPSTOX_INTRADAY_URL = "https://api.upstox.com/v2/historical-candle/intraday/{instrument_key}/1minute"
@@ -2156,6 +2156,48 @@ def _attach_daily_support(signal, symbol, instrument_key):
         print(f"Monthly RSI failed for {symbol}: {e}", flush=True)
 
 
+_NIFTY_CACHE = {"t": 0.0, "df": None}
+
+
+def _nifty_trend_at(candle_time):
+    """'UP' / 'DOWN' / 'FLAT' = where NIFTY's close sits vs the average typical price of today's 15-min
+    candles up to `candle_time`. None if the data is unavailable (never blocks). The Nifty 1-min data is
+    fetched at most once every 2 minutes per run."""
+    try:
+        now = time.time()
+        if _NIFTY_CACHE["df"] is None or now - _NIFTY_CACHE["t"] > 120:
+            sym = getattr(config, "MARKET_TREND_SYMBOL", "NIFTY 50")
+            key = instruments.resolve_indices({sym: config.INDICES[sym]}).get(sym)
+            raw = fetch_1min_candles(key) if key else None
+            df = None
+            if raw is not None and not raw.empty:
+                ts = pd.to_datetime(raw["timestamp"])
+                ts = ts.dt.tz_convert(IST) if ts.dt.tz is not None else ts.dt.tz_localize(IST)
+                raw = raw.assign(timestamp=ts.dt.tz_localize(None))
+                df = resample_15min(raw)
+            _NIFTY_CACHE.update({"t": now, "df": df})
+        df = _NIFTY_CACHE["df"]
+        if df is None or df.empty:
+            return None
+        ct = pd.Timestamp(candle_time)
+        if ct.tzinfo is not None:
+            ct = ct.tz_convert(IST).tz_localize(None)
+        rows = df[(df["timestamp"].dt.date == ct.date()) & (df["timestamp"] <= ct)]
+        if rows.empty:
+            return None
+        avg = float(((rows["high"] + rows["low"] + rows["close"]) / 3.0).mean())
+        last = float(rows.iloc[-1]["close"])
+        flat = float(getattr(config, "MARKET_TREND_FLAT_PCT", 0.03)) / 100.0
+        if last > avg * (1 + flat):
+            return "UP"
+        if last < avg * (1 - flat):
+            return "DOWN"
+        return "FLAT"
+    except Exception as e:
+        print(f"Nifty trend check failed: {e}", flush=True)
+        return None
+
+
 def _daily_support_blocks(signal):
     """True if this signal must be blocked by the stock-only gates (cash-bearish, Monthly RSI,
     optional daily support). Commodities and indices are exempt: a nearest-expiry futures
@@ -2163,6 +2205,16 @@ def _daily_support_blocks(signal):
     was silently killing every commodity alert."""
     if signal.get("symbol") in (set(config.COMMODITIES) | set(config.INDICES)):
         return False
+    # No alerts for candles that START before ALERT_NO_ALERT_BEFORE (09:15 / 09:30 candles are noise)
+    try:
+        nb = str(getattr(config, "ALERT_NO_ALERT_BEFORE", "") or "")
+        if nb:
+            hh, mm = (int(x) for x in nb.split(":"))
+            if pd.Timestamp(signal["candle_time"]).time() < dt.time(hh, mm):
+                print(f"[early-candle] {signal.get('symbol')} {signal['direction']} skipped (candle before {nb})", flush=True)
+                return True
+    except Exception as e:
+        print(f"early-candle check failed: {e}", flush=True)
     # Cash-only stocks: no bearish alerts (F&O stocks keep both directions)
     if getattr(config, "CASH_STOCKS_BULLISH_ONLY", False) and signal.get("is_fno") is False and signal["direction"] == "BEARISH":
         print(f"[cash-bearish] {signal.get('symbol')} BEARISH skipped (cash stock)", flush=True)
@@ -2178,6 +2230,13 @@ def _daily_support_blocks(signal):
             if (bull and mr < config.MONTHLY_RSI_BULL_MIN) or (not bull and mr > config.MONTHLY_RSI_BEAR_MAX):
                 print(f"[monthly-rsi] {signal.get('symbol')} {signal['direction']} skipped (monthly RSI {mr})", flush=True)
                 return True
+    # Market trend: don't fight NIFTY (bullish while Nifty is below its intraday average, bearish while above)
+    trend = _nifty_trend_at(signal["candle_time"])
+    signal["nifty_trend"] = trend
+    if getattr(config, "MARKET_TREND_FILTER", False) and trend:
+        if (signal["direction"] == "BULLISH" and trend == "DOWN") or (signal["direction"] == "BEARISH" and trend == "UP"):
+            print(f"[market-trend] {signal.get('symbol')} {signal['direction']} skipped (Nifty {trend})", flush=True)
+            return True
     if not getattr(config, "ALERT_REQUIRE_DAILY_SUPPORT", False):
         return False
     ds = signal.get("daily_support")
@@ -4088,6 +4147,8 @@ def _log_alert_for_eod(st, signal, symbol, instrument_key):
             "score": f"{stt.get('passed')}/{stt.get('total')}" if stt.get("total") else "",
             "fno": bool(signal.get("is_fno")),
             "day": signal.get("alert_count"),
+            "nifty": signal.get("nifty_trend"),
+            "sector": _sector_label(symbol) or "",
         })
     except Exception as e:
         print(f"EOD log failed for {symbol}: {e}", flush=True)
@@ -4119,9 +4180,37 @@ def _eod_one(entry):
     else:
         best = (price - float(after["low"].min())) / price * 100.0
         worst = (price - float(after["high"].max())) / price * 100.0
+    # first-touch outcome: +TARGET% before -STOP% (both in the same minute counts as STOP)
+    outcome = "NONE"
+    tgt = float(getattr(config, "EOD_TARGET_PCT", 0.5)) / 100.0
+    stp = float(getattr(config, "EOD_STOP_PCT", 0.5)) / 100.0
+    for _, row in after.iterrows():
+        hi, lo = float(row["high"]), float(row["low"])
+        if bull:
+            hit_t, hit_s = hi >= price * (1 + tgt), lo <= price * (1 - stp)
+        else:
+            hit_t, hit_s = lo <= price * (1 - tgt), hi >= price * (1 + stp)
+        if hit_s:
+            outcome = "STOP"
+            break
+        if hit_t:
+            outcome = "TARGET"
+            break
     out = dict(entry)
-    out.update({"last": last, "pnl": pnl, "best": max(best, 0.0), "worst": min(worst, 0.0)})
+    out.update({"last": last, "pnl": pnl, "best": max(best, 0.0), "worst": min(worst, 0.0), "outcome": outcome})
     return out
+
+
+def run_alert_stats(now_ist):
+    """Win-rate tables from the stored day-end outcomes (see config.ALERT_STATS_*)."""
+    st = state.load_state()
+    log = st.get("_alerts_log") if isinstance(st.get("_alerts_log"), dict) else {}
+    rows = []
+    for day, entries in sorted(log.items()):
+        for e in entries or []:
+            if e.get("outcome") in ("TARGET", "STOP", "NONE") and e.get("pnl") is not None:
+                rows.append(dict(e, _day=day))
+    send_alert_stats_report(rows, now_ist)
 
 
 def run_eod_alert_report(now_ist):
@@ -4144,6 +4233,12 @@ def run_eod_alert_report(now_ist):
                 else:
                     results.append(dict(e, last=None, pnl=None, best=None, worst=None))
     send_eod_alert_report(results, now_ist)
+    try:
+        _st = state.load_state()
+        if state.update_alert_outcomes(_st, today, results):
+            state.save_state(_st)
+    except Exception as e:
+        print(f"Saving alert outcomes failed: {e}", flush=True)
 
 
 def maybe_run_eod_report_once_a_day(now_ist):
@@ -4160,6 +4255,11 @@ def maybe_run_eod_report_once_a_day(now_ist):
     state.mark_alerted(st, "EOD_REPORT", "DONE", today)   # mark first: a crash must not retry every run
     state.save_state(st)
     run_eod_alert_report(now_ist)
+    if getattr(config, "ALERT_STATS_ENABLED", False) and now_ist.weekday() == getattr(config, "ALERT_STATS_WEEKDAY", 4):
+        try:
+            run_alert_stats(now_ist)
+        except Exception as e:
+            print(f"Alert stats failed: {e}", flush=True)
 
 
 # ---------- Daily RSI < 30 (oversold) alert + day-end performance (ADDED 2026-11-15) ----------
@@ -4607,6 +4707,14 @@ def _run_inner():
         except Exception as e:
             print(f"run_oversold_eod_report failed: {e}", flush=True)
             send_mode_failure_notice("oversold_eod", e, now_ist)
+        return
+
+    if mode == "alert_stats":
+        try:
+            run_alert_stats(now_ist)
+        except Exception as e:
+            print(f"run_alert_stats failed: {e}", flush=True)
+            send_mode_failure_notice("alert_stats", e, now_ist)
         return
 
     if mode == "eod_report":

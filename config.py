@@ -944,7 +944,7 @@ ENABLED_SCAN_MODES = {
     "daily_scan",
     "eod_report",
     "oversold_report", "oversold_eod", "opening_bias_report_1h",
-    "opening_bias_report_30m",
+    "opening_bias_report_30m", "alert_stats",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -976,7 +976,7 @@ ALERT_STRENGTH_WEIGHTS = {
 # These checks MUST pass or no alert is sent, whatever the other points add up to
 # (per request 2026-10-21 — "MACD RSI lagbei"). A check whose data is missing never blocks.
 # Keys are the ALERT_STRENGTH_WEIGHTS keys. Set to () to make everything points-only.
-ALERT_MANDATORY_CHECKS = ("macd_zero", "volume")   # MACD cross (trigger) + MACD side of zero + last-day volume support must hold (2026-10-22). RSI is NOT mandatory — 1 point. Missing data never blocks.
+ALERT_MANDATORY_CHECKS = ("macd_zero", "volume", "vwap", "first30")   # MACD cross (trigger) + MACD side of zero + last-day volume support must hold (2026-10-22). RSI is NOT mandatory — 1 point. Missing data never blocks.
 # Alert rule (2026-10-21, "MACD must ar nicher mot 50% match korle alert asbe"):
 # the MACD check is mandatory; of ALL THE OTHER checks (RSI, 75-min EMA50, VWAP,
 # 1st 15-min, last-day volume, last-day delivery, candle volume — only those whose
@@ -1135,3 +1135,27 @@ DAILY_RSI_CROSS_LEVEL = 55
 # evaluated them. If that cron isn't running, indices never alert. True = the normal run also evaluates
 # them (same 15-min MACD alert rules). Dedupe (alert_state) still stops duplicates.
 INDEX_ALERTS_IN_FULL_RUN = True
+
+
+# ---------- Success-rate package (ADDED 2026-11-18, "success ratio onek kom") ----------
+# 1) VWAP side + 1st-30-min-range break are now MANDATORY for the 15-min alert (ALERT_MANDATORY_CHECKS above):
+#    bullish only when price is above VWAP AND above the 1st 30-min high; bearish mirror.
+#    (A check whose data is missing - e.g. alert candle still inside the 1st 30 min - never blocks by itself.)
+# 2) No alerts for candles that START before this time (the 09:15 and 09:30 candles are noisy).
+ALERT_NO_ALERT_BEFORE = "09:45"
+# 3) Market trend filter: bullish alerts are skipped while NIFTY 50 is below its own intraday average price
+#    (mean of typical price of today's 15-min candles up to the alert candle), bearish alerts while it is above.
+#    Within +-MARKET_TREND_FLAT_PCT of that average = FLAT (both directions allowed). Missing data never blocks.
+MARKET_TREND_FILTER = True
+MARKET_TREND_SYMBOL = "NIFTY 50"
+MARKET_TREND_FLAT_PCT = 0.03
+# 4) Day-end report also says which alerts hit +EOD_TARGET_PCT before -EOD_STOP_PCT (first touch, 1-min data;
+#    both inside one minute counts as STOP). This is a fairer "did the alert work" measure than alert price -> close.
+EOD_TARGET_PCT = 0.5
+EOD_STOP_PCT = 0.5
+# 5) Each alert's outcome is stored (alert_state.json -> _alerts_log, kept ALERT_LOG_KEEP_DAYS days) and a stats report
+#    (win-rate by direction / time of day / score / Nifty trend / F&O vs cash / Day streak) is sent every
+#    ALERT_STATS_WEEKDAY (0=Mon ... 4=Fri) after the EOD summary, or on demand with SCAN_MODE=alert_stats.
+ALERT_LOG_KEEP_DAYS = 30
+ALERT_STATS_ENABLED = True
+ALERT_STATS_WEEKDAY = 4

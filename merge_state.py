@@ -87,19 +87,22 @@ def _parse_dt(candle_time_str):
     return None
 
 
-def _merge_alert_log(a, b):
-    """Union of two {day: [entries]} dicts (entries identified by symbol+direction+time)."""
+def _merge_alert_log(a, b, keep_days=30):
+    """Union of two {day: [entries]} dicts (entries identified by symbol+direction+time).
+    If both sides have the same entry, the one that already carries the day-end `outcome` wins."""
     out = {}
     for src in (a if isinstance(a, dict) else {}, b if isinstance(b, dict) else {}):
         for day, entries in src.items():
             lst = out.setdefault(day, [])
-            seen = {(e.get("symbol"), e.get("direction"), str(e.get("time"))) for e in lst}
+            pos = {(e.get("symbol"), e.get("direction"), str(e.get("time"))): i for i, e in enumerate(lst)}
             for e in entries or []:
                 sig = (e.get("symbol"), e.get("direction"), str(e.get("time")))
-                if sig not in seen:
+                if sig not in pos:
                     lst.append(e)
-                    seen.add(sig)
-    for old in sorted(out.keys())[:-6]:
+                    pos[sig] = len(lst) - 1
+                elif "outcome" in e and "outcome" not in lst[pos[sig]]:
+                    lst[pos[sig]] = e
+    for old in sorted(out.keys())[:-keep_days]:
         out.pop(old, None)
     return out
 
@@ -109,7 +112,7 @@ def merge(local, remote):
     merged = {}
     for key in keys:
         if key in ("_alerts_log", "_oversold_log"):
-            merged[key] = _merge_alert_log(local.get(key), remote.get(key))
+            merged[key] = _merge_alert_log(local.get(key), remote.get(key), 30 if key == "_alerts_log" else 6)
             continue
         lv, rv = local.get(key), remote.get(key)
         if isinstance(lv, str) or isinstance(rv, str):      # plain markers, e.g. _token_notice
