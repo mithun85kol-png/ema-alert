@@ -4067,7 +4067,8 @@
   ],
   "SUNTV::N500:BULLISH": [
     "2026-09-24 09:45:00+05:30",
-    "2026-11-12 11:30:00+05:30"
+    "2026-11-12 11:30:00+05:30",
+    "2026-11-19 10:15:00+05:30"
   ],
   "PHOENIXLTD::N500:BULLISH": [
     "2026-08-14 13:30:00+05:30"
@@ -6357,7 +6358,8 @@
   ],
   "OPEN1H_REPORT:DONE": [
     "2026-11-17",
-    "2026-11-18"
+    "2026-11-18",
+    "2026-11-19"
   ],
   "CONCOR::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-21 11:45:00+05:30",
@@ -10538,6 +10540,18 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Healthcare"
+      },
+      {
+        "symbol": "SUNTV",
+        "direction": "BULLISH",
+        "time": "2026-11-19 10:15:00+05:30",
+        "price": 705.8,
+        "key": "NSE_EQ|INE424H01027",
+        "score": "8/9",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Media Entertainment & Publication"
       }
     ]
   },
