@@ -1164,3 +1164,12 @@ ALERT_STATS_WEEKDAY = 4
 # ---------- SCAN_MODE=stock_list : all stocks sector wise (ADDED 2026-11-18) ----------
 # FNO stocks (with lot qty) + CASH stocks (rest of Nifty 500), each with Chart + Screener link.
 STOCK_LIST_INCLUDE_NIFTY500 = True   # False = only the F&O stocks
+
+
+# ---------- "2% move + 1st 15-min range break" alert (ADDED 2026-11-19) ----------
+# A stock alerts when BOTH are true on the latest price: day change vs previous close >= ORB15_MOVE_MIN_PCT
+# (up for BULLISH, down for BEARISH) AND price is beyond the high/low of today's 09:15 candle (above the high for
+# BULLISH, below the low for BEARISH). Stocks only (no indices/commodities), F&O + Nifty 500. Once per day per
+# direction. Cash-only stocks follow CASH_STOCKS_BULLISH_ONLY. ONE message per run lists all new hits.
+ORB15_MOVE_ALERT_ENABLED = True
+ORB15_MOVE_MIN_PCT = 2.0
