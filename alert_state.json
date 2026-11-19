@@ -6757,6 +6757,18 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Capital Goods"
+      },
+      {
+        "symbol": "ABDL",
+        "direction": "BULLISH",
+        "time": "2026-11-19 14:45:00+05:30",
+        "price": 813.4,
+        "key": "NSE_EQ|INE552Z01027",
+        "score": "7/9",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Fast Moving Consumer Goods"
       }
     ]
   },
@@ -7760,7 +7772,8 @@
   ],
   "ABDL::N500:BULLISH": [
     "2026-09-04 11:15:00+05:30",
-    "2026-11-16 12:30:00+05:30"
+    "2026-11-16 12:30:00+05:30",
+    "2026-11-19 14:45:00+05:30"
   ],
   "ASIANPAINT:BEARISH": [
     "2026-08-06 13:03:00+05:30",
