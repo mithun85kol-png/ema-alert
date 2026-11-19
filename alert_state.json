@@ -3113,7 +3113,8 @@
     "2026-09-10 10:00:00+05:30"
   ],
   "AZAD::N500:BULLISH": [
-    "2026-11-04 12:45:00+05:30"
+    "2026-11-04 12:45:00+05:30",
+    "2026-11-19 14:15:00+05:30"
   ],
   "RPOWER::MAENV::BULLISH:BULLISH": [
     "2026-09-10 09:45:00+05:30",
@@ -6744,6 +6745,18 @@
         "day": 4,
         "nifty": "UP",
         "sector": "Fast Moving Consumer Goods"
+      },
+      {
+        "symbol": "AZAD",
+        "direction": "BULLISH",
+        "time": "2026-11-19 14:15:00+05:30",
+        "price": 2426.4,
+        "key": "NSE_EQ|INE02IJ01035",
+        "score": "8/9",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Capital Goods"
       }
     ]
   },
