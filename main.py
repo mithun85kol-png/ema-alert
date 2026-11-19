@@ -4506,7 +4506,116 @@ def maybe_run_daily_scan_once_a_day(now_ist):
     run_daily_macd_rsi_scan(now_ist, notify_if_stale=True)
 
 
+def run_stock_list_report(now_ist):
+    """SCAN_MODE=stock_list — ALL stocks, SECTOR WISE, to Telegram (ADDED 2026-11-17).
+    Every F&O stock (+ the rest of Nifty 500 as CASH when config.STOCK_LIST_INCLUDE_NIFTY500).
+    Each line: symbol [FNO · lot qty] or [CASH], Chart link (Groww) and Screener.in link.
+    Works any time of day (no market-session check). Sent in several messages (Telegram's 4096 limit)."""
+    import html as _html
+    from telegram_notifier import _sector_label
+    fo = instruments.resolve_fo_stock_list(None if config.USE_FULL_FO_LIST else config.FO_STOCK_WATCHLIST)
+    universe = {s: "FNO" for s in fo}
+    if getattr(config, "STOCK_LIST_INCLUDE_NIFTY500", True):
+        try:
+            for s in instruments.resolve_nifty500_stocks():
+                universe.setdefault(s, "CASH")
+        except Exception as e:
+            print(f"Nifty 500 list failed (continuing with F&O only): {e}", flush=True)
+    lots = instruments.get_fno_lot_sizes()
+    syms = sorted(universe)
+    print(f"[stock_list] {len(syms)} stocks ({sum(1 for v in universe.values() if v == 'FNO')} FNO)", flush=True)
+
+    def _link(sym):
+        try:
+            return sym, build_chart_link(sym)
+        except Exception:
+            return sym, f"https://www.tradingview.com/chart/?symbol=NSE:{sym}"
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        links = dict(pool.map(_link, syms))
+
+    by_sector = {}
+    for sym in syms:
+        sec = (_sector_label(sym) or "Other").strip() or "Other"
+        by_sector.setdefault(sec, []).append(sym)
+
+    def _line(sym):
+        if universe[sym] == "FNO":
+            lot = lots.get(sym)
+            tag = f"FNO \u00b7 lot {lot}" if lot else "FNO"
+        else:
+            tag = "CASH"
+        return (f"\u2022 <b>{_html.escape(sym)}</b> [{tag}] "
+                f"<a href=\"{links[sym]}\">Chart</a> \u00b7 "
+                f"<a href=\"https://www.screener.in/company/{sym}/consolidated/\">Screener</a>")
+
+    n_fno = sum(1 for v in universe.values() if v == "FNO")
+    head = (f"\U0001F4CB <b>ALL STOCKS \u2014 sector wise</b>  {now_ist.strftime('%d %b %Y')}\n"
+            f"FNO {n_fno} \u00b7 CASH {len(universe) - n_fno} \u00b7 Sectors {len(by_sector)}\n"
+            f"FNO = F&O stock (lot qty shown)  \u00b7  CASH = cash only")
+    msgs, cur = [], head
+    LIMIT = 3800
+    for sec in sorted(by_sector, key=lambda x: (x == "Other", x)):
+        members = sorted(by_sector[sec], key=lambda x: (universe[x] != "FNO", x))
+        pending = f"\n\n\U0001F3ED <b>{_html.escape(sec)}</b> ({len(members)})"
+        for sym in members:
+            line = _line(sym)
+            add = (pending + "\n" if pending else "\n") + line
+            if len(cur) + len(add) > LIMIT:
+                msgs.append(cur)
+                cur = ""
+                add = f"\U0001F3ED <b>{_html.escape(sec)}</b> (contd)\n{line}"
+            cur += add
+            pending = None
+    if cur.strip():
+        msgs.append(cur)
+    print(f"[stock_list] sending {len(msgs)} messages", flush=True)
+    for i, m in enumerate(msgs, 1):
+        for attempt in range(3):
+            try:
+                r = requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                                  data={"chat_id": config.TELEGRAM_CHAT_ID, "text": m, "parse_mode": "HTML",
+                                        "disable_web_page_preview": True}, timeout=20)
+                if r.status_code == 429:
+                    time.sleep(int(r.json().get("parameters", {}).get("retry_after", 5)) + 1)
+                    continue
+                r.raise_for_status()
+                break
+            except Exception as e:
+                print(f"[stock_list] message {i}/{len(msgs)} failed (try {attempt + 1}): {e}", flush=True)
+                time.sleep(2)
+        time.sleep(1.1)
+
+
+def _run_telegram_test():
+    """SCAN_MODE=telegram_test: send ONE test message to TELEGRAM_CHAT_ID and exit. Works any time
+    (no market-session or Upstox check). Prints Telegram's answer in the log so a failure is visible."""
+    tok, chat = config.TELEGRAM_BOT_TOKEN, str(config.TELEGRAM_CHAT_ID or "")
+    print(f"[telegram_test] token_set={bool(tok)} chat_id_set={bool(chat)} "
+          f"chat_type={'private' if chat and not chat.startswith('-') else ('group' if chat else 'none')} "
+          f"chat_id_ends_with=...{chat[-4:] if chat else ''}", flush=True)
+    if not tok or not chat:
+        print("[telegram_test] TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secret missing - nothing sent.", flush=True)
+        sys.exit(1)
+    try:
+        from telegram_notifier import BUILD_TAG
+    except Exception:
+        BUILD_TAG = "unknown"
+    now_ist = _now_ist()
+    text = (f"\u2705 <b>Test message from GitHub</b>\n"
+            f"Time: {now_ist.strftime('%Y-%m-%d %H:%M')} IST\n"
+            f"Code version: <b>{BUILD_TAG.split(' ')[0]}</b>\n"
+            f"Alerts will come to this chat.")
+    r = requests.post(f"https://api.telegram.org/bot{tok}/sendMessage",
+                      data={"chat_id": chat, "text": text, "parse_mode": "HTML"}, timeout=20)
+    print(f"[telegram_test] Telegram answered HTTP {r.status_code}: {r.text[:300]}", flush=True)
+    if r.status_code != 200:
+        sys.exit(1)
+
+
 def _run_inner():
+    if os.environ.get("SCAN_MODE", "full") == "telegram_test":
+        _run_telegram_test()
+        return
     # TEMP DEBUG — remove once we confirm why "Run scan" finished in ~1s
     # with zero stdout beyond the auto-generated env dump: this print
     # (with explicit flush) tells us whether run() is even being
@@ -4675,6 +4784,14 @@ def _run_inner():
             except Exception as e:
                 print(f"run_daily_macd_rsi_scan failed: {e}", flush=True)
                 send_mode_failure_notice("daily_scan", e, now_ist)
+        return
+
+    if mode == "stock_list":
+        try:
+            run_stock_list_report(now_ist)
+        except Exception as e:
+            print(f"run_stock_list_report failed: {e}", flush=True)
+            send_mode_failure_notice("stock_list", e, now_ist)
         return
 
     if mode == "opening_bias_report_30m":

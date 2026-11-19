@@ -944,7 +944,7 @@ ENABLED_SCAN_MODES = {
     "daily_scan",
     "eod_report",
     "oversold_report", "oversold_eod", "opening_bias_report_1h",
-    "opening_bias_report_30m", "alert_stats",
+    "opening_bias_report_30m", "alert_stats", "telegram_test", "stock_list",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -1159,3 +1159,8 @@ EOD_STOP_PCT = 0.5
 ALERT_LOG_KEEP_DAYS = 30
 ALERT_STATS_ENABLED = True
 ALERT_STATS_WEEKDAY = 4
+
+
+# ---------- SCAN_MODE=stock_list : all stocks sector wise (ADDED 2026-11-18) ----------
+# FNO stocks (with lot qty) + CASH stocks (rest of Nifty 500), each with Chart + Screener link.
+STOCK_LIST_INCLUDE_NIFTY500 = True   # False = only the F&O stocks

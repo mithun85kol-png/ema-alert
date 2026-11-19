@@ -229,6 +229,30 @@ def _fno_underlyings_from_master(master):
     return underlyings
 
 
+def get_fno_lot_sizes():
+    """{UNDERLYING: lot size (qty per lot)} for every F&O stock/index, read from the instrument master
+    already loaded for this run (NSE_FO futures rows; option rows as fallback). Never raises."""
+    out = {}
+    try:
+        master = _load_master()
+        fut, opt = {}, {}
+        for row in master:
+            if row.get("segment") != "NSE_FO":
+                continue
+            sym = (row.get("underlying_symbol") or row.get("name") or "").upper()
+            lot = row.get("lot_size")
+            if not sym or not lot:
+                continue
+            if row.get("instrument_type") == "FUT":
+                fut.setdefault(sym, int(lot))
+            elif row.get("instrument_type") in ("CE", "PE"):
+                opt.setdefault(sym, int(lot))
+        out = {**opt, **fut}
+    except Exception as e:
+        print(f"Lot size map failed: {e}", flush=True)
+    return out
+
+
 def _load_nifty500_cache():
     try:
         with open(config.NIFTY500_LIST_CACHE_FILE, "r") as f:
