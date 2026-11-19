@@ -3724,6 +3724,92 @@
         "streak": 1,
         "t_offset_min": 0
       }
+    ],
+    "2026-11-19": [
+      {
+        "symbol": "PIIND",
+        "direction": "BULLISH",
+        "time": "2026-11-19 09:30:43",
+        "price": 1634.0,
+        "key": "NSE_EQ|INE603J01030",
+        "fno": true,
+        "prev_close": 1624.0,
+        "d_rsi": 24.4,
+        "h_rsi": 21.8,
+        "m_rsi": 27.6,
+        "streak": 10,
+        "t_offset_min": 0
+      },
+      {
+        "symbol": "ATUL",
+        "direction": "BULLISH",
+        "time": "2026-11-19 09:30:43",
+        "price": 5018.0,
+        "key": "NSE_EQ|INE100A01010",
+        "fno": false,
+        "prev_close": 5018.5,
+        "d_rsi": 28.0,
+        "h_rsi": 31.3,
+        "m_rsi": 37.5,
+        "streak": 2,
+        "t_offset_min": 0
+      },
+      {
+        "symbol": "PAGEIND",
+        "direction": "BULLISH",
+        "time": "2026-11-19 09:30:43",
+        "price": 30825.0,
+        "key": "NSE_EQ|INE761H01022",
+        "fno": true,
+        "prev_close": 30810.0,
+        "d_rsi": 28.5,
+        "h_rsi": 29.4,
+        "m_rsi": 37.7,
+        "streak": 2,
+        "t_offset_min": 0
+      },
+      {
+        "symbol": "THANGAMAYL",
+        "direction": "BULLISH",
+        "time": "2026-11-19 09:30:43",
+        "price": 3924.6,
+        "key": "NSE_EQ|INE085J01014",
+        "fno": false,
+        "prev_close": 3947.2,
+        "d_rsi": 28.9,
+        "h_rsi": 39.0,
+        "m_rsi": 54.5,
+        "streak": 1,
+        "t_offset_min": 0
+      },
+      {
+        "symbol": "CAPLIPOINT",
+        "direction": "BULLISH",
+        "time": "2026-11-19 09:30:43",
+        "price": 2038.6,
+        "key": "NSE_EQ|INE475E01026",
+        "fno": false,
+        "prev_close": 2085.3,
+        "d_rsi": 29.0,
+        "h_rsi": 18.6,
+        "m_rsi": 51.5,
+        "streak": 1,
+        "t_offset_min": 0
+      },
+      {
+        "symbol": "ECLERX",
+        "direction": "BULLISH",
+        "time": "2026-11-19 09:30:43",
+        "price": 1486.3,
+        "key": "NSE_EQ|INE738I01010",
+        "fno": false,
+        "prev_close": 1500.1,
+        "d_rsi": 29.7,
+        "h_rsi": 28.5,
+        "m_rsi": 46.6,
+        "streak": 1,
+        "t_offset_min": 0
+      }
     ]
   },
   "TTML::TRENDLINE::BULLISH:BULLISH": [
@@ -7903,7 +7989,8 @@
     "2026-11-13",
     "2026-11-16",
     "2026-11-17",
-    "2026-11-18"
+    "2026-11-18",
+    "2026-11-19"
   ],
   "HINDALCO:BEARISH": [
     "2026-09-15 09:15:00+05:30",
@@ -11045,7 +11132,8 @@
   ],
   "OVERSOLD_SCAN:DONE": [
     "2026-11-17",
-    "2026-11-18"
+    "2026-11-18",
+    "2026-11-19"
   ],
   "HONASA::SWEEP::BULLISH:BULLISH": [
     "2026-09-07 09:15:00+05:30"
@@ -11282,5 +11370,11 @@
   ],
   "LICHSGFIN::MONTHLY:BULLISH": [
     "Nov 2026"
+  ],
+  "COFORGE::DAILY:BULLISH": [
+    "2026-11-17"
+  ],
+  "CIPLA::DAILY:BULLISH": [
+    "2026-11-18"
   ]
 }
