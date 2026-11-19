@@ -3641,7 +3641,8 @@
   "OVERSOLD_EOD:DONE": [
     "2026-11-16",
     "2026-11-17",
-    "2026-11-18"
+    "2026-11-18",
+    "2026-11-19"
   ],
   "AFFLE::N500:BULLISH": [
     "2026-08-14 12:15:00+05:30",
@@ -6061,7 +6062,8 @@
     "2026-11-13",
     "2026-11-16",
     "2026-11-17",
-    "2026-11-18"
+    "2026-11-18",
+    "2026-11-19"
   ],
   "PCBL::SWEEP::BULLISH:BULLISH": [
     "2026-09-07 09:15:00+05:30"
@@ -6685,7 +6687,12 @@
         "fno": false,
         "day": 1,
         "nifty": "UP",
-        "sector": "Construction"
+        "sector": "Construction",
+        "last": 1384.1,
+        "pnl": 1.578,
+        "best": 2.378,
+        "worst": -0.602,
+        "outcome": "STOP"
       },
       {
         "symbol": "WOCKPHARMA",
@@ -6697,7 +6704,12 @@
         "fno": false,
         "day": 1,
         "nifty": "UP",
-        "sector": "Healthcare"
+        "sector": "Healthcare",
+        "last": 2186.0,
+        "pnl": 5.885,
+        "best": 6.418,
+        "worst": -0.872,
+        "outcome": "STOP"
       },
       {
         "symbol": "SUNTV",
@@ -6709,7 +6721,12 @@
         "fno": false,
         "day": 1,
         "nifty": "UP",
-        "sector": "Media Entertainment & Publication"
+        "sector": "Media Entertainment & Publication",
+        "last": 688.95,
+        "pnl": -2.387,
+        "best": 1.141,
+        "worst": -2.805,
+        "outcome": "TARGET"
       },
       {
         "symbol": "PVRINOX",
@@ -6721,7 +6738,12 @@
         "fno": false,
         "day": 1,
         "nifty": "UP",
-        "sector": "Media Entertainment & Publication"
+        "sector": "Media Entertainment & Publication",
+        "last": 1688.0,
+        "pnl": -2.292,
+        "best": 1.123,
+        "worst": -2.46,
+        "outcome": "TARGET"
       },
       {
         "symbol": "FLUOROCHEM",
@@ -6733,7 +6755,12 @@
         "fno": false,
         "day": 1,
         "nifty": "UP",
-        "sector": "Chemicals"
+        "sector": "Chemicals",
+        "last": 4969.9,
+        "pnl": 1.424,
+        "best": 2.039,
+        "worst": -0.329,
+        "outcome": "TARGET"
       },
       {
         "symbol": "HONASA",
@@ -6745,7 +6772,12 @@
         "fno": false,
         "day": 4,
         "nifty": "UP",
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 529.8,
+        "pnl": 0.085,
+        "best": 0.312,
+        "worst": -0.387,
+        "outcome": "NONE"
       },
       {
         "symbol": "AZAD",
@@ -6757,7 +6789,12 @@
         "fno": false,
         "day": 1,
         "nifty": "UP",
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 2390.3,
+        "pnl": -1.488,
+        "best": 0.556,
+        "worst": -1.686,
+        "outcome": "TARGET"
       },
       {
         "symbol": "ABDL",
@@ -6769,7 +6806,12 @@
         "fno": false,
         "day": 1,
         "nifty": "UP",
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 806.0,
+        "pnl": -0.91,
+        "best": 0.031,
+        "worst": -0.959,
+        "outcome": "STOP"
       },
       {
         "symbol": "TVSMOTOR",
@@ -6781,7 +6823,12 @@
         "fno": true,
         "day": 1,
         "nifty": "UP",
-        "sector": "Automobile and Auto Components"
+        "sector": "Automobile and Auto Components",
+        "last": 4601.4,
+        "pnl": 0.0,
+        "best": 0.0,
+        "worst": 0.0,
+        "outcome": "NONE"
       },
       {
         "symbol": "GAIL",
@@ -6793,7 +6840,12 @@
         "fno": true,
         "day": 1,
         "nifty": "UP",
-        "sector": "Oil Gas & Consumable Fuels"
+        "sector": "Oil Gas & Consumable Fuels",
+        "last": 192.1,
+        "pnl": 0.0,
+        "best": 0.0,
+        "worst": 0.0,
+        "outcome": "NONE"
       }
     ]
   },
