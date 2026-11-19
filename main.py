@@ -2284,6 +2284,7 @@ def run_fo_scan(now_ist, index_only=False):
     # dao"), sent as ONE batched message at the end instead of one
     # message per stock. See send_consolidation_breakout_summary.
     consolidation_live_hits = []
+    orb15_hits = []
 
     # Used to set the "F&O: Yes/No" flag on stock signals only — indices
     # (NIFTY 50, SENSEX...) and commodities (GOLD, SILVER...) aren't
@@ -2372,6 +2373,19 @@ def run_fo_scan(now_ist, index_only=False):
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
+            # 2%+ move + 1st 15-min range break (added 2026-11-19) — stocks only, once per day per direction.
+            if symbol not in index_symbols_orb and symbol not in config.COMMODITIES:
+                _o = check_orb15_move(df15, symbol, prev_close, now_ist)
+                if _o is not None:
+                    _o["is_fno"] = symbol.upper() in fno_underlyings
+                    if _o["is_fno"] is False and getattr(config, "CASH_STOCKS_BULLISH_ONLY", False) and _o["direction"] == "BEARISH":
+                        _o = None
+                if _o is not None:
+                    _ok = f"{symbol}::ORB15_MOVE"
+                    if not state.already_alerted(saved_state, _ok, _o["direction"], _o["date"]):
+                        _o["chart_link"] = build_chart_link(symbol, "15-min")
+                        state.mark_alerted(saved_state, _ok, _o["direction"], _o["date"])
+                        orb15_hits.append(_o)
             # prev_day_high/prev_day_low (added, per request, 2026-09-05)
             # — feeds the Liquidity Sweep scan below.
             prev_day_high = levels.get("high") if levels else None
@@ -3011,6 +3025,10 @@ def run_fo_scan(now_ist, index_only=False):
         send_consolidation_breakout_summary(consolidation_live_hits, now_ist)
         alerts_sent += len(consolidation_live_hits)
 
+    if orb15_hits:
+        send_orb15_move_summary(orb15_hits, now_ist)
+        alerts_sent += len(orb15_hits)
+
     state.save_state(saved_state)
     if failed_symbols:
         print(f"{len(failed_symbols)} instrument(s) failed to fetch this run: {failed_symbols}")
@@ -3065,6 +3083,7 @@ def run_nifty500_scan(now_ist):
     # run (see matching comment in run_fo_scan above), sent as ONE
     # batched message at the end.
     consolidation_live_hits = []
+    orb15_hits = []
 
     fno_underlyings = instruments.get_fno_underlyings()
     hist_cache = build_hist1min_cache(watchlist)
@@ -3117,6 +3136,19 @@ def run_nifty500_scan(now_ist):
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
+            # 2%+ move + 1st 15-min range break (added 2026-11-19) — stocks only, once per day per direction.
+            if symbol not in index_symbols_orb and symbol not in config.COMMODITIES:
+                _o = check_orb15_move(df15, symbol, prev_close, now_ist)
+                if _o is not None:
+                    _o["is_fno"] = symbol.upper() in fno_underlyings
+                    if _o["is_fno"] is False and getattr(config, "CASH_STOCKS_BULLISH_ONLY", False) and _o["direction"] == "BEARISH":
+                        _o = None
+                if _o is not None:
+                    _ok = f"{symbol}::ORB15_MOVE"
+                    if not state.already_alerted(saved_state, _ok, _o["direction"], _o["date"]):
+                        _o["chart_link"] = build_chart_link(symbol, "15-min")
+                        state.mark_alerted(saved_state, _ok, _o["direction"], _o["date"])
+                        orb15_hits.append(_o)
             # prev_day_high/prev_day_low (added, per request, 2026-09-05)
             # — feeds the Liquidity Sweep scan below.
             prev_day_high = levels.get("high") if levels else None
@@ -3466,6 +3498,10 @@ def run_nifty500_scan(now_ist):
     if consolidation_live_hits:
         send_consolidation_breakout_summary(consolidation_live_hits, now_ist)
         alerts_sent += len(consolidation_live_hits)
+
+    if orb15_hits:
+        send_orb15_move_summary(orb15_hits, now_ist)
+        alerts_sent += len(orb15_hits)
 
     state.save_state(saved_state)
     if failed_symbols:
@@ -4234,6 +4270,10 @@ def run_eod_alert_report(now_ist):
                     results.append(dict(e, last=None, pnl=None, best=None, worst=None))
     send_eod_alert_report(results, now_ist)
     try:
+        _send_eod_chart_list(results, now_ist)
+    except Exception as e:
+        print(f"EOD chart list failed (non-blocking): {e}", flush=True)
+    try:
         _st = state.load_state()
         if state.update_alert_outcomes(_st, today, results):
             state.save_state(_st)
@@ -4504,6 +4544,166 @@ def maybe_run_daily_scan_once_a_day(now_ist):
     state.mark_alerted(st, "DAILY_SCAN", "DONE", today)  # mark first: a crash must not retry every run
     state.save_state(st)
     run_daily_macd_rsi_scan(now_ist, notify_if_stale=True)
+
+
+index_symbols_orb = set(config.INDICES.keys())
+
+
+def check_orb15_move(df15, symbol, prev_close, now_ist):
+    """"Stock moved more than ORB15_MOVE_MIN_PCT % AND price broke the 1st 15-min range" (ADDED 2026-11-19).
+    BULLISH: latest price > high of today's 09:15 candle AND day change vs previous close >= +MIN_PCT.
+    BEARISH: latest price < low of that candle AND day change <= -MIN_PCT.
+    Evaluates the CURRENT state (so a missed run still catches it). Returns a dict or None. Never raises."""
+    try:
+        if not getattr(config, "ORB15_MOVE_ALERT_ENABLED", False) or not prev_close or df15 is None or df15.empty:
+            return None
+        rows = df15[df15["timestamp"].dt.date == now_ist.date()]
+        if len(rows) < 2:
+            return None                      # the 1st 15-min candle is not finished yet
+        first = rows.iloc[0]
+        if (first["timestamp"].hour, first["timestamp"].minute) != (9, 15):
+            return None
+        hi, lo = float(first["high"]), float(first["low"])
+        last = rows.iloc[-1]
+        close = float(last["close"])
+        pct = (close - float(prev_close)) / float(prev_close) * 100.0
+        thr = float(getattr(config, "ORB15_MOVE_MIN_PCT", 2.0))
+        if close > hi and pct >= thr:
+            direction = "BULLISH"
+        elif close < lo and pct <= -thr:
+            direction = "BEARISH"
+        else:
+            return None
+        return {"symbol": symbol, "direction": direction, "close": close, "pct": pct,
+                "range_high": hi, "range_low": lo, "candle_time": str(last["timestamp"]),
+                "date": now_ist.date().isoformat()}
+    except Exception as e:
+        print(f"ORB15 move check failed for {symbol}: {e}", flush=True)
+        return None
+
+
+def send_orb15_move_summary(hits, now_ist):
+    """ONE Telegram message with every new '2% move + 1st 15-min range break' stock of this run."""
+    import html as _html
+    from telegram_notifier import _sector_label
+    if not hits:
+        return
+    thr = getattr(config, "ORB15_MOVE_MIN_PCT", 2.0)
+    out = [f"\U0001F680 <b>{thr:g}%+ MOVE + 1st 15-MIN RANGE BREAK</b>  {now_ist.strftime('%H:%M')}"]
+    for direction, icon, word in (("BULLISH", "\U0001F7E2", "above 15m high"), ("BEARISH", "\U0001F534", "below 15m low")):
+        grp = sorted((h for h in hits if h["direction"] == direction), key=lambda h: -abs(h["pct"]))
+        if not grp:
+            continue
+        out.append(f"\n{icon} <b>{direction}</b> ({len(grp)})")
+        for h in grp:
+            lvl = h["range_high"] if direction == "BULLISH" else h["range_low"]
+            sec = _sector_label(h["symbol"]) or "Other"
+            kind = "F&O" if h.get("is_fno") else "Cash"
+            out.append(f"{icon} <b>{_html.escape(h['symbol'])}</b> ({_html.escape(sec)}) [{kind}] "
+                       f"<a href=\"{h.get('chart_link', '')}\">Chart</a>\n"
+                       f"    {h['close']:g} ({h['pct']:+.2f}%) \u00b7 {word} {lvl:g}")
+    text = "\n".join(out)
+    for i in range(0, len(text), 3900):
+        try:
+            requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                          data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text[i:i + 3900], "parse_mode": "HTML",
+                                "disable_web_page_preview": True}, timeout=20)
+        except Exception as e:
+            print(f"ORB15 summary send failed: {e}", flush=True)
+
+
+def _sector_chart_label(sym):
+    from telegram_notifier import _sector_label
+    return (_sector_label(sym) or "Other").strip() or "Other"
+
+
+def run_day_movers_report(now_ist):
+    """TOP N GAINERS / LOSERS of the day (F&O stocks): latest price vs previous close, with sector + Chart.
+    Works any time (also after the close). Triggered by maybe_run_day_movers_once_a_day or SCAN_MODE=day_movers."""
+    import html as _html
+    n = int(getattr(config, "DAY_MOVERS_COUNT", 10))
+    fo_watch = None if config.USE_FULL_FO_LIST else config.FO_STOCK_WATCHLIST
+    watchlist = instruments.resolve_fo_stock_list(fo_watch)
+    pivots = build_pivot_levels(watchlist)
+    dfs, _failed = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
+    movers = []
+    for sym, tup in dfs.items():
+        try:
+            df15 = tup[2]
+            prev = (pivots.get(sym) or {}).get("prev_close")
+            if df15 is None or df15.empty or not prev:
+                continue
+            today = df15[df15["timestamp"].dt.date == now_ist.date()]
+            if today.empty:
+                continue
+            px = float(today.iloc[-1]["close"])
+            movers.append({"symbol": sym, "close": px, "pct": (px - float(prev)) / float(prev) * 100.0})
+        except Exception:
+            continue
+    if not movers:
+        print("[day_movers] no data - nothing sent", flush=True)
+        return
+    gainers = sorted(movers, key=lambda x: -x["pct"])[:n]
+    losers = sorted(movers, key=lambda x: x["pct"])[:n]
+    out = [f"\U0001F4CA <b>TOP {n} GAINERS / LOSERS</b>  {now_ist.strftime('%d %b %H:%M')}  (F&amp;O, vs prev close)"]
+    for title, icon, rows in (("GAINERS", "\U0001F7E2", gainers), ("LOSERS", "\U0001F534", losers)):
+        out.append(f"\n{icon} <b>{title}</b>")
+        for i, r in enumerate(rows, 1):
+            out.append(f"{i}. <b>{_html.escape(r['symbol'])}</b> ({_html.escape(_sector_chart_label(r['symbol']))}) "
+                       f"<b>{r['pct']:+.2f}%</b> \u00b7 {r['close']:g} "
+                       f"<a href=\"{build_chart_link(r['symbol'])}\">Chart</a>")
+    try:
+        requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                      data={"chat_id": config.TELEGRAM_CHAT_ID, "text": "\n".join(out)[:4000], "parse_mode": "HTML",
+                            "disable_web_page_preview": True}, timeout=20)
+    except Exception as e:
+        print(f"[day_movers] send failed: {e}", flush=True)
+
+
+def maybe_run_day_movers_once_a_day(now_ist):
+    """Auto top-N gainers/losers at config.DAY_MOVERS_AUTO_TIMES (first run at/after each time, weekdays)."""
+    if not getattr(config, "DAY_MOVERS_ENABLED", False) or now_ist.weekday() >= 5:
+        return
+    today = now_ist.date().isoformat()
+    for hhmm in getattr(config, "DAY_MOVERS_AUTO_TIMES", ()):
+        hh, mm = (int(x) for x in hhmm.split(":"))
+        start = now_ist.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        if not (start <= now_ist <= start + dt.timedelta(minutes=int(getattr(config, "DAY_MOVERS_WINDOW_MIN", 90)))):
+            continue
+        st = state.load_state()
+        if state.already_alerted(st, f"DAYMOVERS_{hhmm}", "DONE", today):
+            continue
+        state.mark_alerted(st, f"DAYMOVERS_{hhmm}", "DONE", today)
+        state.save_state(st)
+        run_day_movers_report(now_ist)
+
+
+def _send_eod_chart_list(results, now_ist):
+    """2nd day-end message: every alerted stock with Chart link + result (ADDED 2026-11-19)."""
+    import html as _html
+    if not getattr(config, "EOD_CHART_LIST_ENABLED", False) or not results:
+        return
+    out = [f"\U0001F4C8 <b>DAY-END CHARTS</b>  {now_ist.strftime('%d %b %Y')}"]
+    for direction, icon in (("BULLISH", "\U0001F7E2"), ("BEARISH", "\U0001F534")):
+        rows = sorted((r for r in results if r.get("direction") == direction),
+                      key=lambda r: (r.get("pnl") is None, -(r.get("pnl") or 0)))
+        if not rows:
+            continue
+        out.append(f"\n{icon} <b>{direction}</b> ({len(rows)})")
+        for r in rows:
+            pnl = r.get("pnl")
+            res = "\u26AA" if pnl is None else ("\u2705" if pnl > 0 else "\u274C")
+            pct = "" if pnl is None else f" <b>{pnl:+.2f}%</b>"
+            out.append(f"{res} <b>{_html.escape(r['symbol'])}</b> ({_html.escape(_sector_chart_label(r['symbol']))}){pct} "
+                       f"<a href=\"{build_chart_link(r['symbol'])}\">Chart</a>")
+    text = "\n".join(out)
+    for i in range(0, len(text), 3800):
+        try:
+            requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                          data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text[i:i + 3800], "parse_mode": "HTML",
+                                "disable_web_page_preview": True}, timeout=20)
+        except Exception as e:
+            print(f"EOD chart list send failed: {e}", flush=True)
 
 
 def run_stock_list_report(now_ist):
@@ -4786,6 +4986,14 @@ def _run_inner():
                 send_mode_failure_notice("daily_scan", e, now_ist)
         return
 
+    if mode == "day_movers":
+        try:
+            run_day_movers_report(now_ist)
+        except Exception as e:
+            print(f"run_day_movers_report failed: {e}", flush=True)
+            send_mode_failure_notice("day_movers", e, now_ist)
+        return
+
     if mode == "stock_list":
         try:
             run_stock_list_report(now_ist)
@@ -4867,6 +5075,12 @@ def _run_inner():
         maybe_run_eod_report_once_a_day(now_ist)
     except Exception as e:
         print(f"EOD report failed this run (non-blocking): {e}", flush=True)
+
+    # Top 10 gainers / losers (auto times in config.DAY_MOVERS_AUTO_TIMES).
+    try:
+        maybe_run_day_movers_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Day movers report failed this run (non-blocking): {e}", flush=True)
 
     # 1st 30-min Open=Low/High + sector report (~09:47).
     try:

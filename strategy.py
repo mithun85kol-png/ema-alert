@@ -1105,6 +1105,19 @@ def compute_alert_strength(signal):
     if e15 and e15.get("bias"):
         add("ema920", "EMA 9/20 (15-min) " + ("bullish" if bull else "bearish"), (e15["bias"] == "BULLISH") == bull)
 
+    # Monthly RSI / Daily RSI as OPTIONAL POINTS (2026-11-19) — they no longer block the alert (see
+    # config.ALERT_REQUIRE_MONTHLY_RSI); each passes = +1 point, fails = 0. Missing data -> no check (neutral).
+    if getattr(config, "ALERT_MONTHLY_RSI_AS_POINT", False):
+        mr = (signal.get("monthly_rsi") or {}).get("rsi")
+        if mr is not None:
+            add("monthly_rsi", "Monthly RSI " + (f">= {config.MONTHLY_RSI_BULL_MIN}" if bull else f"<= {config.MONTHLY_RSI_BEAR_MAX}"),
+                (mr >= config.MONTHLY_RSI_BULL_MIN) if bull else (mr <= config.MONTHLY_RSI_BEAR_MAX))
+    if getattr(config, "ALERT_DAILY_RSI_AS_POINT", False):
+        ds = signal.get("daily_support") or {}
+        if ds.get("rsi") is not None:
+            add("daily_rsi", "Daily RSI " + (f">= {config.ALERT_STRONG_RSI_BULLISH}" if bull else f"<= {config.ALERT_STRONG_RSI_BEARISH}"),
+                bool(ds.get("rsi_ok")))
+
     others = [(n, ok, w) for (n, ok, w), k in zip(checks, keys) if k not in mandatory]
     others_total = sum(w for _, _, w in others)
     others_passed = sum(w for _, ok, w in others if ok)

@@ -944,7 +944,7 @@ ENABLED_SCAN_MODES = {
     "daily_scan",
     "eod_report",
     "oversold_report", "oversold_eod", "opening_bias_report_1h",
-    "opening_bias_report_30m", "alert_stats", "telegram_test", "stock_list",
+    "opening_bias_report_30m", "alert_stats", "telegram_test", "stock_list", "day_movers",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -971,7 +971,7 @@ ALERT_REQUIRE_STILL_VALID = True
 ALERT_STRENGTH_WEIGHTS = {
     "macd_zero": 1, "rsi": 1, "ema75": 1, "vwap": 1, "first15": 1,
     "volume": 1, "delivery": 1, "candle_volume": 1, "ema920": 1,
-    "first30": 1,
+    "first30": 1, "monthly_rsi": 1, "daily_rsi": 1,
 }
 # These checks MUST pass or no alert is sent, whatever the other points add up to
 # (per request 2026-10-21 — "MACD RSI lagbei"). A check whose data is missing never blocks.
@@ -1031,7 +1031,7 @@ ALERT_REQUIRE_DAILY_SUPPORT = False
 
 # Monthly RSI filter: True = alert is NOT sent if Monthly RSI is against the direction
 # (bullish needs monthly RSI >= BULL_MIN, bearish needs <= BEAR_MAX). Same 55/45 as the ✅/❌ shown.
-ALERT_REQUIRE_MONTHLY_RSI = True
+ALERT_REQUIRE_MONTHLY_RSI = False   # 2026-11-19: now OPTIONAL (a POINT, see ALERT_MONTHLY_RSI_AS_POINT). True = hard filter again
 
 # True = cash-only (non-F&O) stocks send BULLISH alerts only; F&O stocks send both.
 CASH_STOCKS_BULLISH_ONLY = True
@@ -1164,3 +1164,33 @@ ALERT_STATS_WEEKDAY = 4
 # ---------- SCAN_MODE=stock_list : all stocks sector wise (ADDED 2026-11-18) ----------
 # FNO stocks (with lot qty) + CASH stocks (rest of Nifty 500), each with Chart + Screener link.
 STOCK_LIST_INCLUDE_NIFTY500 = True   # False = only the F&O stocks
+
+
+# ---------- "2% move + 1st 15-min range break" alert (ADDED 2026-11-19) ----------
+# A stock alerts when BOTH are true on the latest price: day change vs previous close >= ORB15_MOVE_MIN_PCT
+# (up for BULLISH, down for BEARISH) AND price is beyond the high/low of today's 09:15 candle (above the high for
+# BULLISH, below the low for BEARISH). Stocks only (no indices/commodities), F&O + Nifty 500. Once per day per
+# direction. Cash-only stocks follow CASH_STOCKS_BULLISH_ONLY. ONE message per run lists all new hits.
+ORB15_MOVE_ALERT_ENABLED = True
+ORB15_MOVE_MIN_PCT = 2.0
+
+
+# ---------- Monthly / Daily RSI = OPTIONAL POINTS, not a filter (ADDED 2026-11-19) ----------
+# Before: Monthly RSI (bullish >= 55 / bearish <= 45) BLOCKED the alert. Now it is just +1 point in the score
+# (pass = +1, fail = 0, no data = ignored). Same for Daily RSI (bullish >= ALERT_STRONG_RSI_BULLISH, bearish <=
+# ALERT_STRONG_RSI_BEARISH). The score total grows (9 -> up to 11) and ALERT_MIN_CHECKS_PASSED scales with it.
+# Want the old hard filter back?  ALERT_REQUIRE_MONTHLY_RSI = True.
+ALERT_MONTHLY_RSI_AS_POINT = True
+ALERT_DAILY_RSI_AS_POINT = True
+
+# ---------- Day-end summary: chart list (ADDED 2026-11-19) ----------
+# Right after the DAILY ALERT SUMMARY a second message lists every alerted stock with its Chart link (+ result %).
+EOD_CHART_LIST_ENABLED = True
+
+# ---------- TOP 10 GAINERS / LOSERS of the day (ADDED 2026-11-19) ----------
+# F&O stocks ranked by latest price vs previous close, with sector + Chart. Sent automatically by the first normal
+# run at/after each time below (within DAY_MOVERS_WINDOW_MIN minutes), or on demand: SCAN_MODE=day_movers.
+DAY_MOVERS_ENABLED = True
+DAY_MOVERS_COUNT = 10
+DAY_MOVERS_AUTO_TIMES = ("10:30", "15:40")   # IST
+DAY_MOVERS_WINDOW_MIN = 90
