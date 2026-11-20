@@ -5675,7 +5675,8 @@
   "IGL::N500:BULLISH": [
     "2026-08-31 09:15:00+05:30",
     "2026-10-15 12:00:00+05:30",
-    "2026-10-26 13:00:00+05:30"
+    "2026-10-26 13:00:00+05:30",
+    "2026-11-20 11:30:00+05:30"
   ],
   "BANDHANBNK::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-25 09:30:00+05:30",
@@ -6996,6 +6997,18 @@
         "day": 2,
         "nifty": "UP",
         "sector": "Media Entertainment & Publication"
+      },
+      {
+        "symbol": "IGL",
+        "direction": "BULLISH",
+        "time": "2026-11-20 11:30:00+05:30",
+        "price": 154.51,
+        "key": "NSE_EQ|INE203G01027",
+        "score": "10/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Oil Gas & Consumable Fuels"
       }
     ]
   },
@@ -11906,6 +11919,18 @@
     "2026-11-20"
   ],
   "WELSPUNLIV::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "ANGELONE::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "UNIONBANK::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "SCHNEIDER::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "ZENSARTECH::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
