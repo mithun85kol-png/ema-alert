@@ -3164,7 +3164,8 @@
     "2026-08-06 11:57:00+05:30",
     "2026-08-06 13:03:00+05:30",
     "2026-10-27 09:45:00+05:30",
-    "2026-11-11 09:15:00+05:30"
+    "2026-11-11 09:15:00+05:30",
+    "2026-11-20 14:45:00+05:30"
   ],
   "RHIM::SWEEP::BULLISH:BULLISH": [
     "2026-09-07 09:15:00+05:30"
@@ -7247,6 +7248,18 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "IREDA",
+        "direction": "BULLISH",
+        "time": "2026-11-20 14:45:00+05:30",
+        "price": 133.45,
+        "key": "NSE_EQ|INE202E01016",
+        "score": "10/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Financial Services"
       }
     ]
   },
@@ -12303,6 +12316,18 @@
     "2026-11-20"
   ],
   "ICICILIFE::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "IREDA::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "PIDILITIND::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "CEMPRO::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "APTUS::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
