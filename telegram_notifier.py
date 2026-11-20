@@ -99,7 +99,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v46 (2026-11-20)"
+BUILD_TAG = "short-v49 (2026-11-20)"
 
 
 def _ema920_line(info15, info75):
@@ -1319,6 +1319,15 @@ def send_sector_performance_report(all_pct, now_ist, month_pct=None, label="15-m
         print("Telegram send failed (sector_performance):", e)
 
 
+def _chart_a(symbol):
+    """' <a href=chart>Chart</a>' for report lines (Groww link, TradingView fallback); '' if none. Never raises."""
+    try:
+        u = _bulk_deal_chart_link(symbol)
+        return f' <a href="{u}">Chart</a>' if u else ""
+    except Exception:
+        return ""
+
+
 def send_eod_alert_report(results, now_ist):
     """End-of-day summary: every stock that alerted today and how it moved since the alert.
     pnl is in TRADE terms: bullish = price up is +, bearish = price down is +."""
@@ -1369,13 +1378,13 @@ def send_eod_alert_report(results, now_ist):
         sec = f" <i>({sec})</i>" if sec else ""
         hhmm = str(r["time"])[11:16]
         if r["pnl"] is None:
-            return f"⚪ <b>{r['symbol']}</b>{sec} {hhmm} @ {_p(r['price'])} · data nei"
+            return f"⚪ <b>{r['symbol']}</b>{sec}{_chart_a(r['symbol'])} {hhmm} @ {_p(r['price'])} · data nei"
         icon = "✅" if r["pnl"] > 0 else "❌"
         day = f" · Day {r['day']}" if r.get("day") else ""
         day += {"TARGET": " · 🎯", "STOP": " · 🛑"}.get(r.get("outcome"), "")
         if str(r.get("type", "")).startswith("ORB"):
             day += " · ORB" + str(r["type"])[3:]
-        return (f"{icon} <b>{r['symbol']}</b>{sec} {hhmm}\n"
+        return (f"{icon} <b>{r['symbol']}</b>{sec}{_chart_a(r['symbol'])} {hhmm}\n"
                 f"     {_p(r['price'])} → {_p(r['last'])} (<b>{r['pnl']:+.2f}%</b>) · max +{r['best']:.1f}% · dd {r['worst']:.1f}%{day}")
 
     blocks = []
@@ -1468,11 +1477,11 @@ def send_oversold_eod_report(results, now_ist):
         sec = f" <i>({sec})</i>" if sec else ""
         hhmm = str(r["time"])[11:16]
         if r.get("pnl") is None:
-            body.append(f"⚪ <b>{r['symbol']}</b>{sec} {hhmm} @ {_p(r['price'])} · data nei")
+            body.append(f"⚪ <b>{r['symbol']}</b>{sec}{_chart_a(r['symbol'])} {hhmm} @ {_p(r['price'])} · data nei")
             continue
         icon = "✅" if r["pnl"] > 0 else "❌"
         dchg = f" · day {r['day_chg']:+.2f}%" if r.get("day_chg") is not None else ""
-        body.append(f"{icon} <b>{r['symbol']}</b>{sec} {hhmm}\n"
+        body.append(f"{icon} <b>{r['symbol']}</b>{sec}{_chart_a(r['symbol'])} {hhmm}\n"
                     f"     {_p(r['price'])} → {_p(r['last'])} (<b>{r['pnl']:+.2f}%</b>) · max +{r['best']:.1f}% · dd {r['worst']:.1f}%{dchg}\n"
                     f"     RSI D {_rsi_txt(r.get('d_rsi'))} · 1H {_rsi_txt(r.get('h_rsi'))} · M {_rsi_txt(r.get('m_rsi'))}")
     _post_html_chunks(head, body, "oversold_eod")

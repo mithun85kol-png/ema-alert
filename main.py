@@ -4291,7 +4291,7 @@ def maybe_run_eod_report_once_a_day(now_ist):
     state.mark_alerted(st, "EOD_REPORT", "DONE", today)   # mark first: a crash must not retry every run
     state.save_state(st)
     run_eod_alert_report(now_ist)
-    if getattr(config, "ALERT_STATS_ENABLED", False) and now_ist.weekday() == getattr(config, "ALERT_STATS_WEEKDAY", 4):
+    if getattr(config, "ALERT_STATS_ENABLED", False) and (getattr(config, "ALERT_STATS_WEEKDAY", 4) is None or now_ist.weekday() == getattr(config, "ALERT_STATS_WEEKDAY", 4)):
         try:
             run_alert_stats(now_ist)
         except Exception as e:
@@ -4582,13 +4582,23 @@ def check_orb_break(df5, df15, symbol, prev_close, now_ist, window_min):
             return None
         pct = (close - float(prev_close)) / float(prev_close) * 100.0
         thr = float(cfg.get("min_pct", 2.0))
-        if close > hi and pct >= thr and (not getattr(config, "ORB_REQUIRE_VWAP", True) or close > vwap):
+        if close > hi and (thr <= 0 or pct >= thr) and (not getattr(config, "ORB_REQUIRE_VWAP", True) or close > vwap):
             direction = "BULLISH"
-        elif (close < lo and pct <= -thr and getattr(config, "ORB15_BEARISH_ENABLED", True)
+        elif (close < lo and (thr <= 0 or pct <= -thr) and getattr(config, "ORB15_BEARISH_ENABLED", True)
               and (not getattr(config, "ORB_REQUIRE_VWAP", True) or close < vwap)):
             direction = "BEARISH"
         else:
             return None
+        # EMA50 (15-min closes, incl. prior days from the history cache) must be on the right side too
+        ema50 = None
+        if getattr(config, "ORB_REQUIRE_EMA", True):
+            per = int(getattr(config, "ORB_EMA_PERIOD", 50))
+            cl = df15["close"].astype(float)
+            if len(cl) < per + 5:
+                return None                               # not enough history to trust the EMA
+            ema50 = float(cl.ewm(span=per, adjust=False).mean().iloc[-1])
+            if (direction == "BULLISH" and close <= ema50) or (direction == "BEARISH" and close >= ema50):
+                return None
         # "good volume": the window's volume vs the same window on the previous days (from the 15-min history)
         vol_ratio = None
         try:
@@ -4612,7 +4622,7 @@ def check_orb_break(df5, df15, symbol, prev_close, now_ist, window_min):
                 vol_ratio = tv / (sum(sums) / len(sums))
         except Exception:
             vol_ratio = None
-        min_ratio = float(cfg.get("min_vol_ratio", 2.0))
+        min_ratio = float(cfg.get("min_vol_ratio", 2.0)) or 2.0   # volume is MANDATORY (0 in config still means 2x)
         if min_ratio > 0:
             if vol_ratio is None:
                 if not getattr(config, "ORB15_VOL_MISSING_PASSES", False):
@@ -4620,7 +4630,7 @@ def check_orb_break(df5, df15, symbol, prev_close, now_ist, window_min):
             elif vol_ratio < min_ratio:
                 return None
         return {"symbol": symbol, "direction": direction, "close": close, "pct": pct, "window": window_min,
-                "range_high": hi, "range_low": lo, "vwap": float(vwap) if vwap else None,
+                "range_high": hi, "range_low": lo, "vwap": float(vwap) if vwap else None, "ema50": ema50,
                 "candle_time": str(last["timestamp"]), "date": now_ist.date().isoformat(), "vol_ratio": vol_ratio}
     except Exception as e:
         print(f"ORB{window_min} check failed for {symbol}: {e}", flush=True)
@@ -4662,7 +4672,8 @@ def send_orb_summary(hits, now_ist, window_min):
     short = {15: "15m", 30: "30m", 60: "1h"}.get(window_min, f"{window_min}m")
     cfg = _orb_windows().get(window_min, {})
     out = [f"\U0001F680 <b>{name} ORB BREAK + VWAP</b>  {now_ist.strftime('%H:%M')}",
-           f"<i>{short} range todar + VWAP er sothik side · {cfg.get('min_pct', 2.0):g}%+ move"
+           f"<i>{short} range todar + VWAP + EMA50 er sothik side"
+           + (f" · {cfg.get('min_pct'):g}%+ move" if cfg.get("min_pct") else "")
            + (f" · volume {cfg.get('min_vol_ratio'):g}x+" if cfg.get("min_vol_ratio") else "") + "</i>"]
     for direction, icon, word, vw in (("BULLISH", "\U0001F7E2", f"above {short} high", "above"), ("BEARISH", "\U0001F534", f"below {short} low", "below")):
         grp = sorted((h for h in hits if h["direction"] == direction), key=lambda h: -abs(h["pct"]))
@@ -4677,6 +4688,7 @@ def send_orb_summary(hits, now_ist, window_min):
                        f"<a href=\"{h.get('chart_link', '')}\">Chart</a>\n"
                        f"    {h['close']:g} ({h['pct']:+.2f}%) \u00b7 {word} {lvl:g}"
                        + (f" \u00b7 VWAP {h['vwap']:.2f} \u2705" if h.get("vwap") else "")
+                       + (f" \u00b7 EMA50 {h['ema50']:.2f} \u2705" if h.get("ema50") else "")
                        + (f" \u00b7 Vol {h['vol_ratio']:.1f}x" if h.get("vol_ratio") else ""))
     text = "\n".join(out)
     for i in range(0, len(text), 3900):

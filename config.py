@@ -1158,7 +1158,7 @@ EOD_STOP_PCT = 0.5
 #    ALERT_STATS_WEEKDAY (0=Mon ... 4=Fri) after the EOD summary, or on demand with SCAN_MODE=alert_stats.
 ALERT_LOG_KEEP_DAYS = 30
 ALERT_STATS_ENABLED = True
-ALERT_STATS_WEEKDAY = 4
+ALERT_STATS_WEEKDAY = None   # CHANGED 2026-11-20: None = every trading day (0=Mon ... 4=Fri for one weekday only)
 
 
 # ---------- SCAN_MODE=stock_list : all stocks sector wise (ADDED 2026-11-18) ----------
@@ -1179,11 +1179,13 @@ ORB15_MOVE_MIN_PCT = 2.0
 # direction per window. min_pct = minimum day change vs previous close, min_vol_ratio = window volume vs the same
 # window's average of the previous days (0 = no volume condition). Remove a window from the dict to switch it off.
 ORB_WINDOWS = {
-    15: {"min_pct": 2.0, "min_vol_ratio": 2.0},
-    30: {"min_pct": 2.0, "min_vol_ratio": 2.0},
-    60: {"min_pct": 2.0, "min_vol_ratio": 2.0},
+    15: {"min_pct": 0, "min_vol_ratio": 2.0},   # min_pct 0 = no % move condition (changed 2026-11-20)
+    30: {"min_pct": 0, "min_vol_ratio": 2.0},
+    60: {"min_pct": 0, "min_vol_ratio": 2.0},
 }
 ORB_REQUIRE_VWAP = True
+ORB_REQUIRE_EMA = True      # price must also be above (bullish) / below (bearish) the 15-min EMA50
+ORB_EMA_PERIOD = 50
 # "Good volume" (ADDED 2026-11-20): today's 09:15 candle volume must be >= ORB15_MIN_VOL_RATIO x the average 09:15 candle
 # volume of the previous ORB15_VOL_LOOKBACK_DAYS days (needs >= ORB15_VOL_MIN_DAYS days of history, else no alert unless
 # ORB15_VOL_MISSING_PASSES = True). ORB15_MIN_VOL_RATIO = 0 switches the volume condition off.
