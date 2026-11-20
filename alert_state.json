@@ -5883,7 +5883,8 @@
   ],
   "ABBOTINDIA::N500:BULLISH": [
     "2026-08-24 14:45:00+05:30",
-    "2026-09-15 12:30:00+05:30"
+    "2026-09-15 12:30:00+05:30",
+    "2026-11-20 10:30:00+05:30"
   ],
   "HINDALCO::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-21 09:15:00+05:30",
@@ -6934,6 +6935,18 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Consumer Durables"
+      },
+      {
+        "symbol": "ABBOTINDIA",
+        "direction": "BULLISH",
+        "time": "2026-11-20 10:30:00+05:30",
+        "price": 26090.0,
+        "key": "NSE_EQ|INE358A01014",
+        "score": "9/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Healthcare"
       }
     ]
   },
@@ -11799,6 +11812,24 @@
     "2026-11-20"
   ],
   "LTTS::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "MCX::ORB15_MOVE:BEARISH": [
+    "2026-11-20"
+  ],
+  "LALPATHLAB::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "HEXT::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "SHYAMMETL::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "CREDITACC::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "BRIGADE::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
