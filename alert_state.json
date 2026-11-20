@@ -7110,6 +7110,30 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Financial Services"
+      },
+      {
+        "symbol": "CROMPTON",
+        "direction": "BULLISH",
+        "time": "2026-11-20 12:30:00+05:30",
+        "price": 222.8,
+        "key": "NSE_EQ|INE299U01018",
+        "score": "9/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Consumer Durables"
+      },
+      {
+        "symbol": "EXIDEIND",
+        "direction": "BULLISH",
+        "time": "2026-11-20 12:30:00+05:30",
+        "price": 406.45,
+        "key": "NSE_EQ|INE302A01020",
+        "score": "9/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Automobile and Auto Components"
       }
     ]
   },
@@ -9674,7 +9698,8 @@
   "CROMPTON:BULLISH": [
     "2026-08-06 13:18:00+05:30",
     "2026-08-06 15:09:00+05:30",
-    "2026-08-14 13:15:00+05:30"
+    "2026-08-14 13:15:00+05:30",
+    "2026-11-20 12:30:00+05:30"
   ],
   "HINDALCO:BEARISH": [
     "2026-09-15 09:15:00+05:30",
@@ -12062,5 +12087,14 @@
   ],
   "ABBOTINDIA::ORB15_MOVE:BULLISH": [
     "2026-11-20"
+  ],
+  "HDFCBANK::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "JSWINFRA::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "EXIDEIND::N500:BULLISH": [
+    "2026-11-20 12:30:00+05:30"
   ]
 }
