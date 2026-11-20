@@ -7223,6 +7223,30 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Services"
+      },
+      {
+        "symbol": "PGEL",
+        "direction": "BULLISH",
+        "time": "2026-11-20 13:45:00+05:30",
+        "price": 584.75,
+        "key": "NSE_EQ|INE457L01029",
+        "score": "9/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Consumer Durables"
+      },
+      {
+        "symbol": "M&M",
+        "direction": "BULLISH",
+        "time": "2026-11-20 13:45:00+05:30",
+        "price": 3548.5,
+        "key": "NSE_EQ|INE101A01026",
+        "score": "11/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Automobile and Auto Components"
       }
     ]
   },
@@ -8323,7 +8347,8 @@
   "M&M:BULLISH": [
     "2026-08-06 13:36:00+05:30",
     "2026-08-14 14:00:00+05:30",
-    "2026-10-19 14:45:00+05:30"
+    "2026-10-19 14:45:00+05:30",
+    "2026-11-20 13:45:00+05:30"
   ],
   "NYKAA::SWEEP::BULLISH:BULLISH": [
     "2026-09-07 09:15:00+05:30"
@@ -10292,7 +10317,8 @@
     "2026-08-07 13:09:00+05:30",
     "2026-08-07 14:18:00+05:30",
     "2026-10-12 14:30:00+05:30",
-    "2026-10-13 14:15:00+05:30"
+    "2026-10-13 14:15:00+05:30",
+    "2026-11-20 13:45:00+05:30"
   ],
   "UBL::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-21 12:00:00+05:30"
@@ -12241,6 +12267,24 @@
     "2026-11-20"
   ],
   "BANKINDIA::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "ULTRACEMCO::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "LEMONTREE::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "UCOBANK::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "IOB::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "POONAWALLA::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "KIRLOSBROS::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
