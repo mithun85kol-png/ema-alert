@@ -3371,7 +3371,8 @@
     "2026-09-18 15:00:00+05:30",
     "2026-09-30 13:15:00+05:30",
     "2026-11-04 10:30:00+05:30",
-    "2026-11-05 09:30:00+05:30"
+    "2026-11-05 09:30:00+05:30",
+    "2026-11-20 09:45:00+05:30"
   ],
   "PAYTM::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-21 12:15:00+05:30",
@@ -3513,7 +3514,8 @@
   "OPEN30M_REPORT:DONE": [
     "2026-11-17",
     "2026-11-18",
-    "2026-11-19"
+    "2026-11-19",
+    "2026-11-20"
   ],
   "HAVELLS::SWEEP::BEARISH:BEARISH": [
     "2026-09-07 09:15:00+05:30"
@@ -6907,6 +6909,32 @@
         "worst": 0.0,
         "outcome": "NONE"
       }
+    ],
+    "2026-11-20": [
+      {
+        "symbol": "HYUNDAI",
+        "direction": "BULLISH",
+        "time": "2026-11-20 09:45:00+05:30",
+        "price": 2234.4,
+        "key": "NSE_EQ|INE0V6F01027",
+        "score": "10/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "LGEINDIA",
+        "direction": "BULLISH",
+        "time": "2026-11-20 09:45:00+05:30",
+        "price": 1727.0,
+        "key": "NSE_EQ|INE324D01010",
+        "score": "9/10",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Consumer Durables"
+      }
     ]
   },
   "HSCL::TRENDLINE::BULLISH:BULLISH": [
@@ -7800,7 +7828,8 @@
     "2026-08-28 10:00:00+05:30",
     "2026-08-28 15:00:00+05:30",
     "2026-11-03 15:00:00+05:30",
-    "2026-11-05 09:15:00+05:30"
+    "2026-11-05 09:15:00+05:30",
+    "2026-11-20 09:45:00+05:30"
   ],
   "APOLLOHOSP::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-21 10:00:00+05:30",
@@ -11685,6 +11714,42 @@
     "2026-11-20"
   ],
   "TATACHEM::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "TECHM::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "NAUKRI::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "PERSISTENT::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "LTM::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "KALYANKJIL::ORB15_MOVE:BEARISH": [
+    "2026-11-20"
+  ],
+  "TATAELXSI::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "SYNGENE::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "EIHOTEL::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "SCI::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "TENNIND::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "NUVOCO::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "JKCEMENT::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
