@@ -1129,7 +1129,8 @@
   "GPIL::N500:BULLISH": [
     "2026-08-17 14:15:00+05:30",
     "2026-08-24 14:30:00+05:30",
-    "2026-08-31 10:30:00+05:30"
+    "2026-08-31 10:30:00+05:30",
+    "2026-11-20 13:15:00+05:30"
   ],
   "ICICIGI::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-21 13:30:00+05:30",
@@ -7198,6 +7199,18 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Consumer Services"
+      },
+      {
+        "symbol": "GPIL",
+        "direction": "BULLISH",
+        "time": "2026-11-20 13:15:00+05:30",
+        "price": 227.85,
+        "key": "NSE_EQ|INE177H01039",
+        "score": "9/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Capital Goods"
       }
     ]
   },
@@ -12197,6 +12210,15 @@
     "2026-11-20"
   ],
   "FEDERALBNK::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "MAXHEALTH::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "DATAPATTNS::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "CENTRALBK::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
