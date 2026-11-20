@@ -3086,7 +3086,8 @@
   "DOMS::N500:BULLISH": [
     "2026-08-18 14:15:00+05:30",
     "2026-08-31 10:00:00+05:30",
-    "2026-10-26 15:15:00+05:30"
+    "2026-10-26 15:15:00+05:30",
+    "2026-11-20 12:45:00+05:30"
   ],
   "RBLBANK:BEARISH": [
     "2026-08-17 14:15:00+05:30",
@@ -4424,7 +4425,8 @@
     "2026-11-02 14:15:00+05:30",
     "2026-11-04 09:30:00+05:30",
     "2026-11-04 14:15:00+05:30",
-    "2026-11-04 15:15:00+05:30"
+    "2026-11-04 15:15:00+05:30",
+    "2026-11-20 12:45:00+05:30"
   ],
   "CGCL::MAENV::BEARISH:BEARISH": [
     "2026-09-10 09:45:00+05:30",
@@ -7134,6 +7136,30 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "TENNIND",
+        "direction": "BULLISH",
+        "time": "2026-11-20 12:45:00+05:30",
+        "price": 446.85,
+        "key": "NSE_EQ|INE19RI01016",
+        "score": "9/10",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "DOMS",
+        "direction": "BULLISH",
+        "time": "2026-11-20 12:45:00+05:30",
+        "price": 2158.6,
+        "key": "NSE_EQ|INE321T01012",
+        "score": "9/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Fast Moving Consumer Goods"
       }
     ]
   },
@@ -12096,5 +12122,20 @@
   ],
   "EXIDEIND::N500:BULLISH": [
     "2026-11-20 12:30:00+05:30"
+  ],
+  "PHOENIXLTD::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "RBLBANK::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "ICICIGI::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "DOMS::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "LGEINDIA::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
   ]
 }
