@@ -7009,6 +7009,30 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Oil Gas & Consumable Fuels"
+      },
+      {
+        "symbol": "CANBK",
+        "direction": "BULLISH",
+        "time": "2026-11-20 11:45:00+05:30",
+        "price": 136.15,
+        "key": "NSE_EQ|INE476A01022",
+        "score": "10/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "JKTYRE",
+        "direction": "BULLISH",
+        "time": "2026-11-20 11:45:00+05:30",
+        "price": 366.2,
+        "key": "NSE_EQ|INE573A01042",
+        "score": "9/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Automobile and Auto Components"
       }
     ]
   },
@@ -10433,7 +10457,8 @@
     "2026-08-06 12:57:00+05:30",
     "2026-08-14 14:30:00+05:30",
     "2026-10-19 09:15:00+05:30",
-    "2026-11-12 13:30:00+05:30"
+    "2026-11-12 13:30:00+05:30",
+    "2026-11-20 11:45:00+05:30"
   ],
   "ZENSARTECH::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-21 14:00:00+05:30",
@@ -11931,6 +11956,27 @@
     "2026-11-20"
   ],
   "ZENSARTECH::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "LICI::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "AXISBANK::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "SANSERA::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "RAINBOW::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "JKTYRE::N500:BULLISH": [
+    "2026-11-20 11:45:00+05:30"
+  ],
+  "BEML::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "GROWW::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
