@@ -1173,6 +1173,26 @@ STOCK_LIST_INCLUDE_NIFTY500 = True   # False = only the F&O stocks
 # direction. Cash-only stocks follow CASH_STOCKS_BULLISH_ONLY. ONE message per run lists all new hits.
 ORB15_MOVE_ALERT_ENABLED = True
 ORB15_MOVE_MIN_PCT = 2.0
+# ---- ORB windows (ADDED 2026-11-20): the same "range break + VWAP" alert for the 1st 15-min, 30-min and 1-hour range ----
+# Price (latest closed 5-min candle after the window) must close ABOVE the window's high AND ABOVE the session VWAP
+# (BULLISH), or below the low AND below VWAP (BEARISH). One summary message per window, once per stock per day per
+# direction per window. min_pct = minimum day change vs previous close, min_vol_ratio = window volume vs the same
+# window's average of the previous days (0 = no volume condition). Remove a window from the dict to switch it off.
+ORB_WINDOWS = {
+    15: {"min_pct": 2.0, "min_vol_ratio": 2.0},
+    30: {"min_pct": 2.0, "min_vol_ratio": 2.0},
+    60: {"min_pct": 2.0, "min_vol_ratio": 2.0},
+}
+ORB_REQUIRE_VWAP = True
+# "Good volume" (ADDED 2026-11-20): today's 09:15 candle volume must be >= ORB15_MIN_VOL_RATIO x the average 09:15 candle
+# volume of the previous ORB15_VOL_LOOKBACK_DAYS days (needs >= ORB15_VOL_MIN_DAYS days of history, else no alert unless
+# ORB15_VOL_MISSING_PASSES = True). ORB15_MIN_VOL_RATIO = 0 switches the volume condition off.
+ORB15_MIN_VOL_RATIO = 2.0
+ORB15_VOL_LOOKBACK_DAYS = 10
+ORB15_VOL_MIN_DAYS = 3
+ORB15_VOL_MISSING_PASSES = False
+# False = only BULLISH (up-move) alerts; True = also BEARISH (down-move, below the 15-min low) alerts.
+ORB15_BEARISH_ENABLED = True
 
 
 # ---------- Monthly / Daily RSI = OPTIONAL POINTS, not a filter (ADDED 2026-11-19) ----------

@@ -2284,7 +2284,7 @@ def run_fo_scan(now_ist, index_only=False):
     # dao"), sent as ONE batched message at the end instead of one
     # message per stock. See send_consolidation_breakout_summary.
     consolidation_live_hits = []
-    orb15_hits = []
+    orb_hits = {w: [] for w in _orb_windows()}
 
     # Used to set the "F&O: Yes/No" flag on stock signals only — indices
     # (NIFTY 50, SENSEX...) and commodities (GOLD, SILVER...) aren't
@@ -2373,19 +2373,8 @@ def run_fo_scan(now_ist, index_only=False):
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
-            # 2%+ move + 1st 15-min range break (added 2026-11-19) — stocks only, once per day per direction.
-            if symbol not in index_symbols_orb and symbol not in config.COMMODITIES:
-                _o = check_orb15_move(df15, symbol, prev_close, now_ist)
-                if _o is not None:
-                    _o["is_fno"] = symbol.upper() in fno_underlyings
-                    if _o["is_fno"] is False and getattr(config, "CASH_STOCKS_BULLISH_ONLY", False) and _o["direction"] == "BEARISH":
-                        _o = None
-                if _o is not None:
-                    _ok = f"{symbol}::ORB15_MOVE"
-                    if not state.already_alerted(saved_state, _ok, _o["direction"], _o["date"]):
-                        _o["chart_link"] = build_chart_link(symbol, "15-min")
-                        state.mark_alerted(saved_state, _ok, _o["direction"], _o["date"])
-                        orb15_hits.append(_o)
+            # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
+            _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
             # prev_day_high/prev_day_low (added, per request, 2026-09-05)
             # — feeds the Liquidity Sweep scan below.
             prev_day_high = levels.get("high") if levels else None
@@ -3025,9 +3014,10 @@ def run_fo_scan(now_ist, index_only=False):
         send_consolidation_breakout_summary(consolidation_live_hits, now_ist)
         alerts_sent += len(consolidation_live_hits)
 
-    if orb15_hits:
-        send_orb15_move_summary(orb15_hits, now_ist)
-        alerts_sent += len(orb15_hits)
+    for _w, _hits in orb_hits.items():
+        if _hits:
+            send_orb_summary(_hits, now_ist, _w)
+            alerts_sent += len(_hits)
 
     state.save_state(saved_state)
     if failed_symbols:
@@ -3083,7 +3073,7 @@ def run_nifty500_scan(now_ist):
     # run (see matching comment in run_fo_scan above), sent as ONE
     # batched message at the end.
     consolidation_live_hits = []
-    orb15_hits = []
+    orb_hits = {w: [] for w in _orb_windows()}
 
     fno_underlyings = instruments.get_fno_underlyings()
     hist_cache = build_hist1min_cache(watchlist)
@@ -3136,19 +3126,8 @@ def run_nifty500_scan(now_ist):
             r3 = levels["r3"] if levels else None
             s3 = levels["s3"] if levels else None
             prev_close = levels.get("prev_close") if levels else None
-            # 2%+ move + 1st 15-min range break (added 2026-11-19) — stocks only, once per day per direction.
-            if symbol not in index_symbols_orb and symbol not in config.COMMODITIES:
-                _o = check_orb15_move(df15, symbol, prev_close, now_ist)
-                if _o is not None:
-                    _o["is_fno"] = symbol.upper() in fno_underlyings
-                    if _o["is_fno"] is False and getattr(config, "CASH_STOCKS_BULLISH_ONLY", False) and _o["direction"] == "BEARISH":
-                        _o = None
-                if _o is not None:
-                    _ok = f"{symbol}::ORB15_MOVE"
-                    if not state.already_alerted(saved_state, _ok, _o["direction"], _o["date"]):
-                        _o["chart_link"] = build_chart_link(symbol, "15-min")
-                        state.mark_alerted(saved_state, _ok, _o["direction"], _o["date"])
-                        orb15_hits.append(_o)
+            # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
+            _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
             # prev_day_high/prev_day_low (added, per request, 2026-09-05)
             # — feeds the Liquidity Sweep scan below.
             prev_day_high = levels.get("high") if levels else None
@@ -3499,9 +3478,10 @@ def run_nifty500_scan(now_ist):
         send_consolidation_breakout_summary(consolidation_live_hits, now_ist)
         alerts_sent += len(consolidation_live_hits)
 
-    if orb15_hits:
-        send_orb15_move_summary(orb15_hits, now_ist)
-        alerts_sent += len(orb15_hits)
+    for _w, _hits in orb_hits.items():
+        if _hits:
+            send_orb_summary(_hits, now_ist, _w)
+            alerts_sent += len(_hits)
 
     state.save_state(saved_state)
     if failed_symbols:
@@ -4190,6 +4170,22 @@ def _log_alert_for_eod(st, signal, symbol, instrument_key):
         print(f"EOD log failed for {symbol}: {e}", flush=True)
 
 
+def _log_orb15_for_eod(st, hit, symbol, instrument_key):
+    """Remember this ORB alert (stocks only) for the day-end summary + stats. Never raises."""
+    try:
+        if not instrument_key or not str(instrument_key).startswith("NSE_EQ"):
+            return
+        state.log_alert(st, {
+            "symbol": symbol, "direction": hit["direction"], "time": str(hit["candle_time"]),
+            "price": float(hit["close"]), "key": instrument_key, "score": "", "type": f"ORB{hit.get('window', 15)}",
+            "fno": bool(hit.get("is_fno")), "day": None, "nifty": None,
+            "vol": round(hit["vol_ratio"], 2) if hit.get("vol_ratio") else None,
+            "sector": _sector_label(symbol) or "",
+        })
+    except Exception as e:
+        print(f"ORB15 log failed for {symbol}: {e}", flush=True)
+
+
 def _eod_one(entry):
     """Move of one alerted stock since the alert (uses today's 1-min candles)."""
     df = fetch_1min_candles(entry["key"])
@@ -4549,48 +4545,126 @@ def maybe_run_daily_scan_once_a_day(now_ist):
 index_symbols_orb = set(config.INDICES.keys())
 
 
-def check_orb15_move(df15, symbol, prev_close, now_ist):
-    """"Stock moved more than ORB15_MOVE_MIN_PCT % AND price broke the 1st 15-min range" (ADDED 2026-11-19).
-    BULLISH: latest price > high of today's 09:15 candle AND day change vs previous close >= +MIN_PCT.
-    BEARISH: latest price < low of that candle AND day change <= -MIN_PCT.
-    Evaluates the CURRENT state (so a missed run still catches it). Returns a dict or None. Never raises."""
+def _orb_windows():
+    """{window_minutes: settings} of the enabled opening-range-break alerts (config.ORB_WINDOWS)."""
+    if not getattr(config, "ORB15_MOVE_ALERT_ENABLED", False):
+        return {}
+    return dict(getattr(config, "ORB_WINDOWS", {15: {"min_pct": 2.0, "min_vol_ratio": 2.0}}))
+
+
+def check_orb_break(df5, df15, symbol, prev_close, now_ist, window_min):
+    """Opening-range break of the first `window_min` minutes (15 / 30 / 60) from 09:15 (ADDED 2026-11-20).
+    BULLISH: the latest CLOSED 5-min candle AFTER the window closes above the window's high AND above the session
+    VWAP AND the day change vs previous close >= min_pct AND (optional) the window's volume is >= min_vol_ratio x the
+    same window's average volume of the previous days. BEARISH mirrors it (below the low and below VWAP).
+    Evaluates the CURRENT state, so a missed run still catches it. Returns a dict or None. Never raises."""
     try:
-        if not getattr(config, "ORB15_MOVE_ALERT_ENABLED", False) or not prev_close or df15 is None or df15.empty:
+        cfg = _orb_windows().get(window_min)
+        if cfg is None or not prev_close or df5 is None or df5.empty:
             return None
-        rows = df15[df15["timestamp"].dt.date == now_ist.date()]
-        if len(rows) < 2:
-            return None                      # the 1st 15-min candle is not finished yet
-        first = rows.iloc[0]
-        if (first["timestamp"].hour, first["timestamp"].minute) != (9, 15):
+        ts = df5["timestamp"]
+        today = df5[ts.dt.date == now_ist.date()]
+        if today.empty:
             return None
-        hi, lo = float(first["high"]), float(first["low"])
-        last = rows.iloc[-1]
+        first_ts = today.iloc[0]["timestamp"]
+        if (first_ts.hour, first_ts.minute) != (9, 15):
+            return None
+        win_end = first_ts + pd.Timedelta(minutes=window_min)
+        win = today[today["timestamp"] < win_end]
+        after = today[today["timestamp"] >= win_end]
+        if after.empty or len(win) < window_min // 5:
+            return None                                  # window not finished / no candle after it yet
+        hi, lo = float(win["high"].max()), float(win["low"].min())
+        last = today.iloc[-1]
         close = float(last["close"])
+        vwap = compute_session_vwap(today)
+        if getattr(config, "ORB_REQUIRE_VWAP", True) and not vwap:
+            return None
         pct = (close - float(prev_close)) / float(prev_close) * 100.0
-        thr = float(getattr(config, "ORB15_MOVE_MIN_PCT", 2.0))
-        if close > hi and pct >= thr:
+        thr = float(cfg.get("min_pct", 2.0))
+        if close > hi and pct >= thr and (not getattr(config, "ORB_REQUIRE_VWAP", True) or close > vwap):
             direction = "BULLISH"
-        elif close < lo and pct <= -thr:
+        elif (close < lo and pct <= -thr and getattr(config, "ORB15_BEARISH_ENABLED", True)
+              and (not getattr(config, "ORB_REQUIRE_VWAP", True) or close < vwap)):
             direction = "BEARISH"
         else:
             return None
-        return {"symbol": symbol, "direction": direction, "close": close, "pct": pct,
-                "range_high": hi, "range_low": lo, "candle_time": str(last["timestamp"]),
-                "date": now_ist.date().isoformat()}
+        # "good volume": the window's volume vs the same window on the previous days (from the 15-min history)
+        vol_ratio = None
+        try:
+            n_c = window_min // 15
+            def _win_vol(day_df):
+                if len(day_df) < n_c:
+                    return None
+                head = day_df.iloc[:n_c]
+                if (head.iloc[0]["timestamp"].hour, head.iloc[0]["timestamp"].minute) != (9, 15):
+                    return None
+                return float(head["volume"].sum())
+            t15 = df15["timestamp"]
+            sums = []
+            for _d, g in df15[t15.dt.date < now_ist.date()].groupby(t15.dt.date):
+                v = _win_vol(g)
+                if v is not None:
+                    sums.append(v)
+            sums = sums[-int(getattr(config, "ORB15_VOL_LOOKBACK_DAYS", 10)):]
+            tv = _win_vol(df15[t15.dt.date == now_ist.date()])
+            if tv is not None and len(sums) >= int(getattr(config, "ORB15_VOL_MIN_DAYS", 3)) and sum(sums) > 0:
+                vol_ratio = tv / (sum(sums) / len(sums))
+        except Exception:
+            vol_ratio = None
+        min_ratio = float(cfg.get("min_vol_ratio", 2.0))
+        if min_ratio > 0:
+            if vol_ratio is None:
+                if not getattr(config, "ORB15_VOL_MISSING_PASSES", False):
+                    return None                          # no history to prove "good volume"
+            elif vol_ratio < min_ratio:
+                return None
+        return {"symbol": symbol, "direction": direction, "close": close, "pct": pct, "window": window_min,
+                "range_high": hi, "range_low": lo, "vwap": float(vwap) if vwap else None,
+                "candle_time": str(last["timestamp"]), "date": now_ist.date().isoformat(), "vol_ratio": vol_ratio}
     except Exception as e:
-        print(f"ORB15 move check failed for {symbol}: {e}", flush=True)
+        print(f"ORB{window_min} check failed for {symbol}: {e}", flush=True)
         return None
 
 
-def send_orb15_move_summary(hits, now_ist):
-    """ONE Telegram message with every new '2% move + 1st 15-min range break' stock of this run."""
+def _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, instrument_key, fno_underlyings, orb_hits):
+    """Run every enabled ORB window for one stock; new hits go into orb_hits[window] (once per day per
+    window per direction) and into the day-end log. Never raises."""
+    try:
+        if symbol in index_symbols_orb or symbol in config.COMMODITIES:
+            return
+        for w in _orb_windows():
+            hit = check_orb_break(df5, df15, symbol, prev_close, now_ist, w)
+            if hit is None:
+                continue
+            hit["is_fno"] = symbol.upper() in fno_underlyings
+            if hit["is_fno"] is False and getattr(config, "CASH_STOCKS_BULLISH_ONLY", False) and hit["direction"] == "BEARISH":
+                continue
+            key = f"{symbol}::ORB{w}_MOVE"
+            if state.already_alerted(saved_state, key, hit["direction"], hit["date"]):
+                continue
+            hit["chart_link"] = build_chart_link(symbol, "15-min")
+            state.mark_alerted(saved_state, key, hit["direction"], hit["date"])
+            orb_hits.setdefault(w, []).append(hit)
+            _log_orb15_for_eod(saved_state, hit, symbol, instrument_key)
+    except Exception as e:
+        print(f"ORB scan failed for {symbol}: {e}", flush=True)
+
+
+def send_orb_summary(hits, now_ist, window_min):
+    """ONE Telegram message per window with every new opening-range break (price beyond the range AND on the
+    right side of VWAP) of this run: sector, F&O/Cash, Chart link, % move, level, VWAP, volume ratio."""
     import html as _html
     from telegram_notifier import _sector_label
     if not hits:
         return
-    thr = getattr(config, "ORB15_MOVE_MIN_PCT", 2.0)
-    out = [f"\U0001F680 <b>{thr:g}%+ MOVE + 1st 15-MIN RANGE BREAK</b>  {now_ist.strftime('%H:%M')}"]
-    for direction, icon, word in (("BULLISH", "\U0001F7E2", "above 15m high"), ("BEARISH", "\U0001F534", "below 15m low")):
+    name = {15: "1st 15-MIN", 30: "1st 30-MIN", 60: "1st 1-HOUR"}.get(window_min, f"1st {window_min}-MIN")
+    short = {15: "15m", 30: "30m", 60: "1h"}.get(window_min, f"{window_min}m")
+    cfg = _orb_windows().get(window_min, {})
+    out = [f"\U0001F680 <b>{name} ORB BREAK + VWAP</b>  {now_ist.strftime('%H:%M')}",
+           f"<i>{short} range todar + VWAP er sothik side · {cfg.get('min_pct', 2.0):g}%+ move"
+           + (f" · volume {cfg.get('min_vol_ratio'):g}x+" if cfg.get("min_vol_ratio") else "") + "</i>"]
+    for direction, icon, word, vw in (("BULLISH", "\U0001F7E2", f"above {short} high", "above"), ("BEARISH", "\U0001F534", f"below {short} low", "below")):
         grp = sorted((h for h in hits if h["direction"] == direction), key=lambda h: -abs(h["pct"]))
         if not grp:
             continue
@@ -4601,7 +4675,9 @@ def send_orb15_move_summary(hits, now_ist):
             kind = "F&O" if h.get("is_fno") else "Cash"
             out.append(f"{icon} <b>{_html.escape(h['symbol'])}</b> ({_html.escape(sec)}) [{kind}] "
                        f"<a href=\"{h.get('chart_link', '')}\">Chart</a>\n"
-                       f"    {h['close']:g} ({h['pct']:+.2f}%) \u00b7 {word} {lvl:g}")
+                       f"    {h['close']:g} ({h['pct']:+.2f}%) \u00b7 {word} {lvl:g}"
+                       + (f" \u00b7 VWAP {h['vwap']:.2f} \u2705" if h.get("vwap") else "")
+                       + (f" \u00b7 Vol {h['vol_ratio']:.1f}x" if h.get("vol_ratio") else ""))
     text = "\n".join(out)
     for i in range(0, len(text), 3900):
         try:
@@ -4609,7 +4685,7 @@ def send_orb15_move_summary(hits, now_ist):
                           data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text[i:i + 3900], "parse_mode": "HTML",
                                 "disable_web_page_preview": True}, timeout=20)
         except Exception as e:
-            print(f"ORB15 summary send failed: {e}", flush=True)
+            print(f"ORB{window_min} summary send failed: {e}", flush=True)
 
 
 def _sector_chart_label(sym):
