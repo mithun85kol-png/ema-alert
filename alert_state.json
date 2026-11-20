@@ -6947,6 +6947,30 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Healthcare"
+      },
+      {
+        "symbol": "BAJAJFINSV",
+        "direction": "BULLISH",
+        "time": "2026-11-20 10:45:00+05:30",
+        "price": 1884.7,
+        "key": "NSE_EQ|INE918I01026",
+        "score": "9/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "ANTHEM",
+        "direction": "BULLISH",
+        "time": "2026-11-20 10:45:00+05:30",
+        "price": 945.0,
+        "key": "NSE_EQ|INE0CZ201020",
+        "score": "10/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Healthcare"
       }
     ]
   },
@@ -9933,7 +9957,8 @@
   "BAJAJFINSV:BULLISH": [
     "2026-08-14 13:45:00+05:30",
     "2026-08-17 11:45:00+05:30",
-    "2026-08-19 15:00:00+05:30"
+    "2026-08-19 15:00:00+05:30",
+    "2026-11-20 10:45:00+05:30"
   ],
   "GODREJCP::MAENV::BULLISH:BULLISH": [
     "2026-09-10 09:30:00+05:30",
@@ -10690,7 +10715,8 @@
   ],
   "ANTHEM::N500:BULLISH": [
     "2026-08-14 12:30:00+05:30",
-    "2026-10-26 13:45:00+05:30"
+    "2026-10-26 13:45:00+05:30",
+    "2026-11-20 10:45:00+05:30"
   ],
   "NCC::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-21 12:45:00+05:30",
@@ -11830,6 +11856,12 @@
     "2026-11-20"
   ],
   "BRIGADE::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "CAMS::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "INTELLECT::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
