@@ -9154,7 +9154,8 @@
   "OPEN1H_REPORT:DONE": [
     "2026-11-17",
     "2026-11-18",
-    "2026-11-19"
+    "2026-11-19",
+    "2026-11-20"
   ],
   "KALYANKJIL::75m:BEARISH": [
     "2026-08-03 14:15:00+05:30"
@@ -11765,6 +11766,39 @@
     "2026-11-20"
   ],
   "IRB::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "DAYMOVERS_10:30:DONE": [
+    "2026-11-20"
+  ],
+  "COFORGE::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "INFY::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "SAGILITY::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "COROMANDEL::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "JSWENERGY::ORB15_MOVE:BEARISH": [
+    "2026-11-20"
+  ],
+  "TCS::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "TATATECH::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "NAVA::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "CYIENT::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "LTTS::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
