@@ -2911,7 +2911,8 @@
     "2026-10-14 14:15:00+05:30",
     "2026-10-26 14:00:00+05:30",
     "2026-11-06 12:30:00+05:30",
-    "2026-11-12 14:15:00+05:30"
+    "2026-11-12 14:15:00+05:30",
+    "2026-11-20 15:00:00+05:30"
   ],
   "STARHEALTH::CONSOLIDATION_BREAKOUT_LIVE::N500:BEARISH": [
     "2026-09-01"
@@ -3644,7 +3645,8 @@
     "2026-10-09 13:15:00+05:30",
     "2026-11-03 11:30:00+05:30",
     "2026-11-03 15:15:00+05:30",
-    "2026-11-04 10:15:00+05:30"
+    "2026-11-04 10:15:00+05:30",
+    "2026-11-20 15:00:00+05:30"
   ],
   "SIGNATURE::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-24 14:30:00+05:30",
@@ -5975,7 +5977,8 @@
     "2026-08-31"
   ],
   "GLAXO::N500:BULLISH": [
-    "2026-08-25 09:15:00+05:30"
+    "2026-08-25 09:15:00+05:30",
+    "2026-11-20 15:00:00+05:30"
   ],
   "SAIL::N500:BEARISH": [
     "2026-08-13 13:00:00+05:30"
@@ -7260,6 +7263,42 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Financial Services"
+      },
+      {
+        "symbol": "AXISBANK",
+        "direction": "BULLISH",
+        "time": "2026-11-20 15:00:00+05:30",
+        "price": 1448.0,
+        "key": "NSE_EQ|INE238A01034",
+        "score": "11/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "PRIVISCL",
+        "direction": "BULLISH",
+        "time": "2026-11-20 15:00:00+05:30",
+        "price": 3568.5,
+        "key": "NSE_EQ|INE959A01019",
+        "score": "10/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Chemicals"
+      },
+      {
+        "symbol": "GLAXO",
+        "direction": "BULLISH",
+        "time": "2026-11-20 15:00:00+05:30",
+        "price": 2736.6,
+        "key": "NSE_EQ|INE159A01016",
+        "score": "10/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Healthcare"
       }
     ]
   },
@@ -12328,6 +12367,27 @@
     "2026-11-20"
   ],
   "APTUS::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "MFSL::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "SWIGGY::ORB15_MOVE:BEARISH": [
+    "2026-11-20"
+  ],
+  "RVNL::ORB15_MOVE:BEARISH": [
+    "2026-11-20"
+  ],
+  "TMCV::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "JSWCEMENT::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "J&KBANK::ORB15_MOVE:BULLISH": [
+    "2026-11-20"
+  ],
+  "IKS::ORB15_MOVE:BULLISH": [
     "2026-11-20"
   ]
 }
