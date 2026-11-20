@@ -1381,6 +1381,64 @@
         "streak": 1,
         "t_offset_min": 0
       }
+    ],
+    "2026-11-20": [
+      {
+        "symbol": "PIIND",
+        "direction": "BULLISH",
+        "time": "2026-11-20 09:30:37",
+        "price": 1622.1,
+        "key": "NSE_EQ|INE603J01030",
+        "fno": true,
+        "prev_close": 1630.0,
+        "d_rsi": 25.1,
+        "h_rsi": 31.7,
+        "m_rsi": 27.6,
+        "streak": 11,
+        "t_offset_min": 0
+      },
+      {
+        "symbol": "ECLERX",
+        "direction": "BULLISH",
+        "time": "2026-11-20 09:30:37",
+        "price": 1468.7,
+        "key": "NSE_EQ|INE738I01010",
+        "fno": false,
+        "prev_close": 1468.8,
+        "d_rsi": 27.6,
+        "h_rsi": 23.8,
+        "m_rsi": 46.1,
+        "streak": 2,
+        "t_offset_min": 0
+      },
+      {
+        "symbol": "CAPLIPOINT",
+        "direction": "BULLISH",
+        "time": "2026-11-20 09:30:37",
+        "price": 2071.9,
+        "key": "NSE_EQ|INE475E01026",
+        "fno": false,
+        "prev_close": 2084.6,
+        "d_rsi": 29.0,
+        "h_rsi": 37.2,
+        "m_rsi": 51.5,
+        "streak": 2,
+        "t_offset_min": 0
+      },
+      {
+        "symbol": "CREDITACC",
+        "direction": "BULLISH",
+        "time": "2026-11-20 09:30:37",
+        "price": 983.0,
+        "key": "NSE_EQ|INE741K01010",
+        "fno": false,
+        "prev_close": 970.6,
+        "d_rsi": 29.1,
+        "h_rsi": 16.4,
+        "m_rsi": 40.4,
+        "streak": 1,
+        "t_offset_min": 0
+      }
     ]
   },
   "CANFINHOME::SWEEP::BEARISH:BEARISH": [
@@ -6189,7 +6247,8 @@
   "OVERSOLD_SCAN:DONE": [
     "2026-11-17",
     "2026-11-18",
-    "2026-11-19"
+    "2026-11-19",
+    "2026-11-20"
   ],
   "TATAINVEST::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-24 11:15:00+05:30"
@@ -7060,7 +7119,8 @@
     "2026-11-16",
     "2026-11-17",
     "2026-11-18",
-    "2026-11-19"
+    "2026-11-19",
+    "2026-11-20"
   ],
   "BEML::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-21 10:30:00+05:30",
@@ -11565,6 +11625,33 @@
     "2026-09-07 09:15:00+05:30"
   ],
   "DAYMOVERS_15:40:DONE": [
+    "2026-11-19"
+  ],
+  "HEROMOTOCO::DAILY:BULLISH": [
+    "2026-11-19"
+  ],
+  "PGEL::DAILY:BULLISH": [
+    "2026-11-19"
+  ],
+  "LICI::DAILY:BULLISH": [
+    "2026-11-19"
+  ],
+  "PIDILITIND::DAILY:BULLISH": [
+    "2026-11-19"
+  ],
+  "TVSMOTOR::DAILY:BULLISH": [
+    "2026-11-19"
+  ],
+  "INDUSINDBK::DAILY:BULLISH": [
+    "2026-11-19"
+  ],
+  "BANDHANBNK::DAILY:BULLISH": [
+    "2026-11-19"
+  ],
+  "ASHOKLEY::DAILY:BULLISH": [
+    "2026-11-19"
+  ],
+  "DABUR::DAILY:BULLISH": [
     "2026-11-19"
   ]
 }
