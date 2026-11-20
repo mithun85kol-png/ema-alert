@@ -7033,6 +7033,18 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "BANKINDIA",
+        "direction": "BULLISH",
+        "time": "2026-11-20 12:00:00+05:30",
+        "price": 162.73,
+        "key": "NSE_EQ|INE084A01016",
+        "score": "10/11",
+        "fno": true,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Financial Services"
       }
     ]
   },
@@ -7900,7 +7912,8 @@
     "2026-09-02 15:00:00+05:30",
     "2026-10-19 14:30:00+05:30",
     "2026-10-21 09:15:00+05:30",
-    "2026-11-13 12:00:00+05:30"
+    "2026-11-13 12:00:00+05:30",
+    "2026-11-20 12:00:00+05:30"
   ],
   "AEGISVOPAK::MAENV::BEARISH:BEARISH": [
     "2026-09-10 09:45:00+05:30",
