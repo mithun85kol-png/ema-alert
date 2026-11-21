@@ -2285,6 +2285,7 @@ def run_fo_scan(now_ist, index_only=False):
     # message per stock. See send_consolidation_breakout_summary.
     consolidation_live_hits = []
     orb_hits = {w: [] for w in _orb_windows()}
+    bb_hits = {"break": [], "reentry": []}
 
     # Used to set the "F&O: Yes/No" flag on stock signals only — indices
     # (NIFTY 50, SENSEX...) and commodities (GOLD, SILVER...) aren't
@@ -2375,6 +2376,11 @@ def run_fo_scan(now_ist, index_only=False):
             prev_close = levels.get("prev_close") if levels else None
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
+            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol))
+            # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
+            if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
+                    getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
+                continue
             # prev_day_high/prev_day_low (added, per request, 2026-09-05)
             # — feeds the Liquidity Sweep scan below.
             prev_day_high = levels.get("high") if levels else None
@@ -2725,6 +2731,7 @@ def run_fo_scan(now_ist, index_only=False):
                 # 1st 15-min / 75-min / 1-month position lines (ADDED,
                 # 2026-10-19) — see strategy.compute_position_info.
                 signal["positions"] = compute_position_info(df15, df75, signal, mv)
+                signal["prev_day"] = prev_day_info(df15, now_ist, signal.get("close"))
                 # EMA 9/20 cross — informational, on 15-min and 75-min (2026-10-21)
                 _attach_daily_support(signal, symbol, watchlist[symbol])
                 for _k, _d in (("ema920_15", df15), ("ema920_75", df75)):
@@ -3018,6 +3025,10 @@ def run_fo_scan(now_ist, index_only=False):
         if _hits:
             send_orb_summary(_hits, now_ist, _w)
             alerts_sent += len(_hits)
+    for _k, _hits in bb_hits.items():
+        if _hits:
+            send_bb_summary(_hits, now_ist, _k)
+            alerts_sent += len(_hits)
 
     state.save_state(saved_state)
     if failed_symbols:
@@ -3074,6 +3085,7 @@ def run_nifty500_scan(now_ist):
     # batched message at the end.
     consolidation_live_hits = []
     orb_hits = {w: [] for w in _orb_windows()}
+    bb_hits = {"break": [], "reentry": []}
 
     fno_underlyings = instruments.get_fno_underlyings()
     hist_cache = build_hist1min_cache(watchlist)
@@ -3128,6 +3140,11 @@ def run_nifty500_scan(now_ist):
             prev_close = levels.get("prev_close") if levels else None
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
+            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol))
+            # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
+            if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
+                    getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
+                continue
             # prev_day_high/prev_day_low (added, per request, 2026-09-05)
             # — feeds the Liquidity Sweep scan below.
             prev_day_high = levels.get("high") if levels else None
@@ -3335,6 +3352,7 @@ def run_nifty500_scan(now_ist):
                 # 1st 15-min / 75-min / 1-month position lines (ADDED,
                 # 2026-10-19) — see strategy.compute_position_info.
                 signal["positions"] = compute_position_info(df15, df75, signal, mv)
+                signal["prev_day"] = prev_day_info(df15, now_ist, signal.get("close"))
                 # EMA 9/20 cross — informational, on 15-min and 75-min (2026-10-21)
                 _attach_daily_support(signal, symbol, watchlist[symbol])
                 for _k, _d in (("ema920_15", df15), ("ema920_75", df75)):
@@ -3481,6 +3499,10 @@ def run_nifty500_scan(now_ist):
     for _w, _hits in orb_hits.items():
         if _hits:
             send_orb_summary(_hits, now_ist, _w)
+            alerts_sent += len(_hits)
+    for _k, _hits in bb_hits.items():
+        if _hits:
+            send_bb_summary(_hits, now_ist, _k)
             alerts_sent += len(_hits)
 
     state.save_state(saved_state)
@@ -4177,7 +4199,7 @@ def _log_orb15_for_eod(st, hit, symbol, instrument_key):
             return
         state.log_alert(st, {
             "symbol": symbol, "direction": hit["direction"], "time": str(hit["candle_time"]),
-            "price": float(hit["close"]), "key": instrument_key, "score": "", "type": f"ORB{hit.get('window', 15)}",
+            "price": float(hit["close"]), "key": instrument_key, "score": "", "type": hit.get("log_type") or f"ORB{hit.get('window', 15)}",
             "fno": bool(hit.get("is_fno")), "day": None, "nifty": None,
             "vol": round(hit["vol_ratio"], 2) if hit.get("vol_ratio") else None,
             "sector": _sector_label(symbol) or "",
@@ -4477,6 +4499,23 @@ def maybe_run_opening_1h_once_a_day(now_ist):
     run_opening_bias_report(now_ist, hour=True, sleep_first=False)
 
 
+def maybe_run_opening_15m_once_a_day(now_ist):
+    """1st 15-min (09:15-09:30) Open=Low/High + sector report, once a day from a normal run (ADDED 2026-11-21).
+    Shares the OPEN15M_REPORT marker with SCAN_MODE=opening_bias_report so it never goes out twice."""
+    if not getattr(config, "OPENING_15M_REPORT_ENABLED", False) or now_ist.weekday() >= 5:
+        return
+    hh, mm = (int(x) for x in config.OPENING_15M_RUN_AFTER.split(":"))
+    if not (dt.time(hh, mm) <= now_ist.time() <= dt.time(12, 0)):
+        return
+    today = now_ist.date().isoformat()
+    st = state.load_state()
+    if state.already_alerted(st, "OPEN15M_REPORT", "DONE", today):
+        return
+    state.mark_alerted(st, "OPEN15M_REPORT", "DONE", today)
+    state.save_state(st)
+    run_opening_bias_report(now_ist, window_min=15, sleep_first=False)
+
+
 def maybe_run_opening_30m_once_a_day(now_ist):
     """1st 30-min (09:15-09:45) Open=Low/High + sector report. Runs from a normal run, once a day,
     first run at/after OPENING_30M_RUN_AFTER (weekdays, before 12:00)."""
@@ -4545,6 +4584,39 @@ def maybe_run_daily_scan_once_a_day(now_ist):
 index_symbols_orb = set(config.INDICES.keys())
 
 
+def prev_day_info(df15, now_ist, price=None):
+    """Previous trading day's O/H/L/C from the 15-min history (None if the history has no earlier day).
+    where = where `price` sits vs that day's range: ABOVE_HIGH / BELOW_LOW / INSIDE. Never raises."""
+    try:
+        if df15 is None or df15.empty:
+            return None
+        ts = df15["timestamp"]
+        prior = df15[ts.dt.date < now_ist.date()]
+        if prior.empty:
+            return None
+        d = prior[prior["timestamp"].dt.date == prior["timestamp"].dt.date.iloc[-1]]
+        o, h, l, c = float(d.iloc[0]["open"]), float(d["high"].max()), float(d["low"].min()), float(d.iloc[-1]["close"])
+        where = None
+        if price:
+            where = "ABOVE_HIGH" if price > h else ("BELOW_LOW" if price < l else "INSIDE")
+        return {"date": str(d.iloc[-1]["timestamp"].date()), "open": o, "high": h, "low": l, "close": c,
+                "chg_pct": (c - o) / o * 100.0 if o else None, "where": where}
+    except Exception:
+        return None
+
+
+def prev_day_text(pd_info):
+    """One short HTML-safe line: 'Ager din: 🟢 +1.2% · H 150 · L 145 · C 148 · aj ager diner high er upore'."""
+    if not pd_info:
+        return ""
+    ch = pd_info.get("chg_pct")
+    icon = "\U0001F7E2" if (ch or 0) >= 0 else "\U0001F534"
+    w = {"ABOVE_HIGH": " \u00b7 aj ager diner high er UPORE", "BELOW_LOW": " \u00b7 aj ager diner low er NICHE",
+         "INSIDE": " \u00b7 aj ager diner range er bhitore"}.get(pd_info.get("where"), "")
+    return (f"Ager din: {icon} {ch:+.2f}% \u00b7 H {pd_info['high']:g} \u00b7 L {pd_info['low']:g} \u00b7 C {pd_info['close']:g}{w}"
+            if ch is not None else "")
+
+
 def _orb_windows():
     """{window_minutes: settings} of the enabled opening-range-break alerts (config.ORB_WINDOWS)."""
     if not getattr(config, "ORB15_MOVE_ALERT_ENABLED", False):
@@ -4553,17 +4625,21 @@ def _orb_windows():
 
 
 def check_orb_break(df5, df15, symbol, prev_close, now_ist, window_min):
-    """Opening-range break of the first `window_min` minutes (15 / 30 / 60) from 09:15 (ADDED 2026-11-20).
-    BULLISH: the latest CLOSED 5-min candle AFTER the window closes above the window's high AND above the session
+    """Opening-range break of the first `window_min` minutes (15 / 30 / 60) from 09:15 on 15-MIN candles (ADDED 2026-11-20).
+    BULLISH: the latest CLOSED 15-min candle AFTER the window closes above the window's high AND above the session
     VWAP AND the day change vs previous close >= min_pct AND (optional) the window's volume is >= min_vol_ratio x the
     same window's average volume of the previous days. BEARISH mirrors it (below the low and below VWAP).
     Evaluates the CURRENT state, so a missed run still catches it. Returns a dict or None. Never raises."""
     try:
         cfg = _orb_windows().get(window_min)
-        if cfg is None or not prev_close or df5 is None or df5.empty:
+        if cfg is None or not prev_close:
             return None
-        ts = df5["timestamp"]
-        today = df5[ts.dt.date == now_ist.date()]
+        # ALL on 15-MIN candles (changed 2026-11-21): range = first window of 15-min candles, break = latest
+        # CLOSED 15-min candle after the window, VWAP = session VWAP of today's 15-min candles up to it.
+        if df15 is None or df15.empty:
+            return None
+        t15 = df15["timestamp"]
+        today = df15[t15.dt.date == now_ist.date()]
         if today.empty:
             return None
         first_ts = today.iloc[0]["timestamp"]
@@ -4572,8 +4648,8 @@ def check_orb_break(df5, df15, symbol, prev_close, now_ist, window_min):
         win_end = first_ts + pd.Timedelta(minutes=window_min)
         win = today[today["timestamp"] < win_end]
         after = today[today["timestamp"] >= win_end]
-        if after.empty or len(win) < window_min // 5:
-            return None                                  # window not finished / no candle after it yet
+        if after.empty or len(win) < window_min // 15:
+            return None                                  # window not finished / no 15-min candle closed after it yet
         hi, lo = float(win["high"].max()), float(win["low"].min())
         last = today.iloc[-1]
         close = float(last["close"])
@@ -4622,7 +4698,7 @@ def check_orb_break(df5, df15, symbol, prev_close, now_ist, window_min):
                 vol_ratio = tv / (sum(sums) / len(sums))
         except Exception:
             vol_ratio = None
-        min_ratio = float(cfg.get("min_vol_ratio", 2.0)) or 2.0   # volume is MANDATORY (0 in config still means 2x)
+        min_ratio = float(cfg.get("min_vol_ratio", 1.5)) or 1.5   # volume is MANDATORY (0 in config still means 1.5x)
         if min_ratio > 0:
             if vol_ratio is None:
                 if not getattr(config, "ORB15_VOL_MISSING_PASSES", False):
@@ -4630,7 +4706,7 @@ def check_orb_break(df5, df15, symbol, prev_close, now_ist, window_min):
             elif vol_ratio < min_ratio:
                 return None
         return {"symbol": symbol, "direction": direction, "close": close, "pct": pct, "window": window_min,
-                "range_high": hi, "range_low": lo, "vwap": float(vwap) if vwap else None, "ema50": ema50,
+                "range_high": hi, "range_low": lo, "vwap": float(vwap) if vwap else None, "ema50": ema50, "prev_day": prev_day_info(df15, now_ist, close),
                 "candle_time": str(last["timestamp"]), "date": now_ist.date().isoformat(), "vol_ratio": vol_ratio}
     except Exception as e:
         print(f"ORB{window_min} check failed for {symbol}: {e}", flush=True)
@@ -4689,7 +4765,8 @@ def send_orb_summary(hits, now_ist, window_min):
                        f"    {h['close']:g} ({h['pct']:+.2f}%) \u00b7 {word} {lvl:g}"
                        + (f" \u00b7 VWAP {h['vwap']:.2f} \u2705" if h.get("vwap") else "")
                        + (f" \u00b7 EMA50 {h['ema50']:.2f} \u2705" if h.get("ema50") else "")
-                       + (f" \u00b7 Vol {h['vol_ratio']:.1f}x" if h.get("vol_ratio") else ""))
+                       + (f" \u00b7 Vol {h['vol_ratio']:.1f}x" if h.get("vol_ratio") else "")
+                       + (f"\n    {prev_day_text(h.get('prev_day'))}" if h.get("prev_day") else ""))
     text = "\n".join(out)
     for i in range(0, len(text), 3900):
         try:
@@ -4698,6 +4775,177 @@ def send_orb_summary(hits, now_ist, window_min):
                                 "disable_web_page_preview": True}, timeout=20)
         except Exception as e:
             print(f"ORB{window_min} summary send failed: {e}", flush=True)
+
+
+# ---------- Bollinger Band close + RSI 70/30 + Supertrend alert (ADDED 2026-11-21) ----------
+def _supertrend(df, period=10, mult=3.0):
+    """Standard Supertrend (Wilder ATR). Returns (line, direction) as lists; direction 1 = uptrend (line below
+    price = support), -1 = downtrend (line above price = resistance)."""
+    h, l, c = df["high"].astype(float).tolist(), df["low"].astype(float).tolist(), df["close"].astype(float).tolist()
+    n = len(c)
+    tr = [h[0] - l[0]] + [max(h[i] - l[i], abs(h[i] - c[i - 1]), abs(l[i] - c[i - 1])) for i in range(1, n)]
+    atr = [None] * n
+    if n >= period:
+        atr[period - 1] = sum(tr[:period]) / period
+        for i in range(period, n):
+            atr[i] = (atr[i - 1] * (period - 1) + tr[i]) / period
+    line, dirn = [None] * n, [0] * n
+    fub = flb = None
+    d = 1
+    for i in range(n):
+        if atr[i] is None:
+            continue
+        mid = (h[i] + l[i]) / 2.0
+        ub, lb = mid + mult * atr[i], mid - mult * atr[i]
+        if fub is None:
+            fub, flb = ub, lb
+            d = 1 if c[i] >= mid else -1
+        else:
+            fub = ub if (ub < fub or c[i - 1] > fub) else fub
+            flb = lb if (lb > flb or c[i - 1] < flb) else flb
+            if d == 1 and c[i] < flb:
+                d = -1
+            elif d == -1 and c[i] > fub:
+                d = 1
+        line[i], dirn[i] = (flb if d == 1 else fub), d
+    return line, dirn
+
+
+def _bb_eval(df15):
+    """Indicator columns for the last candles: bb upper/lower, rsi, supertrend line + direction. None if too little data."""
+    p = int(getattr(config, "BB_PERIOD", 20))
+    if df15 is None or len(df15) < max(p, int(getattr(config, "BB_MIN_BARS", 30))):
+        return None
+    d = df15.reset_index(drop=True).copy()
+    cl = d["close"].astype(float)
+    ma = cl.rolling(p).mean()
+    sd = cl.rolling(p).std(ddof=0)
+    k = float(getattr(config, "BB_STD", 2.0))
+    d["bb_up"], d["bb_lo"] = ma + k * sd, ma - k * sd
+    d["rsi"] = _rsi_series(cl.tolist(), int(getattr(config, "BB_RSI_PERIOD", 14))).values
+    d["st_line"], d["st_dir"] = _supertrend(d, int(getattr(config, "ST_PERIOD", 10)), float(getattr(config, "ST_MULT", 3.0)))
+    return d
+
+
+def _bb_times(st, key, direction, day):
+    return sorted(t for t in state._get_times(st, f"{key}:{direction}") if str(t).startswith(day))
+
+
+def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, instrument_key=None):
+    """BREAK: candle CLOSES above the upper Bollinger band with RSI >= 70 and Supertrend support (uptrend, close above
+    the line), or below the lower band with RSI <= 30 and Supertrend resistance (BEARISH). RE-ENTRY: later, when the
+    same stock's candle closes back INSIDE the band after a BREAK alert today. Last 2 closed candles are checked (catch-up).
+    State is per (symbol, direction) lists of candle times, so merge_state.py unions them safely. Never raises."""
+    try:
+        if not getattr(config, "BB_ALERT_ENABLED", False):
+            return
+        is_index, is_comm = symbol in index_symbols_orb, symbol in config.COMMODITIES
+        if (is_index and not getattr(config, "BB_INCLUDE_INDICES", True)) or (is_comm and not getattr(config, "BB_INCLUDE_COMMODITIES", True)):
+            return
+        d = _bb_eval(df15)
+        if d is None:
+            return
+        day = now_ist.date().isoformat()
+        today_idx = [i for i in range(len(d)) if str(d.iloc[i]["timestamp"]).startswith(day)]
+        is_fno = symbol.upper() in fno_underlyings
+        kind_tag = "Index" if is_index else ("Commodity" if is_comm else ("F&O" if is_fno else "Cash"))
+        rsi_hi, rsi_lo = float(getattr(config, "BB_RSI_UPPER", 70)), float(getattr(config, "BB_RSI_LOWER", 30))
+        need_st = getattr(config, "BB_REQUIRE_SUPERTREND", True)
+        for i in today_idx[-2:]:
+            r = d.iloc[i]
+            if pd.isna(r["bb_up"]) or pd.isna(r["rsi"]):
+                continue
+            ct = str(r["timestamp"])
+            close, rsi = float(r["close"]), float(r["rsi"])
+            stl, std_ = r["st_line"], r["st_dir"]
+            for direction in ("BULLISH", "BEARISH"):
+                if direction == "BEARISH" and (not getattr(config, "BB_BEARISH_ENABLED", True)
+                                               or (is_fno is False and not is_index and not is_comm
+                                                   and getattr(config, "CASH_STOCKS_BULLISH_ONLY", False))):
+                    continue
+                bull = direction == "BULLISH"
+                brk = _bb_times(saved_state, f"{symbol}::BB_BREAK", direction, day)
+                rev = _bb_times(saved_state, f"{symbol}::BB_REENTRY", direction, day)
+                active = bool(brk) and (not rev or max(brk) > max(rev))
+                outside = close > float(r["bb_up"]) if bull else close < float(r["bb_lo"])
+                rsi_ok = rsi >= rsi_hi if bull else rsi <= rsi_lo
+                st_ok = True
+                if need_st:
+                    st_ok = (stl is not None and not pd.isna(stl) and ((std_ == 1 and close > float(stl)) if bull
+                                                                       else (std_ == -1 and close < float(stl))))
+                base = {"symbol": symbol, "direction": direction, "close": close, "rsi": rsi, "is_fno": is_fno, "kind": kind_tag,
+                        "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
+                        "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct}
+                if outside and rsi_ok and st_ok and not active:
+                    if state.already_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct):
+                        continue
+                    state.mark_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct)
+                    base["chart_link"] = build_chart_link(symbol, "15-min")
+                    base["prev_day"] = prev_day_info(df15, now_ist, close)
+                    bb_hits["break"].append(base)
+                    base["log_type"] = "BB"
+                    _log_orb15_for_eod(saved_state, base, symbol, instrument_key)
+                elif active and getattr(config, "BB_REENTRY_ALERT", True) and ct > max(brk) and not outside:
+                    if state.already_alerted(saved_state, f"{symbol}::BB_REENTRY", direction, ct):
+                        continue
+                    state.mark_alerted(saved_state, f"{symbol}::BB_REENTRY", direction, ct)
+                    b = d[d["timestamp"].astype(str) == max(brk)]
+                    base["break_time"] = max(brk)
+                    base["break_price"] = float(b.iloc[0]["close"]) if not b.empty else None
+                    base["chart_link"] = build_chart_link(symbol, "15-min")
+                    bb_hits["reentry"].append(base)
+    except Exception as e:
+        print(f"BB scan failed for {symbol}: {e}", flush=True)
+
+
+def send_bb_summary(hits, now_ist, kind):
+    """ONE summary message per run: 'break' = close outside the Bollinger band (+RSI +Supertrend);
+    'reentry' = those stocks closing back inside the band."""
+    import html as _html
+    from telegram_notifier import _sector_label
+    if not hits:
+        return
+    if kind == "break":
+        out = [f"\U0001F4C8 <b>BOLLINGER BAND CLOSE + RSI + SUPERTREND</b>  {now_ist.strftime('%H:%M')}",
+               "<i>15-min candle band er baire close · RSI 70/30 · Supertrend support</i>"]
+    else:
+        out = [f"\U0001F501 <b>BOLLINGER BAND RE-ENTRY</b>  {now_ist.strftime('%H:%M')}",
+               "<i>ager alert howa stock ebar band er bhitore fire close korlo</i>"]
+    for direction, icon in (("BULLISH", "\U0001F7E2"), ("BEARISH", "\U0001F534")):
+        grp = sorted((h for h in hits if h["direction"] == direction), key=lambda h: h["symbol"])
+        if not grp:
+            continue
+        out.append(f"\n{icon} <b>{direction}</b> ({len(grp)})")
+        for h in grp:
+            bull = direction == "BULLISH"
+            kindtxt = h.get("kind") or ("F&O" if h.get("is_fno") else "Cash")
+            band = h["bb_up"] if bull else h["bb_lo"]
+            sec = "" if kindtxt in ("Index", "Commodity") else f" ({_html.escape(_sector_label(h['symbol']) or 'Other')})"
+            head = (f"{icon} <b>{_html.escape(h['symbol'])}</b>{sec} [{kindtxt}] "
+                    f"<a href=\"{h.get('chart_link', '')}\">Chart</a> {str(h['candle_time'])[11:16]}")
+            if kind == "break":
+                st = (f" \u00b7 Supertrend {h['st_line']:.2f} \u2705") if h.get("st_line") else ""
+                line = (f"    {h['close']:g} \u00b7 {'above upper' if bull else 'below lower'} band {band:.2f}"
+                        f" \u00b7 RSI {h['rsi']:.1f}{st}")
+                if h.get("prev_day"):
+                    line += f"\n    {prev_day_text(h['prev_day'])}"
+            else:
+                bp = h.get("break_price")
+                mv = ""
+                if bp:
+                    pnl = (h["close"] - bp) / bp * 100.0 * (1 if bull else -1)
+                    mv = f" \u00b7 alert {str(h.get('break_time'))[11:16]} @ {bp:g} \u2192 {pnl:+.2f}%"
+                line = (f"    {h['close']:g} \u00b7 {'upper' if bull else 'lower'} band {band:.2f} er bhitore"
+                        f" \u00b7 RSI {h['rsi']:.1f}{mv}")
+            out.append(head + "\n" + line)
+    text = "\n".join(out)
+    for i in range(0, len(text), 3900):
+        try:
+            requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                          data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text[i:i + 3900], "parse_mode": "HTML",
+                                "disable_web_page_preview": True}, timeout=20)
+        except Exception as e:
+            print(f"BB summary send failed: {e}", flush=True)
 
 
 def _sector_chart_label(sym):
@@ -4987,6 +5235,12 @@ def _run_inner():
     # build_todays_opening_bias_list above.
     if mode == "opening_bias_report":
         try:
+            _st15 = state.load_state()
+            if state.already_alerted(_st15, "OPEN15M_REPORT", "DONE", now_ist.date().isoformat()):
+                print("1st 15-min opening report already sent today — skipping.", flush=True)
+                return
+            state.mark_alerted(_st15, "OPEN15M_REPORT", "DONE", now_ist.date().isoformat())
+            state.save_state(_st15)
             run_opening_bias_report(now_ist)
         except Exception as e:
             print(f"run_opening_bias_report failed: {e}", flush=True)
@@ -5169,6 +5423,12 @@ def _run_inner():
         maybe_run_day_movers_once_a_day(now_ist)
     except Exception as e:
         print(f"Day movers report failed this run (non-blocking): {e}", flush=True)
+
+    # 1st 15-min Open=Low/High + sector report (~09:31).
+    try:
+        maybe_run_opening_15m_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Opening 15M report failed this run (non-blocking): {e}", flush=True)
 
     # 1st 30-min Open=Low/High + sector report (~09:47).
     try:

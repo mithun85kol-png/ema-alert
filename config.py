@@ -937,14 +937,9 @@ POSITION_75MIN_EMA_MIN_BARS = 60
 # daily_ema50_scan, top_movers_1min, consolidation_breakout_scan) now exits
 # immediately with no Telegram message. To bring one back, add its name here.
 ENABLED_SCAN_MODES = {
-    "full", "index",
-    "opening_bias_report",
-    "ema_cross_report", "ema_cross_report_evening",
-    "monthly_scan",
-    "daily_scan",
-    "eod_report",
-    "oversold_report", "oversold_eod", "opening_bias_report_1h",
-    "opening_bias_report_30m", "alert_stats", "telegram_test", "stock_list", "day_movers",
+    "full",            # Bollinger + commodity MACD + daily/monthly/EOD/day-movers/opening hooks run from this
+    "opening_bias_report", "opening_bias_report_30m", "opening_bias_report_1h",
+    "daily_scan", "monthly_scan", "eod_report", "alert_stats", "day_movers", "telegram_test",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -1081,14 +1076,14 @@ ALERT_MESSAGE_STYLE = "single"
 # Each row also shows the 1-hour RSI and Monthly RSI (information only - they never block).
 # After the close (>= OVERSOLD_EOD_RUN_AFTER) a performance report says how each of those stocks
 # moved since the morning alert.
-OVERSOLD_ALERT_ENABLED = True
+OVERSOLD_ALERT_ENABLED = False   # OFF 2026-11-21 (only-5-alerts mode)
 OVERSOLD_DAILY_RSI_MAX = 30
 OVERSOLD_RUN_AFTER = "09:30"            # IST
 OVERSOLD_UNIVERSE = "fo+n500"           # "fo" = F&O stocks only, "fo+n500" = F&O + Nifty 500 cash stocks
 OVERSOLD_HISTORY_LOOKBACK_DAYS = 300    # calendar days of daily candles (RSI warm-up)
 OVERSOLD_HOURLY_HISTORY_DAYS = 25       # calendar days of 1-min candles used to build 1-hour bars
 OVERSOLD_MAX_STOCKS = 80                # safety cap on list size (lowest RSI kept)
-OVERSOLD_EOD_ENABLED = True
+OVERSOLD_EOD_ENABLED = False   # OFF 2026-11-21 (only-5-alerts mode)
 OVERSOLD_EOD_RUN_AFTER = "15:40"        # IST
 
 # ---------- 1st 1-HOUR Open=Low/High + sector report (ADDED 2026-11-16) ----------
@@ -1127,7 +1122,7 @@ VWAP_CROSS_LOOKBACK_CANDLES = 4
 # crossing DOWN through ALERT_STRONG_RSI_BEARISH (45) — only if DAILY_ALERT_BULLISH_ONLY is False.
 # "All conditions" = exactly the same mandatory checks + minimum score as the MACD-cross daily alert
 # (MACD on the right side of zero, RSI, volume, EMA50/200, EMA 9/20, 20-day high, delivery ...).
-DAILY_RSI_CROSS_ENABLED = True
+DAILY_RSI_CROSS_ENABLED = False   # OFF 2026-11-21 (only-5-alerts mode)
 DAILY_RSI_CROSS_LEVEL = 55
 
 # ---------- NIFTY 50 / NIFTY BANK / SENSEX in the normal run (ADDED 2026-11-17, "nifty sensex e asche na") ----------
@@ -1142,7 +1137,7 @@ INDEX_ALERTS_IN_FULL_RUN = True
 #    bullish only when price is above VWAP AND above the 1st 30-min high; bearish mirror.
 #    (A check whose data is missing - e.g. alert candle still inside the 1st 30 min - never blocks by itself.)
 # 2) No alerts for candles that START before this time (the 09:15 and 09:30 candles are noisy).
-ALERT_NO_ALERT_BEFORE = "09:45"
+ALERT_NO_ALERT_BEFORE = "09:15"   # CHANGED 2026-11-21: alerts from the 09:15 candle (closes 09:30), i.e. from 09:30 ("" = no limit)
 # 3) Market trend filter: bullish alerts are skipped while NIFTY 50 is below its own intraday average price
 #    (mean of typical price of today's 15-min candles up to the alert candle), bearish alerts while it is above.
 #    Within +-MARKET_TREND_FLAT_PCT of that average = FLAT (both directions allowed). Missing data never blocks.
@@ -1171,7 +1166,7 @@ STOCK_LIST_INCLUDE_NIFTY500 = True   # False = only the F&O stocks
 # (up for BULLISH, down for BEARISH) AND price is beyond the high/low of today's 09:15 candle (above the high for
 # BULLISH, below the low for BEARISH). Stocks only (no indices/commodities), F&O + Nifty 500. Once per day per
 # direction. Cash-only stocks follow CASH_STOCKS_BULLISH_ONLY. ONE message per run lists all new hits.
-ORB15_MOVE_ALERT_ENABLED = True
+ORB15_MOVE_ALERT_ENABLED = False   # OFF 2026-11-21 ("ORB sorao")
 ORB15_MOVE_MIN_PCT = 2.0
 # ---- ORB windows (ADDED 2026-11-20): the same "range break + VWAP" alert for the 1st 15-min, 30-min and 1-hour range ----
 # Price (latest closed 5-min candle after the window) must close ABOVE the window's high AND ABOVE the session VWAP
@@ -1179,9 +1174,9 @@ ORB15_MOVE_MIN_PCT = 2.0
 # direction per window. min_pct = minimum day change vs previous close, min_vol_ratio = window volume vs the same
 # window's average of the previous days (0 = no volume condition). Remove a window from the dict to switch it off.
 ORB_WINDOWS = {
-    15: {"min_pct": 0, "min_vol_ratio": 2.0},   # min_pct 0 = no % move condition (changed 2026-11-20)
-    30: {"min_pct": 0, "min_vol_ratio": 2.0},
-    60: {"min_pct": 0, "min_vol_ratio": 2.0},
+    15: {"min_pct": 0, "min_vol_ratio": 1.5},   # min_pct 0 = no % move condition (changed 2026-11-20)
+    30: {"min_pct": 0, "min_vol_ratio": 1.5},
+    60: {"min_pct": 0, "min_vol_ratio": 1.5},
 }
 ORB_REQUIRE_VWAP = True
 ORB_REQUIRE_EMA = True      # price must also be above (bullish) / below (bearish) the 15-min EMA50
@@ -1207,7 +1202,7 @@ ALERT_DAILY_RSI_AS_POINT = True
 
 # ---------- Day-end summary: chart list (ADDED 2026-11-19) ----------
 # Right after the DAILY ALERT SUMMARY a second message lists every alerted stock with its Chart link (+ result %).
-EOD_CHART_LIST_ENABLED = True
+EOD_CHART_LIST_ENABLED = False   # OFF 2026-11-21 (only-5-alerts mode)
 
 # ---------- TOP 10 GAINERS / LOSERS of the day (ADDED 2026-11-19) ----------
 # F&O stocks ranked by latest price vs previous close, with sector + Chart. Sent automatically by the first normal
@@ -1216,3 +1211,39 @@ DAY_MOVERS_ENABLED = True
 DAY_MOVERS_COUNT = 10
 DAY_MOVERS_AUTO_TIMES = ("10:30", "15:40")   # IST
 DAY_MOVERS_WINDOW_MIN = 90
+
+
+# ---------- Bollinger Band close + RSI 70/30 + Supertrend alert (ADDED 2026-11-21) ----------
+# Summary-report only (one message per scan run). 15-min candles, stocks only.
+#  BREAK    : candle CLOSES above the upper Bollinger band with RSI >= BB_RSI_UPPER and Supertrend support
+#             (uptrend, close above the Supertrend line) -> BULLISH; mirror below the lower band, RSI <= BB_RSI_LOWER,
+#             Supertrend downtrend -> BEARISH.
+#  RE-ENTRY : after a BREAK alert today, when the same stock's candle closes back INSIDE the band -> second summary.
+BB_ALERT_ENABLED = True
+BB_PERIOD = 20
+BB_STD = 2.0
+BB_RSI_PERIOD = 14
+BB_RSI_UPPER = 70
+BB_RSI_LOWER = 30
+ST_PERIOD = 10
+ST_MULT = 3.0
+BB_REQUIRE_SUPERTREND = True
+BB_BEARISH_ENABLED = True       # cash stocks still follow CASH_STOCKS_BULLISH_ONLY
+BB_REENTRY_ALERT = True
+BB_MIN_BARS = 30
+
+
+# ---------- ONLY-5-ALERTS MODE (2026-11-21, per request) ----------
+# ON : 1) ORB 15/30/60-min + VWAP (+EMA50, volume)   2) Bollinger band + RSI + Supertrend
+#      3) Daily MACD+RSI+volume alert and Monthly MACD+RSI alert   4) Day-end performance report + win-rate stats
+#      5) Top gainers / losers report
+# OFF: the 15-min MACD alert (stocks, indices, commodities) and every other report.
+# To bring the 15-min MACD alert back: MACD15_ALERT_ENABLED = True (and add "index" to ENABLED_SCAN_MODES).
+MACD15_ALERT_ENABLED = False
+
+# ---- 2026-11-21 update ----
+OPENING_15M_REPORT_ENABLED = True       # 1st 15-min Open=Low/High + sector report (auto from a normal run; same report as SCAN_MODE=opening_bias_report)
+OPENING_15M_RUN_AFTER = "09:31"
+BB_INCLUDE_INDICES = True               # NIFTY 50 / NIFTY BANK / SENSEX Bollinger alerts
+BB_INCLUDE_COMMODITIES = True           # commodity Bollinger alerts
+MACD15_ALERT_COMMODITIES = True         # commodities keep the 15-min MACD alert even though MACD15_ALERT_ENABLED is False
