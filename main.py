@@ -2376,7 +2376,7 @@ def run_fo_scan(now_ist, index_only=False):
             prev_close = levels.get("prev_close") if levels else None
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
-            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels)
+            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels, df5)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
             if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
                     getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
@@ -3140,7 +3140,7 @@ def run_nifty500_scan(now_ist):
             prev_close = levels.get("prev_close") if levels else None
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
-            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels)
+            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels, df5)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
             if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
                     getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
@@ -4581,6 +4581,118 @@ def maybe_run_daily_scan_once_a_day(now_ist):
     run_daily_macd_rsi_scan(now_ist, notify_if_stale=True)
 
 
+# ---------- Daily Bollinger band report (ADDED 2026-11-22) ----------
+def run_daily_bb_report(now_ist):
+    """Every morning: F&O stocks whose LAST COMPLETED daily candle closed ABOVE the daily upper Bollinger band
+    (20, 2) with daily RSI > DAILY_BB_RSI_MIN (65). One summary with sector + Chart, strongest RSI first.
+    (DAILY_BB_INCLUDE_LOWER = also the mirror list: close below the lower band with RSI < 100 - 65.) Never raises."""
+    import html as _html
+    from telegram_notifier import _post_html_chunks
+    try:
+        today_str = now_ist.date().isoformat()
+        watchlist = dict(instruments.resolve_fo_stock_list(None))
+        if getattr(config, "DAILY_BB_UNIVERSE", "fo") == "fo+n500":
+            watchlist.update(instruments.resolve_nifty500_stocks())
+        if not watchlist:
+            print("Daily BB report: empty watchlist - skipping.", flush=True)
+            return True
+        use_today = now_ist.time() >= dt.time(15, 45)
+        histories, failed = _fetch_daily_histories(watchlist, int(getattr(config, "DAILY_BB_HISTORY_DAYS", 180)),
+                                                   include_today=use_today)
+        if not use_today:   # never judge today's still-forming candle
+            histories = {s: [r for r in h if str(r["date"])[:10] < today_str] for s, h in histories.items()}
+            histories = {s: h for s, h in histories.items() if h}
+        latest = max((str(h[-1]["date"])[:10] for h in histories.values()), default=None)
+        if not latest:
+            print("Daily BB report: no daily data - nothing sent.", flush=True)
+            return False
+        if use_today:
+            n_today = sum(1 for h in histories.values() if str(h[-1]["date"])[:10] == today_str)
+            if latest != today_str or n_today < 0.7 * len(histories):
+                print(f"Daily BB report (evening): today's daily candle not ready yet ({n_today}/{len(histories)}) - will retry next run.", flush=True)
+                return False
+        period, k = int(getattr(config, "BB_PERIOD", 20)), float(getattr(config, "DAILY_BB_STD", 2.0))
+        rsi_min = float(getattr(config, "DAILY_BB_RSI_MIN", 65))
+        lower_on = getattr(config, "DAILY_BB_INCLUDE_LOWER", False)
+        ups, lows = [], []
+        for sym, h in histories.items():
+            try:
+                if str(h[-1]["date"])[:10] != latest or len(h) < period + 15:
+                    continue
+                cl = pd.Series([float(r["close"]) for r in h])
+                ma, sd = cl.rolling(period).mean(), cl.rolling(period).std(ddof=0)
+                up, lo = float((ma + k * sd).iloc[-1]), float((ma - k * sd).iloc[-1])
+                rsi = float(_rsi_series(cl.tolist(), 14).iloc[-1])
+                close, prev = float(cl.iloc[-1]), float(cl.iloc[-2])
+                vols = [float(r.get("volume") or 0) for r in h]
+                vavg = sum(vols[-21:-1]) / 20.0 if len(vols) >= 21 else 0
+                row = {"symbol": sym, "close": close, "chg": (close - prev) / prev * 100.0 if prev else 0.0,
+                       "rsi": rsi, "vol": (vols[-1] / vavg) if vavg > 0 else None}
+                if close > up and rsi > rsi_min:
+                    row.update(band=up, away=(close / up - 1) * 100.0)
+                    ups.append(row)
+                elif lower_on and close < lo and rsi < (100 - rsi_min):
+                    row.update(band=lo, away=(close / lo - 1) * 100.0)
+                    lows.append(row)
+            except Exception as e:
+                print(f"Daily BB: {sym} failed: {e}", flush=True)
+        day_txt = dt.date.fromisoformat(latest).strftime("%d %b")
+        when = "AJKER (day-end)" if use_today else "AGER DIN"
+        head = [f"\U0001F4CA <b>DAILY BOLLINGER \u2014 {when} \u2014 UPPER BAND CLOSE</b>  {now_ist.strftime('%d %b %H:%M')}",
+                f"<i>{day_txt} er daily close upper band (20, 2) er upore \u00b7 daily RSI &gt; {rsi_min:g} \u00b7 {len(ups)} ta stock</i>"]
+        body = []
+
+        def _lines(rows, icon, word):
+            for i, r in enumerate(sorted(rows, key=lambda r: -r["rsi"] if icon == "\U0001F7E2" else r["rsi"]), 1):
+                sec = _sector_label(r["symbol"]) or "Other"
+                body.append(f"{i}. <b>{_html.escape(r['symbol'])}</b> ({_html.escape(sec)}) "
+                            f"<a href=\"{build_chart_link(r['symbol'])}\">Chart</a>\n"
+                            f"    {r['close']:g} ({r['chg']:+.2f}%) \u00b7 {word} band {r['band']:.2f} ({r['away']:+.1f}%) "
+                            f"\u00b7 RSI {r['rsi']:.1f}" + (f" \u00b7 Vol {r['vol']:.1f}x" if r.get("vol") else ""))
+
+        _lines(ups, "\U0001F7E2", "upper")
+        if lows:
+            body.append("")
+            body.append(f"\U0001F534 <b>LOWER BAND CLOSE</b> ({len(lows)})")
+            _lines(lows, "\U0001F534", "lower")
+        if not ups and not lows:
+            if not getattr(config, "DAILY_BB_NOTIFY_WHEN_EMPTY", True):
+                return True
+            body.append(f"{day_txt} e kono F&amp;O stock upper band er upore close kore ni (RSI &gt; {rsi_min:g}).")
+        _post_html_chunks(head, body, "daily_bb")
+        print(f"Daily BB report done: {len(ups)} upper, {len(lows)} lower, {len(failed)} fetch failures.", flush=True)
+        return True
+    except Exception as e:
+        print(f"Daily BB report failed: {e}", flush=True)
+        return True   # do not retry a crashing report every run
+
+
+def maybe_run_daily_bb_once_a_day(now_ist):
+    """Twice a day (weekdays): MORNING (first run at/after DAILY_BB_RUN_AFTER, before 12:00) = previous trading day's
+    daily close; EVENING (first run at/after DAILY_BB_EVENING_RUN_AFTER, until DAILY_BB_EVENING_UNTIL) = today's close.
+    The evening one is retried every run until today's daily candle is available."""
+    if not getattr(config, "DAILY_BB_ENABLED", False) or now_ist.weekday() >= 5:
+        return
+    today = now_ist.date().isoformat()
+    hh, mm = (int(x) for x in config.DAILY_BB_RUN_AFTER.split(":"))
+    if dt.time(hh, mm) <= now_ist.time() <= dt.time(12, 0):
+        st = state.load_state()
+        if not state.already_alerted(st, "DAILY_BB", "DONE", today):
+            state.mark_alerted(st, "DAILY_BB", "DONE", today)   # mark first: a crash must not retry every run
+            state.save_state(st)
+            run_daily_bb_report(now_ist)
+    if getattr(config, "DAILY_BB_EVENING_ENABLED", True):
+        eh, em = (int(x) for x in config.DAILY_BB_EVENING_RUN_AFTER.split(":"))
+        uh, um = (int(x) for x in config.DAILY_BB_EVENING_UNTIL.split(":"))
+        if dt.time(eh, em) <= now_ist.time() <= dt.time(uh, um):
+            st = state.load_state()
+            if not state.already_alerted(st, "DAILY_BB_EVE", "DONE", today):
+                if run_daily_bb_report(now_ist):
+                    st = state.load_state()
+                    state.mark_alerted(st, "DAILY_BB_EVE", "DONE", today)
+                    state.save_state(st)
+
+
 index_symbols_orb = set(config.INDICES.keys())
 
 
@@ -4835,7 +4947,7 @@ def _bb_times(st, key, direction, day):
     return sorted(t for t in state._get_times(st, f"{key}:{direction}") if str(t).startswith(day))
 
 
-def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, instrument_key=None, levels=None):
+def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, instrument_key=None, levels=None, df5=None):
     """BREAK: candle CLOSES above the upper Bollinger band with RSI >= 70 and Supertrend support (uptrend, close above
     the line), or below the lower band with RSI <= 30 and Supertrend resistance (BEARISH). RE-ENTRY: later, when the
     same stock's candle closes back INSIDE the band after a BREAK alert today. Last 2 closed candles are checked (catch-up).
@@ -4865,8 +4977,27 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
         kind_tag = "Index" if is_index else ("Commodity" if is_comm else ("F&O" if is_fno else "Cash"))
         rsi_hi, rsi_lo = float(getattr(config, "BB_RSI_UPPER", 70)), float(getattr(config, "BB_RSI_LOWER", 30))
         need_st = getattr(config, "BB_REQUIRE_SUPERTREND", True)
+        # units to evaluate: each of the last 2 closed 15-min candles, plus (BB_FIRST2_5MIN_ENABLED) the state of that
+        # 15-min candle after its FIRST and SECOND 5-min candle (the 3rd one = the 15-min close itself, already covered).
+        units = []
         for i in today_idx[-2:]:
-            r = d.iloc[i]
+            units.append((d.iloc[i], None))
+            if getattr(config, "BB_FIRST2_5MIN_ENABLED", True) and df5 is not None and not df5.empty:
+                try:
+                    bar_start = pd.Timestamp(d.iloc[i]["timestamp"])
+                    c5 = df5[(df5["timestamp"] >= bar_start) & (df5["timestamp"] < bar_start + pd.Timedelta(minutes=10))]
+                    hist = df15[df15["timestamp"] < bar_start].tail(160)
+                    for k in range(1, len(c5) + 1):
+                        part = c5.iloc[:k]
+                        syn = {"timestamp": bar_start, "open": float(part.iloc[0]["open"]), "high": float(part["high"].max()),
+                               "low": float(part["low"].min()), "close": float(part.iloc[-1]["close"]),
+                               "volume": float(part["volume"].sum())}
+                        sd = _bb_eval(pd.concat([hist, pd.DataFrame([syn])], ignore_index=True))
+                        if sd is not None:
+                            units.append((sd.iloc[-1], str(part.iloc[-1]["timestamp"])))
+                except Exception as e:
+                    print(f"BB 5-min partial failed for {symbol}: {e}", flush=True)
+        for r, five_min in units:
             if pd.isna(r["bb_up"]) or pd.isna(r["rsi"]):
                 continue
             ct = str(r["timestamp"])
@@ -4892,7 +5023,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                     pv_ok = (r1 is not None and close > r1) if bull else (s1 is not None and close < s1)
                 # extra info (informational, never blocks): MACD side, candle volume vs recent average, last-1-month trend
                 _va = r.get("vol_avg")
-                vol_ratio = (float(r["volume"]) / float(_va)) if (_va is not None and not pd.isna(_va) and float(_va) > 0) else None
+                vol_ratio = (float(r["volume"]) / float(_va)) if (_va is not None and not pd.isna(_va) and float(_va) > 0 and five_min is None) else None
                 _ts = pd.Timestamp(r["timestamp"])
                 _win = d[(d["timestamp"] >= _ts - pd.Timedelta(days=30)) & (d["timestamp"] <= _ts)]
                 m_pct = m_days = m_above = None
@@ -4906,7 +5037,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                         "macd": float(r["macd"]), "macd_sig": float(r["macd_sig"]), "vol_ratio": vol_ratio,
                         "month_pct": m_pct, "month_days": m_days, "month_above_avg": m_above, "close": close, "rsi": rsi, "is_fno": is_fno, "kind": kind_tag,
                         "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
-                        "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct}
+                        "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": five_min}
                 if outside and rsi_ok and st_ok and pv_ok and not active:
                     if state.already_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct):
                         continue
@@ -4915,7 +5046,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                     bb_hits["break"].append(base)
                     base["log_type"] = "BB"
                     _log_orb15_for_eod(saved_state, base, symbol, instrument_key)
-                elif active and getattr(config, "BB_REENTRY_ALERT", True) and ct > max(brk) and not outside:
+                elif active and five_min is None and getattr(config, "BB_REENTRY_ALERT", True) and ct > max(brk) and not outside:
                     if state.already_alerted(saved_state, f"{symbol}::BB_REENTRY", direction, ct):
                         continue
                     state.mark_alerted(saved_state, f"{symbol}::BB_REENTRY", direction, ct)
@@ -5073,6 +5204,8 @@ def send_bb_summary(hits, now_ist, kind):
             sec = "" if kindtxt in ("Index", "Commodity") else f" ({_html.escape(_sector_label(h['symbol']) or 'Other')})"
             head = (f"{icon} <b>{_html.escape(h['symbol'])}</b>{sec} [{kindtxt}] "
                     f"<a href=\"{h.get('chart_link', '')}\">Chart</a> {str(h['candle_time'])[11:16]}")
+            if kind == "break" and h.get("five_min"):
+                head += f" \u23F1 5-min {str(h['five_min'])[11:16]} candle e"
             if kind == "break":
                 st = (f" \u00b7 Supertrend {h['st_line']:.2f} \u2705") if h.get("st_line") else ""
                 pv = ""
@@ -5501,6 +5634,17 @@ def _run_inner():
                 send_mode_failure_notice("daily_scan", e, now_ist)
         return
 
+    if mode == "daily_bb":
+        try:
+            _stb = state.load_state()
+            state.mark_alerted(_stb, "DAILY_BB", "DONE", now_ist.date().isoformat())
+            state.save_state(_stb)
+            run_daily_bb_report(now_ist)
+        except Exception as e:
+            print(f"run_daily_bb_report failed: {e}", flush=True)
+            send_mode_failure_notice("daily_bb", e, now_ist)
+        return
+
     if mode == "day_movers":
         try:
             run_day_movers_report(now_ist)
@@ -5584,6 +5728,12 @@ def _run_inner():
             send_mode_failure_notice("daily_scan", e, now_ist)
         except Exception:
             pass
+
+    # Daily Bollinger band report (first run at/after DAILY_BB_RUN_AFTER, ~09:01).
+    try:
+        maybe_run_daily_bb_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Daily BB report failed this run (non-blocking): {e}", flush=True)
 
     # End-of-day summary of today's alerts (first run at/after 15:40 IST).
     try:

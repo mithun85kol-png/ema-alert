@@ -939,7 +939,7 @@ POSITION_75MIN_EMA_MIN_BARS = 60
 ENABLED_SCAN_MODES = {
     "full",            # Bollinger + commodity MACD + daily/monthly/EOD/day-movers/opening hooks run from this
     "opening_bias_report", "opening_bias_report_30m", "opening_bias_report_1h",
-    "daily_scan", "monthly_scan", "eod_report", "alert_stats", "day_movers", "telegram_test",
+    "daily_scan", "daily_bb", "monthly_scan", "eod_report", "alert_stats", "day_movers", "telegram_test",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -1209,7 +1209,7 @@ EOD_CHART_LIST_ENABLED = False   # OFF 2026-11-21 (only-5-alerts mode)
 # run at/after each time below (within DAY_MOVERS_WINDOW_MIN minutes), or on demand: SCAN_MODE=day_movers.
 DAY_MOVERS_ENABLED = True
 DAY_MOVERS_COUNT = 10
-DAY_MOVERS_AUTO_TIMES = ("10:30", "15:40")   # IST
+DAY_MOVERS_AUTO_TIMES = ("15:40",)   # IST
 DAY_MOVERS_WINDOW_MIN = 90
 
 
@@ -1229,7 +1229,7 @@ ST_PERIOD = 10
 ST_MULT = 3.0
 BB_REQUIRE_SUPERTREND = True
 BB_BEARISH_ENABLED = True       # cash stocks still follow CASH_STOCKS_BULLISH_ONLY
-BB_REENTRY_ALERT = True
+BB_REENTRY_ALERT = False   # OFF 2026-11-22 (apatoto re-entry bondho)
 BB_MIN_BARS = 30
 
 
@@ -1258,3 +1258,22 @@ CORP_EVENTS_DIVIDEND_DAYS = 30     # show the ex-dividend date if within this ma
 
 # F&O stocks: lot size (qty) + ATM call/put price + IV on the Bollinger alert (ADDED 2026-11-22), from Upstox option chain.
 ATM_OPTION_INFO_ENABLED = True
+
+# 15-min Bollinger alert also fires when the FIRST or SECOND 5-min candle inside a 15-min candle already closed outside the
+# band (+RSI +Supertrend +R1/S1) even if the 15-min candle later closes back inside (ADDED 2026-11-22).
+BB_FIRST2_5MIN_ENABLED = True
+
+# ---------- Daily Bollinger band report (ADDED 2026-11-22) ----------
+# Every morning: F&O stocks whose last COMPLETED daily candle closed above the daily upper Bollinger band
+# (BB_PERIOD, DAILY_BB_STD) with daily RSI(14) > DAILY_BB_RSI_MIN. Runs on the first normal run at/after DAILY_BB_RUN_AFTER.
+DAILY_BB_ENABLED = True
+DAILY_BB_RUN_AFTER = "09:00"
+DAILY_BB_RSI_MIN = 65
+DAILY_BB_STD = 2.0
+DAILY_BB_HISTORY_DAYS = 180
+DAILY_BB_UNIVERSE = "fo"            # "fo" or "fo+n500"
+DAILY_BB_INCLUDE_LOWER = False      # True = also list closes below the lower band with RSI < 35
+DAILY_BB_NOTIFY_WHEN_EMPTY = True
+DAILY_BB_EVENING_ENABLED = True     # ADDED 2026-11-22: a second report after the close with TODAY's daily candle
+DAILY_BB_EVENING_RUN_AFTER = "15:45"
+DAILY_BB_EVENING_UNTIL = "17:30"    # retried every run until today's daily candle is available
