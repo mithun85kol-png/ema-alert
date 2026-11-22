@@ -1221,10 +1221,10 @@ DAY_MOVERS_WINDOW_MIN = 90
 #  RE-ENTRY : after a BREAK alert today, when the same stock's candle closes back INSIDE the band -> second summary.
 BB_ALERT_ENABLED = True
 BB_PERIOD = 20
-BB_STD = 2.0
+BB_STD = 2.0   # 2026-11-22: back to 2.0 standard deviations
 BB_RSI_PERIOD = 14
-BB_RSI_UPPER = 70
-BB_RSI_LOWER = 30
+BB_RSI_UPPER = 65   # CHANGED 2026-11-22 (was 70)
+BB_RSI_LOWER = 35   # CHANGED 2026-11-22 (was 30)
 ST_PERIOD = 10
 ST_MULT = 3.0
 BB_REQUIRE_SUPERTREND = True
@@ -1247,3 +1247,14 @@ OPENING_15M_RUN_AFTER = "09:31"
 BB_INCLUDE_INDICES = True               # NIFTY 50 / NIFTY BANK / SENSEX Bollinger alerts
 BB_INCLUDE_COMMODITIES = True           # commodity Bollinger alerts
 MACD15_ALERT_COMMODITIES = True         # commodities keep the 15-min MACD alert even though MACD15_ALERT_ENABLED is False
+BB_REQUIRE_R1S1 = True          # ADDED 2026-11-22: bullish close must also be above R1, bearish below S1 (floor pivots of the previous day)
+BB_VOL_GOOD_RATIO = 1.5      # candle volume vs avg of the last 20 candles: >= this shows a tick on the alert (informational)
+
+# Result / dividend line on the Bollinger alert (ADDED 2026-11-22) — from Yahoo Finance via yfinance ("SYMBOL.NS").
+# Best effort: if Yahoo has no date (or is unreachable) the line is simply left out.
+CORP_EVENTS_ENABLED = True
+CORP_EVENTS_RESULT_DAYS = 45       # show the next result date if it falls within this many days
+CORP_EVENTS_DIVIDEND_DAYS = 30     # show the ex-dividend date if within this many days (or up to 3 days ago)
+
+# F&O stocks: lot size (qty) + ATM call/put price + IV on the Bollinger alert (ADDED 2026-11-22), from Upstox option chain.
+ATM_OPTION_INFO_ENABLED = True

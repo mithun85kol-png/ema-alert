@@ -99,7 +99,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v55 (2026-11-21)"
+BUILD_TAG = "short-v60 (2026-11-22)"
 
 
 def _ema920_line(info15, info75):
@@ -702,12 +702,6 @@ def send_alert(signal):
         day_change_line = f"Day Change: {day_change_pct:+.2f}% {day_change_icon}\n"
     else:
         day_change_line = ""
-    _pd = signal.get("prev_day")
-    if _pd and _pd.get("chg_pct") is not None:
-        _w = {"ABOVE_HIGH": " · aj ager diner high er UPORE", "BELOW_LOW": " · aj ager diner low er NICHE",
-              "INSIDE": " · aj ager diner range er bhitore"}.get(_pd.get("where"), "")
-        day_change_line += (f"Ager din: {'🟢' if _pd['chg_pct'] >= 0 else '🔴'} {_pd['chg_pct']:+.2f}% · "
-                            f"H {_pd['high']:g} · L {_pd['low']:g} · C {_pd['close']:g}{_w}\n")
 
     r3 = signal.get("r3")
     s3 = signal.get("s3")

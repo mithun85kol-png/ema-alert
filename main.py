@@ -2376,7 +2376,7 @@ def run_fo_scan(now_ist, index_only=False):
             prev_close = levels.get("prev_close") if levels else None
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
-            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol))
+            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
             if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
                     getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
@@ -3140,7 +3140,7 @@ def run_nifty500_scan(now_ist):
             prev_close = levels.get("prev_close") if levels else None
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
-            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol))
+            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
             if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
                     getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
@@ -4766,7 +4766,7 @@ def send_orb_summary(hits, now_ist, window_min):
                        + (f" \u00b7 VWAP {h['vwap']:.2f} \u2705" if h.get("vwap") else "")
                        + (f" \u00b7 EMA50 {h['ema50']:.2f} \u2705" if h.get("ema50") else "")
                        + (f" \u00b7 Vol {h['vol_ratio']:.1f}x" if h.get("vol_ratio") else "")
-                       + (f"\n    {prev_day_text(h.get('prev_day'))}" if h.get("prev_day") else ""))
+)
     text = "\n".join(out)
     for i in range(0, len(text), 3900):
         try:
@@ -4823,6 +4823,10 @@ def _bb_eval(df15):
     k = float(getattr(config, "BB_STD", 2.0))
     d["bb_up"], d["bb_lo"] = ma + k * sd, ma - k * sd
     d["rsi"] = _rsi_series(cl.tolist(), int(getattr(config, "BB_RSI_PERIOD", 14))).values
+    ema = lambda s, n: s.ewm(span=n, adjust=False).mean()
+    d["macd"] = ema(cl, 12) - ema(cl, 26)
+    d["macd_sig"] = ema(d["macd"], 9)
+    d["vol_avg"] = d["volume"].astype(float).shift(1).rolling(20, min_periods=10).mean()
     d["st_line"], d["st_dir"] = _supertrend(d, int(getattr(config, "ST_PERIOD", 10)), float(getattr(config, "ST_MULT", 3.0)))
     return d
 
@@ -4831,7 +4835,7 @@ def _bb_times(st, key, direction, day):
     return sorted(t for t in state._get_times(st, f"{key}:{direction}") if str(t).startswith(day))
 
 
-def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, instrument_key=None):
+def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, instrument_key=None, levels=None):
     """BREAK: candle CLOSES above the upper Bollinger band with RSI >= 70 and Supertrend support (uptrend, close above
     the line), or below the lower band with RSI <= 30 and Supertrend resistance (BEARISH). RE-ENTRY: later, when the
     same stock's candle closes back INSIDE the band after a BREAK alert today. Last 2 closed candles are checked (catch-up).
@@ -4848,6 +4852,16 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
         day = now_ist.date().isoformat()
         today_idx = [i for i in range(len(d)) if str(d.iloc[i]["timestamp"]).startswith(day)]
         is_fno = symbol.upper() in fno_underlyings
+        # classic floor pivots from the previous day's H/L/C (15-min history first, pivot cache as fallback)
+        r1 = s1 = None
+        pdi = prev_day_info(df15, now_ist)
+        _h = (pdi or {}).get("high") or (levels or {}).get("high")
+        _l = (pdi or {}).get("low") or (levels or {}).get("low")
+        _c = (pdi or {}).get("close") or (levels or {}).get("prev_close")
+        if _h and _l and _c:
+            _p = (float(_h) + float(_l) + float(_c)) / 3.0
+            r1, s1 = 2 * _p - float(_l), 2 * _p - float(_h)
+        need_pivot = getattr(config, "BB_REQUIRE_R1S1", True)
         kind_tag = "Index" if is_index else ("Commodity" if is_comm else ("F&O" if is_fno else "Cash"))
         rsi_hi, rsi_lo = float(getattr(config, "BB_RSI_UPPER", 70)), float(getattr(config, "BB_RSI_LOWER", 30))
         need_st = getattr(config, "BB_REQUIRE_SUPERTREND", True)
@@ -4873,15 +4887,31 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                 if need_st:
                     st_ok = (stl is not None and not pd.isna(stl) and ((std_ == 1 and close > float(stl)) if bull
                                                                        else (std_ == -1 and close < float(stl))))
-                base = {"symbol": symbol, "direction": direction, "close": close, "rsi": rsi, "is_fno": is_fno, "kind": kind_tag,
+                pv_ok = True
+                if need_pivot:
+                    pv_ok = (r1 is not None and close > r1) if bull else (s1 is not None and close < s1)
+                # extra info (informational, never blocks): MACD side, candle volume vs recent average, last-1-month trend
+                _va = r.get("vol_avg")
+                vol_ratio = (float(r["volume"]) / float(_va)) if (_va is not None and not pd.isna(_va) and float(_va) > 0) else None
+                _ts = pd.Timestamp(r["timestamp"])
+                _win = d[(d["timestamp"] >= _ts - pd.Timedelta(days=30)) & (d["timestamp"] <= _ts)]
+                m_pct = m_days = m_above = None
+                if len(_win) >= 20:
+                    _b = float(_win.iloc[0]["close"])
+                    if _b:
+                        m_pct = (close - _b) / _b * 100.0
+                        m_days = (_ts - pd.Timestamp(_win.iloc[0]["timestamp"])).days
+                        m_above = close > float(_win["close"].mean())
+                base = {"symbol": symbol, "direction": direction, "r1": r1, "s1": s1, "instrument_key": instrument_key,
+                        "macd": float(r["macd"]), "macd_sig": float(r["macd_sig"]), "vol_ratio": vol_ratio,
+                        "month_pct": m_pct, "month_days": m_days, "month_above_avg": m_above, "close": close, "rsi": rsi, "is_fno": is_fno, "kind": kind_tag,
                         "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                         "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct}
-                if outside and rsi_ok and st_ok and not active:
+                if outside and rsi_ok and st_ok and pv_ok and not active:
                     if state.already_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct):
                         continue
                     state.mark_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct)
                     base["chart_link"] = build_chart_link(symbol, "15-min")
-                    base["prev_day"] = prev_day_info(df15, now_ist, close)
                     bb_hits["break"].append(base)
                     base["log_type"] = "BB"
                     _log_orb15_for_eod(saved_state, base, symbol, instrument_key)
@@ -4898,6 +4928,126 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
         print(f"BB scan failed for {symbol}: {e}", flush=True)
 
 
+_ATM_OPT_CACHE = {}
+
+
+def get_atm_option_text(symbol, instrument_key, today=None):
+    """'🎯 Lot 550 · Exp 24 Dec · ATM 450: CE 12.5 (IV 28.4%) · PE 11.8 (IV 27.9%) · 1 lot ≈ ₹6,875 (CE)' for an F&O stock
+    / index from Upstox's option-contract + option-chain endpoints (nearest expiry, strike closest to spot).
+    Returns "" if anything is missing (never raises, never blocks the alert)."""
+    try:
+        if not getattr(config, "ATM_OPTION_INFO_ENABLED", True) or not instrument_key:
+            return ""
+        if symbol in _ATM_OPT_CACHE:
+            return _ATM_OPT_CACHE[symbol]
+        text = ""
+        try:
+            today = today or _now_ist().date()
+            headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
+            r = _get_with_retry(UPSTOX_OPTION_CONTRACTS_URL, headers=headers, params={"instrument_key": instrument_key}, timeout=15)
+            r.raise_for_status()
+            contracts = r.json().get("data") or []
+            exps = sorted({c["expiry"] for c in contracts if c.get("expiry") and dt.date.fromisoformat(str(c["expiry"])[:10]) >= today})
+            if exps:
+                expiry = str(exps[0])[:10]
+                lot = next((int(c["lot_size"]) for c in contracts if str(c.get("expiry"))[:10] == expiry and c.get("lot_size")), None)
+                if not lot:
+                    lot = (instruments.get_fno_lot_sizes() or {}).get(symbol.upper())
+                r2 = _get_with_retry(UPSTOX_OPTION_CHAIN_URL, headers=headers,
+                                     params={"instrument_key": instrument_key, "expiry_date": expiry}, timeout=15)
+                r2.raise_for_status()
+                chain = [row for row in (r2.json().get("data") or []) if row.get("strike_price") is not None]
+                if chain:
+                    spot = next((float(row["underlying_spot_price"]) for row in chain if row.get("underlying_spot_price")), None)
+                    if spot:
+                        row = min(chain, key=lambda x: abs(float(x["strike_price"]) - spot))
+                        def _side(o):
+                            o = o or {}
+                            ltp = (o.get("market_data") or {}).get("ltp")
+                            iv = (o.get("option_greeks") or {}).get("iv")
+                            return ltp, iv
+                        (cl, civ), (pl, piv) = _side(row.get("call_options")), _side(row.get("put_options"))
+                        def _fmt(tag, ltp, iv):
+                            if not ltp:
+                                return f"{tag} -"
+                            return f"{tag} {float(ltp):g}" + (f" (IV {float(iv):.1f}%)" if iv else "")
+                        strike = float(row["strike_price"])
+                        parts = []
+                        if lot:
+                            parts.append(f"Lot {int(lot)}")
+                        parts.append(f"Exp {dt.date.fromisoformat(expiry).strftime('%d %b')}")
+                        parts.append(f"ATM {strike:g}: {_fmt('CE', cl, civ)} \u00b7 {_fmt('PE', pl, piv)}")
+                        if lot and cl:
+                            parts.append(f"1 lot CE \u2248 \u20b9{float(cl) * int(lot):,.0f}")
+                        text = "\U0001F3AF " + " \u00b7 ".join(parts)
+        except Exception as e:
+            print(f"[atm-option] {symbol}: {type(e).__name__}: {e}", flush=True)
+            text = ""
+        _ATM_OPT_CACHE[symbol] = text
+        return text
+    except Exception:
+        return ""
+
+
+_CORP_EVENT_CACHE = {}
+
+
+def get_corp_event_text(symbol, today=None):
+    """'🗓 Result ~28 Nov (6d) · Dividend ex-date 25 Nov' from Yahoo Finance (yfinance, "SYMBOL.NS"), or "" when
+    nothing upcoming / not available. Best effort: Yahoo's Indian dates are sometimes estimates or missing, so a
+    missing line does NOT mean 'no result/dividend'. Cached per run; never raises; hard 8-sec per-symbol cap."""
+    try:
+        if not getattr(config, "CORP_EVENTS_ENABLED", True):
+            return ""
+        if symbol in _CORP_EVENT_CACHE:
+            return _CORP_EVENT_CACHE[symbol]
+        text = ""
+        try:
+            import yfinance as yf
+            import concurrent.futures as _cf
+            today = today or _now_ist().date()
+
+            def _fetch():
+                return yf.Ticker(f"{symbol}.NS").calendar
+
+            with _cf.ThreadPoolExecutor(max_workers=1) as ex:
+                cal = ex.submit(_fetch).result(timeout=8)
+
+            def _as_dates(v):
+                out = []
+                for x in (v if isinstance(v, (list, tuple)) else [v]):
+                    try:
+                        if x is None or (isinstance(x, float) and x != x):
+                            continue
+                        out.append(pd.Timestamp(x).date())
+                    except Exception:
+                        continue
+                return out
+
+            if cal is not None and hasattr(cal, "to_dict") and not isinstance(cal, dict):
+                cal = {k: list(v.values()) if isinstance(v, dict) else v for k, v in cal.to_dict().items()}
+            cal = cal or {}
+            parts = []
+            win_r = int(getattr(config, "CORP_EVENTS_RESULT_DAYS", 45))
+            win_d = int(getattr(config, "CORP_EVENTS_DIVIDEND_DAYS", 30))
+            er = sorted(d for d in _as_dates(cal.get("Earnings Date")) if 0 <= (d - today).days <= win_r)
+            if er:
+                parts.append(f"Result ~{er[0].strftime('%d %b')} ({(er[0] - today).days}d)")
+            xd = sorted(d for d in _as_dates(cal.get("Ex-Dividend Date")) if -3 <= (d - today).days <= win_d)
+            if xd:
+                lab = "today" if xd[0] == today else (f"{(xd[0] - today).days}d" if xd[0] > today else "just passed")
+                parts.append(f"Dividend ex-date {xd[0].strftime('%d %b')} ({lab})")
+            if parts:
+                text = "\U0001F5D3 " + " \u00b7 ".join(parts)
+        except Exception as e:
+            print(f"[corp-events] {symbol}: {type(e).__name__}", flush=True)
+            text = ""
+        _CORP_EVENT_CACHE[symbol] = text
+        return text
+    except Exception:
+        return ""
+
+
 def send_bb_summary(hits, now_ist, kind):
     """ONE summary message per run: 'break' = close outside the Bollinger band (+RSI +Supertrend);
     'reentry' = those stocks closing back inside the band."""
@@ -4906,8 +5056,8 @@ def send_bb_summary(hits, now_ist, kind):
     if not hits:
         return
     if kind == "break":
-        out = [f"\U0001F4C8 <b>BOLLINGER BAND CLOSE + RSI + SUPERTREND</b>  {now_ist.strftime('%H:%M')}",
-               "<i>15-min candle band er baire close · RSI 70/30 · Supertrend support</i>"]
+        out = [f"\U0001F4C8 <b>BOLLINGER BAND + RSI + R1/S1 + SUPERTREND</b>  {now_ist.strftime('%H:%M')}",
+               "<i>15-min candle band er baire close · RSI 65/35 · R1/S1 break · Supertrend support</i>"]
     else:
         out = [f"\U0001F501 <b>BOLLINGER BAND RE-ENTRY</b>  {now_ist.strftime('%H:%M')}",
                "<i>ager alert howa stock ebar band er bhitore fire close korlo</i>"]
@@ -4925,10 +5075,33 @@ def send_bb_summary(hits, now_ist, kind):
                     f"<a href=\"{h.get('chart_link', '')}\">Chart</a> {str(h['candle_time'])[11:16]}")
             if kind == "break":
                 st = (f" \u00b7 Supertrend {h['st_line']:.2f} \u2705") if h.get("st_line") else ""
+                pv = ""
+                if bull and h.get("r1"):
+                    pv = f" \u00b7 above R1 {h['r1']:.2f} \u2705"
+                elif (not bull) and h.get("s1"):
+                    pv = f" \u00b7 below S1 {h['s1']:.2f} \u2705"
                 line = (f"    {h['close']:g} \u00b7 {'above upper' if bull else 'below lower'} band {band:.2f}"
-                        f" \u00b7 RSI {h['rsi']:.1f}{st}")
-                if h.get("prev_day"):
-                    line += f"\n    {prev_day_text(h['prev_day'])}"
+                        f" \u00b7 RSI {h['rsi']:.1f}{pv}{st}")
+                mk = lambda ok: "\u2705" if ok else "\u274C"
+                good = float(getattr(config, "BB_VOL_GOOD_RATIO", 1.5))
+                ex = [f"MACD {h['macd']:.2f} / {h['macd_sig']:.2f} {mk((h['macd'] > h['macd_sig']) == bull)}"]
+                if h.get("vol_ratio") is not None:
+                    ex.append(f"Vol {h['vol_ratio']:.1f}x {mk(h['vol_ratio'] >= good)}")
+                if h.get("month_pct") is not None:
+                    ok1m = (h["month_pct"] > 0) == bull
+                    _dot = "\U0001F7E2" if h["month_pct"] >= 0 else "\U0001F534"
+                    ex.append(f"1M {_dot} {h['month_pct']:+.1f}% ({h['month_days']}d) {mk(ok1m)}")
+                line += "\n    " + " \u00b7 ".join(ex)
+                if kindtxt in ("F&O", "Cash"):
+                    ao = get_atm_option_text(h["symbol"], h.get("instrument_key"), now_ist.date()) if h.get("is_fno") else ""
+                    if ao:
+                        line += f"\n    {ao}"
+                    ev = get_corp_event_text(h["symbol"], now_ist.date())
+                    if ev:
+                        line += f"\n    {ev}"
+                    sym_q = urllib.parse.quote_plus(h["symbol"])
+                    line += (f"\n    \U0001F4F0 <a href=\"https://news.google.com/search?q={sym_q}+share+news&hl=en-IN&gl=IN&ceid=IN:en\">News</a>"
+                             f" \u00b7 \U0001F5D3 <a href=\"https://news.google.com/search?q={sym_q}+result+OR+dividend+date&hl=en-IN&gl=IN&ceid=IN:en\">Result/Dividend</a>")
             else:
                 bp = h.get("break_price")
                 mv = ""
