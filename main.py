@@ -5111,6 +5111,38 @@ def get_atm_option_text(symbol, instrument_key, today=None):
                         if lot and cl:
                             parts.append(f"1 lot CE \u2248 \u20b9{float(cl) * int(lot):,.0f}")
                         text = "\U0001F3AF " + " \u00b7 ".join(parts)
+                        # Max Call OI (resistance) / Max Put OI (support) strikes of the same expiry, with price, OI and
+                        # the change vs the previous day's closing OI
+                        if getattr(config, "OPTION_MAX_OI_ENABLED", True):
+                            def _oi_txt(v):
+                                v = float(v or 0)
+                                return f"{v / 1e5:.2f}L" if v >= 1e5 else (f"{v / 1e3:.1f}K" if v >= 1e3 else f"{v:g}")
+
+                            def _best(side):
+                                best = None
+                                for rw in chain:
+                                    md = (rw.get(side) or {}).get("market_data") or {}
+                                    oi = float(md.get("oi") or 0)
+                                    if oi > 0 and (best is None or oi > best[1]):
+                                        best = (float(rw["strike_price"]), oi, md.get("ltp"), md.get("prev_oi"))
+                                return best
+
+                            def _fmt_oi(tag, b):
+                                if not b:
+                                    return None
+                                s = f"Max {tag} OI {b[0]:g}: {_oi_txt(b[1])}"
+                                if b[3]:
+                                    s += f" ({(b[1] - float(b[3])) / float(b[3]) * 100:+.0f}% vs kal)"
+                                if b[2]:
+                                    s += f" \u00b7 {'CE' if tag == 'Call' else 'PE'} price {float(b[2]):g}"
+                                return s
+                            tc = sum(float((rw.get("call_options") or {}).get("market_data", {}).get("oi") or 0) for rw in chain)
+                            tp = sum(float((rw.get("put_options") or {}).get("market_data", {}).get("oi") or 0) for rw in chain)
+                            bits = [x for x in (_fmt_oi("Call", _best("call_options")), _fmt_oi("Put", _best("put_options"))) if x]
+                            if bits:
+                                if tc > 0:
+                                    bits.append(f"PCR {tp / tc:.2f}")
+                                text += "\n    \U0001F4CD " + " \u00b7 ".join(bits)
         except Exception as e:
             print(f"[atm-option] {symbol}: {type(e).__name__}: {e}", flush=True)
             text = ""

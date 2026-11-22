@@ -1277,3 +1277,4 @@ DAILY_BB_NOTIFY_WHEN_EMPTY = True
 DAILY_BB_EVENING_ENABLED = True     # ADDED 2026-11-22: a second report after the close with TODAY's daily candle
 DAILY_BB_EVENING_RUN_AFTER = "15:45"
 DAILY_BB_EVENING_UNTIL = "17:30"    # retried every run until today's daily candle is available
+OPTION_MAX_OI_ENABLED = True        # ADDED 2026-11-22: Max Call OI / Max Put OI strike (+price, OI, change vs yesterday, PCR) on F&O Bollinger alerts
