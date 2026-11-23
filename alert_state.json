@@ -13336,6 +13336,20 @@
         "nifty": null,
         "vol": 2.26,
         "sector": "Realty"
+      },
+      {
+        "symbol": "BEL",
+        "direction": "BEARISH",
+        "time": "2026-11-23 12:45:00+05:30",
+        "price": 396.95,
+        "key": "NSE_EQ|INE263A01024",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.03,
+        "sector": "Capital Goods"
       }
     ]
   },
@@ -14617,5 +14631,8 @@
   ],
   "ABREL::BB_BREAK:BULLISH": [
     "2026-11-23 12:30:00+05:30"
+  ],
+  "BEL::BB_BREAK:BEARISH": [
+    "2026-11-23 12:45:00+05:30"
   ]
 }
