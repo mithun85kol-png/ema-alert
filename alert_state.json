@@ -1199,7 +1199,8 @@
     "2026-11-17",
     "2026-11-18",
     "2026-11-19",
-    "2026-11-20"
+    "2026-11-20",
+    "2026-11-23"
   ],
   "CIPLA::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-21 13:15:00+05:30",
@@ -7524,6 +7525,216 @@
         "nifty": null,
         "vol": 3.55,
         "sector": "Oil Gas & Consumable Fuels"
+      },
+      {
+        "symbol": "NAM-INDIA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 1029.3,
+        "key": "NSE_EQ|INE298J01013",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "PGEL",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 596.4,
+        "key": "NSE_EQ|INE457L01029",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Consumer Durables"
+      },
+      {
+        "symbol": "NAUKRI",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 1204.5,
+        "key": "NSE_EQ|INE663F01032",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.29,
+        "sector": "Consumer Services"
+      },
+      {
+        "symbol": "UNIONBANK",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 209.26,
+        "key": "NSE_EQ|INE692A01016",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.17,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "BEL",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 404.15,
+        "key": "NSE_EQ|INE263A01024",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "BANKINDIA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 159.25,
+        "key": "NSE_EQ|INE084A01016",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.69,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "SYRMA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 1491.3,
+        "key": "NSE_EQ|INE0DYJ01015",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.61,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "MEESHO",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 264.8,
+        "key": "NSE_EQ|INE0VDM01015",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Consumer Services"
+      },
+      {
+        "symbol": "TEJASNET",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 409.0,
+        "key": "NSE_EQ|INE010J01012",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 10.62,
+        "sector": "Telecommunication"
+      },
+      {
+        "symbol": "BSOFT",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 315.35,
+        "key": "NSE_EQ|INE836A01035",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 4.47,
+        "sector": "Information Technology"
+      },
+      {
+        "symbol": "AFFLE",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 1616.8,
+        "key": "NSE_EQ|INE00WC01027",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Information Technology"
+      },
+      {
+        "symbol": "JYOTICNC",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 1070.35,
+        "key": "NSE_EQ|INE980O01024",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.78,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "PWL",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 139.3,
+        "key": "NSE_EQ|INE0LP301011",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 2.04,
+        "sector": "Consumer Services"
+      },
+      {
+        "symbol": "AFCONS",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 222.95,
+        "key": "NSE_EQ|INE101I01011",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 2.17,
+        "sector": "Construction"
+      },
+      {
+        "symbol": "HONASA",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:45:00+05:30",
+        "price": 539.5,
+        "key": "NSE_EQ|INE0J5401028",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 4.35,
+        "sector": "Fast Moving Consumer Goods"
       }
     ]
   },
@@ -14003,5 +14214,50 @@
   ],
   "CHENNPETRO::BB_BREAK:BULLISH": [
     "2026-11-23 09:30:00+05:30"
+  ],
+  "NAM-INDIA::BB_BREAK:BEARISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "PGEL::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "NAUKRI::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "UNIONBANK::BB_BREAK:BEARISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "BEL::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "BANKINDIA::BB_BREAK:BEARISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "SYRMA::BB_BREAK:BEARISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "MEESHO::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "TEJASNET::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "BSOFT::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "AFFLE::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "JYOTICNC::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "PWL::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "AFCONS::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
+  ],
+  "HONASA::BB_BREAK:BULLISH": [
+    "2026-11-23 09:45:00+05:30"
   ]
 }
