@@ -7062,6 +7062,468 @@
         "nifty": null,
         "vol": 7.14,
         "sector": "Services"
+      },
+      {
+        "symbol": "ENRIN",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 2904.4,
+        "key": "NSE_EQ|INE1NPP01017",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.38,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "BDL",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1026.05,
+        "key": "NSE_EQ|INE171Z01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "INFY",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1120.2,
+        "key": "NSE_EQ|INE009A01021",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.73,
+        "sector": "Information Technology"
+      },
+      {
+        "symbol": "UNOMINDA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1366.2,
+        "key": "NSE_EQ|INE405E01023",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "TECHM",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1790.2,
+        "key": "NSE_EQ|INE669C01036",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.82,
+        "sector": "Information Technology"
+      },
+      {
+        "symbol": "CONCOR",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 435.0,
+        "key": "NSE_EQ|INE111A01025",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Services"
+      },
+      {
+        "symbol": "WIPRO",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 188.75,
+        "key": "NSE_EQ|INE075A01022",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.79,
+        "sector": "Information Technology"
+      },
+      {
+        "symbol": "COCHINSHIP",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1116.0,
+        "key": "NSE_EQ|INE704P01025",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.2,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "IRFC",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 82.4,
+        "key": "NSE_EQ|INE053F01010",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "NTPC",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 318.75,
+        "key": "NSE_EQ|INE733E01010",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Power"
+      },
+      {
+        "symbol": "ANANDRATHI",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 2355.8,
+        "key": "NSE_EQ|INE463V01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "PIIND",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1580.9,
+        "key": "NSE_EQ|INE603J01030",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Chemicals"
+      },
+      {
+        "symbol": "JIOFIN",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 223.01,
+        "key": "NSE_EQ|INE758E01017",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "PAGEIND",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 30665.0,
+        "key": "NSE_EQ|INE761H01022",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.36,
+        "sector": "Textiles"
+      },
+      {
+        "symbol": "FORCEMOT",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 20030.0,
+        "key": "NSE_EQ|INE451A01017",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "DMART",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 3459.9,
+        "key": "NSE_EQ|INE192R01011",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 4.96,
+        "sector": "Consumer Services"
+      },
+      {
+        "symbol": "CIPLA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1400.0,
+        "key": "NSE_EQ|INE059A01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "OIL",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 426.0,
+        "key": "NSE_EQ|INE274J01014",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 0.96,
+        "sector": "Oil Gas & Consumable Fuels"
+      },
+      {
+        "symbol": "SUNPHARMA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1874.5,
+        "key": "NSE_EQ|INE044A01036",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 0.85,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "ADANIGREEN",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1410.6,
+        "key": "NSE_EQ|INE364U01010",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Power"
+      },
+      {
+        "symbol": "RECLTD",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 293.4,
+        "key": "NSE_EQ|INE020B01018",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "SRF",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 2538.5,
+        "key": "NSE_EQ|INE647A01010",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 7.21,
+        "sector": "Chemicals"
+      },
+      {
+        "symbol": "POLICYBZR",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1050.0,
+        "key": "NSE_EQ|INE417T01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 3.31,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "RVNL",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 189.15,
+        "key": "NSE_EQ|INE415G01027",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Construction"
+      },
+      {
+        "symbol": "BOSCHLTD",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 48800.0,
+        "key": "NSE_EQ|INE323A01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.4,
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "AUROPHARMA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1783.7,
+        "key": "NSE_EQ|INE406A01037",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "COLPAL",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1791.0,
+        "key": "NSE_EQ|INE259A01022",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 3.39,
+        "sector": "Fast Moving Consumer Goods"
+      },
+      {
+        "symbol": "BHEL",
+        "direction": "BEARISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 423.75,
+        "key": "NSE_EQ|INE257A01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 5.8,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "RRKABEL",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1834.9,
+        "key": "NSE_EQ|INE777K01022",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "RAINBOW",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1302.1,
+        "key": "NSE_EQ|INE961O01016",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 2.45,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "VIJAYA",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1620.4,
+        "key": "NSE_EQ|INE043W01024",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 5.74,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "ITCHOTELS",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 186.7,
+        "key": "NSE_EQ|INE379A01028",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Consumer Services"
+      },
+      {
+        "symbol": "CHENNPETRO",
+        "direction": "BULLISH",
+        "time": "2026-11-23 09:30:00+05:30",
+        "price": 1443.4,
+        "key": "NSE_EQ|INE178A01016",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 3.55,
+        "sector": "Oil Gas & Consumable Fuels"
       }
     ]
   },
@@ -13442,5 +13904,104 @@
   ],
   "MARUTI::SWEEP::BULLISH:BULLISH": [
     "2026-09-07 09:15:00+05:30"
+  ],
+  "ENRIN::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "BDL::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "INFY::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "UNOMINDA::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "TECHM::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "CONCOR::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "WIPRO::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "COCHINSHIP::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "IRFC::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "NTPC::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "ANANDRATHI::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "PIIND::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "JIOFIN::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "PAGEIND::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "FORCEMOT::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "DMART::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "CIPLA::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "OIL::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "SUNPHARMA::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "ADANIGREEN::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "RECLTD::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "SRF::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "POLICYBZR::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "RVNL::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "BOSCHLTD::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "AUROPHARMA::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "COLPAL::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "BHEL::BB_BREAK:BEARISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "RRKABEL::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "RAINBOW::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "VIJAYA::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "ITCHOTELS::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
+  ],
+  "CHENNPETRO::BB_BREAK:BULLISH": [
+    "2026-11-23 09:30:00+05:30"
   ]
 }
