@@ -13322,6 +13322,20 @@
         "nifty": null,
         "vol": 23.86,
         "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "ABREL",
+        "direction": "BULLISH",
+        "time": "2026-11-23 12:30:00+05:30",
+        "price": 1238.3,
+        "key": "NSE_EQ|INE055A01016",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 2.26,
+        "sector": "Realty"
       }
     ]
   },
@@ -14600,5 +14614,8 @@
   ],
   "SCHAEFFLER::BB_BREAK:BULLISH": [
     "2026-11-23 12:00:00+05:30"
+  ],
+  "ABREL::BB_BREAK:BULLISH": [
+    "2026-11-23 12:30:00+05:30"
   ]
 }
