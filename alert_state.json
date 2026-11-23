@@ -3152,7 +3152,8 @@
     "2026-11-17",
     "2026-11-18",
     "2026-11-19",
-    "2026-11-20"
+    "2026-11-20",
+    "2026-11-23"
   ],
   "ARE&M::CONSOLIDATION_BREAKOUT_LIVE::N500:BEARISH": [
     "2026-08-31"
@@ -15728,5 +15729,11 @@
   ],
   "CEMPRO::BB_BREAK:BULLISH": [
     "2026-11-23 15:15:00+05:30"
+  ],
+  "OBEROIRLTY::MONTHLY:BULLISH": [
+    "Nov 2026"
+  ],
+  "AXISBANK::MONTHLY:BULLISH": [
+    "Nov 2026"
   ]
 }
