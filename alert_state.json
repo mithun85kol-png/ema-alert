@@ -7735,6 +7735,76 @@
         "nifty": null,
         "vol": 4.35,
         "sector": "Fast Moving Consumer Goods"
+      },
+      {
+        "symbol": "BIOCON",
+        "direction": "BEARISH",
+        "time": "2026-11-23 10:00:00+05:30",
+        "price": 359.8,
+        "key": "NSE_EQ|INE376G01013",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.63,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "NBCC",
+        "direction": "BEARISH",
+        "time": "2026-11-23 10:00:00+05:30",
+        "price": 78.37,
+        "key": "NSE_EQ|INE095N01031",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.15,
+        "sector": "Construction"
+      },
+      {
+        "symbol": "HCLTECH",
+        "direction": "BULLISH",
+        "time": "2026-11-23 10:00:00+05:30",
+        "price": 1371.7,
+        "key": "NSE_EQ|INE860A01027",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.8,
+        "sector": "Information Technology"
+      },
+      {
+        "symbol": "PREMIERENE",
+        "direction": "BEARISH",
+        "time": "2026-11-23 10:00:00+05:30",
+        "price": 822.75,
+        "key": "NSE_EQ|INE0BS701011",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.91,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "BERGEPAINT",
+        "direction": "BULLISH",
+        "time": "2026-11-23 10:00:00+05:30",
+        "price": 468.35,
+        "key": "NSE_EQ|INE463A01038",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 0.51,
+        "sector": "Consumer Durables"
       }
     ]
   },
@@ -14259,5 +14329,20 @@
   ],
   "HONASA::BB_BREAK:BULLISH": [
     "2026-11-23 09:45:00+05:30"
+  ],
+  "BIOCON::BB_BREAK:BEARISH": [
+    "2026-11-23 10:00:00+05:30"
+  ],
+  "NBCC::BB_BREAK:BEARISH": [
+    "2026-11-23 10:00:00+05:30"
+  ],
+  "HCLTECH::BB_BREAK:BULLISH": [
+    "2026-11-23 10:00:00+05:30"
+  ],
+  "PREMIERENE::BB_BREAK:BEARISH": [
+    "2026-11-23 10:00:00+05:30"
+  ],
+  "BERGEPAINT::BB_BREAK:BULLISH": [
+    "2026-11-23 10:00:00+05:30"
   ]
 }
