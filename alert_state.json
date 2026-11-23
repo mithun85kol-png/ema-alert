@@ -13238,6 +13238,48 @@
         "nifty": null,
         "vol": 1.51,
         "sector": "Textiles"
+      },
+      {
+        "symbol": "ANTHEM",
+        "direction": "BULLISH",
+        "time": "2026-11-23 11:45:00+05:30",
+        "price": 964.0,
+        "key": "NSE_EQ|INE0CZ201020",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.3,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "CMPDI",
+        "direction": "BULLISH",
+        "time": "2026-11-23 11:45:00+05:30",
+        "price": 182.13,
+        "key": "NSE_EQ|INE05HV01027",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 0.42,
+        "sector": "Services"
+      },
+      {
+        "symbol": "COHANCE",
+        "direction": "BULLISH",
+        "time": "2026-11-23 11:45:00+05:30",
+        "price": 473.35,
+        "key": "NSE_EQ|INE03QK01018",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 3.75,
+        "sector": "Healthcare"
       }
     ]
   },
@@ -14498,5 +14540,14 @@
   ],
   "WELSPUNLIV::BB_BREAK:BULLISH": [
     "2026-11-23 11:30:00+05:30"
+  ],
+  "ANTHEM::BB_BREAK:BULLISH": [
+    "2026-11-23 11:45:00+05:30"
+  ],
+  "CMPDI::BB_BREAK:BULLISH": [
+    "2026-11-23 11:45:00+05:30"
+  ],
+  "COHANCE::BB_BREAK:BULLISH": [
+    "2026-11-23 11:45:00+05:30"
   ]
 }
