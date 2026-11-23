@@ -13154,6 +13154,48 @@
         "nifty": null,
         "vol": 1.87,
         "sector": "Capital Goods"
+      },
+      {
+        "symbol": "TATAPOWER",
+        "direction": "BEARISH",
+        "time": "2026-11-23 10:30:00+05:30",
+        "price": 335.5,
+        "key": "NSE_EQ|INE245A01021",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 0.71,
+        "sector": "Power"
+      },
+      {
+        "symbol": "CHOICEIN",
+        "direction": "BULLISH",
+        "time": "2026-11-23 10:30:00+05:30",
+        "price": 743.75,
+        "key": "NSE_EQ|INE102B01014",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.59,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "PVRINOX",
+        "direction": "BULLISH",
+        "time": "2026-11-23 10:30:00+05:30",
+        "price": 1721.8,
+        "key": "NSE_EQ|INE191H01014",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": null,
+        "sector": "Media Entertainment & Publication"
       }
     ]
   },
@@ -14396,5 +14438,14 @@
   "INDIAMART::N500:BULLISH": [
     "2026-09-01 14:30:00+05:30",
     "2026-10-19 15:15:00+05:30"
+  ],
+  "TATAPOWER::BB_BREAK:BEARISH": [
+    "2026-11-23 10:30:00+05:30"
+  ],
+  "CHOICEIN::BB_BREAK:BULLISH": [
+    "2026-11-23 10:30:00+05:30"
+  ],
+  "PVRINOX::BB_BREAK:BULLISH": [
+    "2026-11-23 10:30:00+05:30"
   ]
 }
