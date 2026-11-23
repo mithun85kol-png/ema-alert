@@ -13280,6 +13280,48 @@
         "nifty": null,
         "vol": 3.75,
         "sector": "Healthcare"
+      },
+      {
+        "symbol": "COALINDIA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 12:00:00+05:30",
+        "price": 386.45,
+        "key": "NSE_EQ|INE522F01014",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 0.83,
+        "sector": "Oil Gas & Consumable Fuels"
+      },
+      {
+        "symbol": "LAURUSLABS",
+        "direction": "BULLISH",
+        "time": "2026-11-23 12:00:00+05:30",
+        "price": 2345.8,
+        "key": "NSE_EQ|INE947Q01028",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 4.27,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "SCHAEFFLER",
+        "direction": "BULLISH",
+        "time": "2026-11-23 12:00:00+05:30",
+        "price": 3642.0,
+        "key": "NSE_EQ|INE513A01022",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 23.86,
+        "sector": "Automobile and Auto Components"
       }
     ]
   },
@@ -14549,5 +14591,14 @@
   ],
   "COHANCE::BB_BREAK:BULLISH": [
     "2026-11-23 11:45:00+05:30"
+  ],
+  "COALINDIA::BB_BREAK:BEARISH": [
+    "2026-11-23 12:00:00+05:30"
+  ],
+  "LAURUSLABS::BB_BREAK:BULLISH": [
+    "2026-11-23 12:00:00+05:30"
+  ],
+  "SCHAEFFLER::BB_BREAK:BULLISH": [
+    "2026-11-23 12:00:00+05:30"
   ]
 }
