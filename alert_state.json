@@ -13574,6 +13574,90 @@
         "nifty": null,
         "vol": 3.48,
         "sector": "Construction"
+      },
+      {
+        "symbol": "WAAREEENER",
+        "direction": "BEARISH",
+        "time": "2026-11-23 15:15:00+05:30",
+        "price": 2390.0,
+        "key": "NSE_EQ|INE377N01017",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 0.86,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "NYKAA",
+        "direction": "BEARISH",
+        "time": "2026-11-23 15:15:00+05:30",
+        "price": 357.0,
+        "key": "NSE_EQ|INE388Y01029",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.96,
+        "sector": "Consumer Services"
+      },
+      {
+        "symbol": "TMPV",
+        "direction": "BEARISH",
+        "time": "2026-11-23 15:15:00+05:30",
+        "price": 259.0,
+        "key": "NSE_EQ|INE155A01022",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.21,
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "M&M",
+        "direction": "BEARISH",
+        "time": "2026-11-23 15:15:00+05:30",
+        "price": 3487.4,
+        "key": "NSE_EQ|INE101A01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.88,
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "GAIL",
+        "direction": "BEARISH",
+        "time": "2026-11-23 15:15:00+05:30",
+        "price": 185.6,
+        "key": "NSE_EQ|INE129A01019",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 5.62,
+        "sector": "Oil Gas & Consumable Fuels"
+      },
+      {
+        "symbol": "CEMPRO",
+        "direction": "BULLISH",
+        "time": "2026-11-23 15:15:00+05:30",
+        "price": 1450.0,
+        "key": "NSE_EQ|INE686A01026",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 7.35,
+        "sector": "Construction"
       }
     ]
   },
@@ -14909,5 +14993,23 @@
   ],
   "LT::BB_BREAK:BEARISH": [
     "2026-11-23 15:00:00+05:30"
+  ],
+  "WAAREEENER::BB_BREAK:BEARISH": [
+    "2026-11-23 15:15:00+05:30"
+  ],
+  "NYKAA::BB_BREAK:BEARISH": [
+    "2026-11-23 15:15:00+05:30"
+  ],
+  "TMPV::BB_BREAK:BEARISH": [
+    "2026-11-23 15:15:00+05:30"
+  ],
+  "M&M::BB_BREAK:BEARISH": [
+    "2026-11-23 15:15:00+05:30"
+  ],
+  "GAIL::BB_BREAK:BEARISH": [
+    "2026-11-23 15:15:00+05:30"
+  ],
+  "CEMPRO::BB_BREAK:BULLISH": [
+    "2026-11-23 15:15:00+05:30"
   ]
 }
