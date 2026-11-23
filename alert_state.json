@@ -13210,6 +13210,34 @@
         "nifty": null,
         "vol": 1.42,
         "sector": "Metals & Mining"
+      },
+      {
+        "symbol": "LINDEINDIA",
+        "direction": "BULLISH",
+        "time": "2026-11-23 11:30:00+05:30",
+        "price": 6905.5,
+        "key": "NSE_EQ|INE473A01011",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 19.87,
+        "sector": "Chemicals"
+      },
+      {
+        "symbol": "WELSPUNLIV",
+        "direction": "BULLISH",
+        "time": "2026-11-23 11:30:00+05:30",
+        "price": 275.68,
+        "key": "NSE_EQ|INE192B01031",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.51,
+        "sector": "Textiles"
       }
     ]
   },
@@ -14464,5 +14492,11 @@
   ],
   "SAIL::BB_BREAK:BEARISH": [
     "2026-11-23 10:45:00+05:30"
+  ],
+  "LINDEINDIA::BB_BREAK:BULLISH": [
+    "2026-11-23 11:30:00+05:30"
+  ],
+  "WELSPUNLIV::BB_BREAK:BULLISH": [
+    "2026-11-23 11:30:00+05:30"
   ]
 }
