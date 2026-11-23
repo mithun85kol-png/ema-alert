@@ -2286,7 +2286,6 @@ def run_fo_scan(now_ist, index_only=False):
     consolidation_live_hits = []
     orb_hits = {w: [] for w in _orb_windows()}
     bb_hits = {"break": [], "reentry": []}
-    move15_hits = []
 
     # Used to set the "F&O: Yes/No" flag on stock signals only — indices
     # (NIFTY 50, SENSEX...) and commodities (GOLD, SILVER...) aren't
@@ -2378,7 +2377,6 @@ def run_fo_scan(now_ist, index_only=False):
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
             _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels, df5)
-            _move15_scan_symbol(symbol, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, move15_hits)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
             if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
                     getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
@@ -3031,9 +3029,6 @@ def run_fo_scan(now_ist, index_only=False):
         if _hits:
             send_bb_summary(_hits, now_ist, _k)
             alerts_sent += len(_hits)
-    if move15_hits:
-        send_move15_summary(move15_hits, now_ist)
-        alerts_sent += len(move15_hits)
 
     state.save_state(saved_state)
     if failed_symbols:
@@ -3091,7 +3086,6 @@ def run_nifty500_scan(now_ist):
     consolidation_live_hits = []
     orb_hits = {w: [] for w in _orb_windows()}
     bb_hits = {"break": [], "reentry": []}
-    move15_hits = []
 
     fno_underlyings = instruments.get_fno_underlyings()
     hist_cache = build_hist1min_cache(watchlist)
@@ -3147,7 +3141,6 @@ def run_nifty500_scan(now_ist):
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
             _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels, df5)
-            _move15_scan_symbol(symbol, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, move15_hits)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
             if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
                     getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
@@ -3511,9 +3504,6 @@ def run_nifty500_scan(now_ist):
         if _hits:
             send_bb_summary(_hits, now_ist, _k)
             alerts_sent += len(_hits)
-    if move15_hits:
-        send_move15_summary(move15_hits, now_ist)
-        alerts_sent += len(move15_hits)
 
     state.save_state(saved_state)
     if failed_symbols:
@@ -5045,8 +5035,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                         m_above = close > float(_win["close"].mean())
                 base = {"symbol": symbol, "direction": direction, "r1": r1, "s1": s1, "instrument_key": instrument_key,
                         "macd": float(r["macd"]), "macd_sig": float(r["macd_sig"]), "vol_ratio": vol_ratio,
-                        "month_pct": m_pct, "month_days": m_days, "month_above_avg": m_above, "close": close,
-                        "day_pct": ((close - float(_c)) / float(_c) * 100.0) if _c else None, "rsi": rsi, "is_fno": is_fno, "kind": kind_tag,
+                        "month_pct": m_pct, "month_days": m_days, "month_above_avg": m_above, "close": close, "rsi": rsi, "is_fno": is_fno, "kind": kind_tag,
                         "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                         "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": five_min}
                 if outside and rsi_ok and st_ok and pv_ok and not active:
@@ -5073,7 +5062,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
 _ATM_OPT_CACHE = {}
 
 
-def get_atm_option_text(symbol, instrument_key, today=None, short=False):
+def get_atm_option_text(symbol, instrument_key, today=None):
     """'🎯 Lot 550 · Exp 24 Dec · ATM 450: CE 12.5 (IV 28.4%) · PE 11.8 (IV 27.9%) · 1 lot ≈ ₹6,875 (CE)' for an F&O stock
     / index from Upstox's option-contract + option-chain endpoints (nearest expiry, strike closest to spot).
     Returns "" if anything is missing (never raises, never blocks the alert)."""
@@ -5081,9 +5070,8 @@ def get_atm_option_text(symbol, instrument_key, today=None, short=False):
         if not getattr(config, "ATM_OPTION_INFO_ENABLED", True) or not instrument_key:
             return ""
         if symbol in _ATM_OPT_CACHE:
-            return _ATM_OPT_CACHE[symbol][1 if short else 0]
+            return _ATM_OPT_CACHE[symbol]
         text = ""
-        short_txt = ""
         try:
             today = today or _now_ist().date()
             headers = {"Authorization": f"Bearer {config.UPSTOX_ACCESS_TOKEN}"}
@@ -5150,15 +5138,7 @@ def get_atm_option_text(symbol, instrument_key, today=None, short=False):
                                 return s
                             tc = sum(float((rw.get("call_options") or {}).get("market_data", {}).get("oi") or 0) for rw in chain)
                             tp = sum(float((rw.get("put_options") or {}).get("market_data", {}).get("oi") or 0) for rw in chain)
-                            _bc, _bp = _best("call_options"), _best("put_options")
-                            short_txt = (f"Lot {int(lot)} \u00b7 " if lot else "") + f"ATM {strike:g} CE {float(cl or 0):g} PE {float(pl or 0):g}"
-                            if civ or piv:
-                                short_txt += f" (IV {float(civ or piv):.0f}%)"
-                            if _bc:
-                                short_txt += f" \u00b7 Call OI {_bc[0]:g}"
-                            if _bp:
-                                short_txt += f" \u00b7 Put OI {_bp[0]:g}"
-                            bits = [x for x in (_fmt_oi("Call", _bc), _fmt_oi("Put", _bp)) if x]
+                            bits = [x for x in (_fmt_oi("Call", _best("call_options")), _fmt_oi("Put", _best("put_options"))) if x]
                             if bits:
                                 if tc > 0:
                                     bits.append(f"PCR {tp / tc:.2f}")
@@ -5166,8 +5146,8 @@ def get_atm_option_text(symbol, instrument_key, today=None, short=False):
         except Exception as e:
             print(f"[atm-option] {symbol}: {type(e).__name__}: {e}", flush=True)
             text = ""
-        _ATM_OPT_CACHE[symbol] = (text, short_txt or text)
-        return short_txt or text if short else text
+        _ATM_OPT_CACHE[symbol] = text
+        return text
     except Exception:
         return ""
 
@@ -5239,7 +5219,8 @@ def send_bb_summary(hits, now_ist, kind):
     if not hits:
         return
     if kind == "break":
-        out = [f"\U0001F4C8 <b>BB + RSI + R1/S1 BREAK</b>  {now_ist.strftime('%H:%M')}"]
+        out = [f"\U0001F4C8 <b>BOLLINGER BAND + RSI + R1/S1 + SUPERTREND</b>  {now_ist.strftime('%H:%M')}",
+               "<i>15-min candle band er baire close · RSI 65/35 · R1/S1 break · Supertrend support</i>"]
     else:
         out = [f"\U0001F501 <b>BOLLINGER BAND RE-ENTRY</b>  {now_ist.strftime('%H:%M')}",
                "<i>ager alert howa stock ebar band er bhitore fire close korlo</i>"]
@@ -5258,40 +5239,34 @@ def send_bb_summary(hits, now_ist, kind):
             if kind == "break" and h.get("five_min"):
                 head += f" \u23F1 5-min {str(h['five_min'])[11:16]} candle e"
             if kind == "break":
-                # COMPACT (2026-11-23): only the conditions that decided the alert; extras are switchable in config (BB_MSG_*)
-                mk = lambda ok: "\u2705" if ok else "\u274C"
-                lvl = ""
+                st = (f" \u00b7 Supertrend {h['st_line']:.2f} \u2705") if h.get("st_line") else ""
+                pv = ""
                 if bull and h.get("r1"):
-                    lvl = f" \u00b7 R1 {h['r1']:.2f} \u2705"
+                    pv = f" \u00b7 above R1 {h['r1']:.2f} \u2705"
                 elif (not bull) and h.get("s1"):
-                    lvl = f" \u00b7 S1 {h['s1']:.2f} \u2705"
-                st = " \u00b7 ST \u2705" if h.get("st_line") else ""
-                _mv = f" ({h['day_pct']:+.2f}%)" if h.get("day_pct") is not None else ""
-                line = f"    {h['close']:g}{_mv} \u00b7 band {band:.2f} \u00b7 RSI {h['rsi']:.1f}{lvl}{st}"
-                ex = []
-                if getattr(config, "BB_MSG_MACD", False):
-                    ex.append(f"MACD {h['macd']:.2f}/{h['macd_sig']:.2f} {mk((h['macd'] > h['macd_sig']) == bull)}")
-                if getattr(config, "BB_MSG_VOL", False) and h.get("vol_ratio") is not None:
-                    ex.append(f"Vol {h['vol_ratio']:.1f}x")
-                if getattr(config, "BB_MSG_1M", False) and h.get("month_pct") is not None:
-                    ex.append(f"1M {h['month_pct']:+.1f}%")
-                if ex:
-                    line += "\n    " + " \u00b7 ".join(ex)
-                if h.get("is_fno") and kindtxt == "F&O":
-                    mode_o = getattr(config, "BB_MSG_OPTIONS", "short")
-                    if mode_o in ("short", "full"):
-                        ao = get_atm_option_text(h["symbol"], h.get("instrument_key"), now_ist.date(), short=(mode_o == "short"))
-                        if ao:
-                            line += f"\n    {ao}"
+                    pv = f" \u00b7 below S1 {h['s1']:.2f} \u2705"
+                line = (f"    {h['close']:g} \u00b7 {'above upper' if bull else 'below lower'} band {band:.2f}"
+                        f" \u00b7 RSI {h['rsi']:.1f}{pv}{st}")
+                mk = lambda ok: "\u2705" if ok else "\u274C"
+                good = float(getattr(config, "BB_VOL_GOOD_RATIO", 1.5))
+                ex = [f"MACD {h['macd']:.2f} / {h['macd_sig']:.2f} {mk((h['macd'] > h['macd_sig']) == bull)}"]
+                if h.get("vol_ratio") is not None:
+                    ex.append(f"Vol {h['vol_ratio']:.1f}x {mk(h['vol_ratio'] >= good)}")
+                if h.get("month_pct") is not None:
+                    ok1m = (h["month_pct"] > 0) == bull
+                    _dot = "\U0001F7E2" if h["month_pct"] >= 0 else "\U0001F534"
+                    ex.append(f"1M {_dot} {h['month_pct']:+.1f}% ({h['month_days']}d) {mk(ok1m)}")
+                line += "\n    " + " \u00b7 ".join(ex)
                 if kindtxt in ("F&O", "Cash"):
-                    if getattr(config, "BB_MSG_EVENTS", True):
-                        ev = get_corp_event_text(h["symbol"], now_ist.date())
-                        if ev:
-                            line += f"\n    {ev}"
-                    if getattr(config, "BB_MSG_NEWS", False):
-                        sym_q = urllib.parse.quote_plus(h["symbol"])
-                        line += (f"\n    \U0001F4F0 <a href=\"https://news.google.com/search?q={sym_q}+share+news&hl=en-IN&gl=IN&ceid=IN:en\">News</a>"
-                                 f" \u00b7 \U0001F5D3 <a href=\"https://news.google.com/search?q={sym_q}+result+OR+dividend+date&hl=en-IN&gl=IN&ceid=IN:en\">Result/Dividend</a>")
+                    ao = get_atm_option_text(h["symbol"], h.get("instrument_key"), now_ist.date()) if h.get("is_fno") else ""
+                    if ao:
+                        line += f"\n    {ao}"
+                    ev = get_corp_event_text(h["symbol"], now_ist.date())
+                    if ev:
+                        line += f"\n    {ev}"
+                    sym_q = urllib.parse.quote_plus(h["symbol"])
+                    line += (f"\n    \U0001F4F0 <a href=\"https://news.google.com/search?q={sym_q}+share+news&hl=en-IN&gl=IN&ceid=IN:en\">News</a>"
+                             f" \u00b7 \U0001F5D3 <a href=\"https://news.google.com/search?q={sym_q}+result+OR+dividend+date&hl=en-IN&gl=IN&ceid=IN:en\">Result/Dividend</a>")
             else:
                 bp = h.get("break_price")
                 mv = ""
@@ -5309,82 +5284,6 @@ def send_bb_summary(hits, now_ist, kind):
                                 "disable_web_page_preview": True}, timeout=20)
         except Exception as e:
             print(f"BB summary send failed: {e}", flush=True)
-
-
-# ---------- 1st 15-min candle 2% move alert (ADDED 2026-11-23) ----------
-def _move15_scan_symbol(symbol, df15, prev_close, now_ist, saved_state, instrument_key, fno_underlyings, hits):
-    """Stocks only: today's FIRST 15-min candle (09:15-09:30) closed >= MOVE15_MIN_PCT % above / below the previous
-    day's close. Once per stock per day per direction; picked up by any run until MOVE15_UNTIL. Never raises."""
-    try:
-        if not getattr(config, "MOVE15_ALERT_ENABLED", False) or not prev_close:
-            return
-        if symbol in index_symbols_orb or symbol in config.COMMODITIES:
-            return
-        hh, mm = (int(x) for x in str(getattr(config, "MOVE15_UNTIL", "10:30")).split(":"))
-        if now_ist.time() > dt.time(hh, mm):
-            return
-        if df15 is None or df15.empty:
-            return
-        ts = df15["timestamp"]
-        today = df15[ts.dt.date == now_ist.date()]
-        if today.empty:
-            return
-        first = today.iloc[0]
-        t0 = pd.Timestamp(first["timestamp"])
-        if (t0.hour, t0.minute) != (9, 15):
-            return
-        close = float(first["close"])
-        pct = (close - float(prev_close)) / float(prev_close) * 100.0
-        thr = float(getattr(config, "MOVE15_MIN_PCT", 2.0))
-        if pct >= thr:
-            direction = "BULLISH"
-        elif pct <= -thr:
-            direction = "BEARISH"
-        else:
-            return
-        is_fno = symbol.upper() in fno_underlyings
-        if direction == "BEARISH" and (not getattr(config, "MOVE15_BEARISH_ENABLED", True)
-                                       or (not is_fno and getattr(config, "CASH_STOCKS_BULLISH_ONLY", False))):
-            return
-        day = now_ist.date().isoformat()
-        if state.already_alerted(saved_state, f"{symbol}::MOVE15", direction, day):
-            return
-        state.mark_alerted(saved_state, f"{symbol}::MOVE15", direction, day)
-        hit = {"symbol": symbol, "direction": direction, "close": close, "pct": pct, "is_fno": is_fno,
-               "open": float(first["open"]), "candle_time": str(t0) , "chart_link": build_chart_link(symbol, "15-min"),
-               "log_type": "MOVE15"}
-        hits.append(hit)
-        logh = dict(hit, candle_time=str(t0 + pd.Timedelta(seconds=1)))   # distinct log key from a BB alert on the same candle
-        _log_orb15_for_eod(saved_state, logh, symbol, instrument_key)
-    except Exception as e:
-        print(f"MOVE15 scan failed for {symbol}: {e}", flush=True)
-
-
-def send_move15_summary(hits, now_ist):
-    """ONE message: stocks whose first 15-min candle moved >= MOVE15_MIN_PCT % (vs previous close)."""
-    import html as _html
-    from telegram_notifier import _sector_label
-    if not hits:
-        return
-    thr = float(getattr(config, "MOVE15_MIN_PCT", 2.0))
-    out = [f"\U0001F680 <b>1st 15-MIN {thr:g}%+ MOVE</b>  {now_ist.strftime('%H:%M')}"]
-    for direction, icon in (("BULLISH", "\U0001F7E2"), ("BEARISH", "\U0001F534")):
-        grp = sorted((h for h in hits if h["direction"] == direction), key=lambda h: -abs(h["pct"]))
-        if not grp:
-            continue
-        out.append(f"\n{icon} <b>{direction}</b> ({len(grp)})")
-        for h in grp:
-            sec = _sector_label(h["symbol"]) or "Other"
-            out.append(f"{icon} <b>{_html.escape(h['symbol'])}</b> ({_html.escape(sec)}) [{'F&amp;O' if h['is_fno'] else 'Cash'}] "
-                       f"<a href=\"{h['chart_link']}\">Chart</a>\n    {h['close']:g} ({h['pct']:+.2f}%)")
-    text = "\n".join(out)
-    for i in range(0, len(text), 3900):
-        try:
-            requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
-                          data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text[i:i + 3900], "parse_mode": "HTML",
-                                "disable_web_page_preview": True}, timeout=20)
-        except Exception as e:
-            print(f"MOVE15 summary send failed: {e}", flush=True)
 
 
 def _sector_chart_label(sym):

@@ -1261,7 +1261,7 @@ ATM_OPTION_INFO_ENABLED = True
 
 # 15-min Bollinger alert also fires when the FIRST or SECOND 5-min candle inside a 15-min candle already closed outside the
 # band (+RSI +Supertrend +R1/S1) even if the 15-min candle later closes back inside (ADDED 2026-11-22).
-BB_FIRST2_5MIN_ENABLED = False   # OFF 2026-11-23: alert only on the 15-min candle CLOSE
+BB_FIRST2_5MIN_ENABLED = True
 
 # ---------- Daily Bollinger band report (ADDED 2026-11-22) ----------
 # Every morning: F&O stocks whose last COMPLETED daily candle closed above the daily upper Bollinger band
@@ -1278,20 +1278,3 @@ DAILY_BB_EVENING_ENABLED = True     # ADDED 2026-11-22: a second report after th
 DAILY_BB_EVENING_RUN_AFTER = "15:45"
 DAILY_BB_EVENING_UNTIL = "17:30"    # retried every run until today's daily candle is available
 OPTION_MAX_OI_ENABLED = True        # ADDED 2026-11-22: Max Call OI / Max Put OI strike (+price, OI, change vs yesterday, PCR) on F&O Bollinger alerts
-
-# ---- Bollinger alert message size (2026-11-23: "message onek boro, choto koro") ----
-# Always shown: price, band, RSI, R1/S1 tick, Supertrend tick. Extras below are OFF/short by default.
-BB_MSG_MACD = False
-BB_MSG_VOL = False                 # candle-volume ratio is misleading on the 09:15 candle, so off
-BB_MSG_1M = False
-BB_MSG_OPTIONS = "short"           # F&O only: "short" = 1 line (lot, ATM CE/PE, IV, max OI strikes), "full" = 2 lines, "off"
-BB_MSG_EVENTS = True               # result / dividend line, only when a date is found
-BB_MSG_NEWS = False                # News / Result-Dividend links
-
-# ---- 1st 15-min candle 2% move alert (ADDED 2026-11-23) ----
-# Stocks whose FIRST 15-min candle (09:15-09:30) closes >= MOVE15_MIN_PCT % above/below the previous close.
-# One summary message (first run after 09:30), once per stock per day per direction, until MOVE15_UNTIL.
-MOVE15_ALERT_ENABLED = False   # OFF 2026-11-23 (move % is now shown inside the Bollinger alert instead)
-MOVE15_MIN_PCT = 2.0
-MOVE15_BEARISH_ENABLED = True       # cash stocks still follow CASH_STOCKS_BULLISH_ONLY
-MOVE15_UNTIL = "10:30"

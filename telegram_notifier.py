@@ -99,7 +99,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v68 (2026-11-23)"
+BUILD_TAG = "short-v65 (2026-11-22)"
 
 
 def _ema920_line(info15, info75):
@@ -1386,8 +1386,6 @@ def send_eod_alert_report(results, now_ist):
             day += " · ORB" + str(r["type"])[3:]
         elif r.get("type") == "BB":
             day += " · BB"
-        elif r.get("type") == "MOVE15":
-            day += " · 15m move"
         return (f"{icon} <b>{r['symbol']}</b>{sec}{_chart_a(r['symbol'])} {hhmm}\n"
                 f"     {_p(r['price'])} → {_p(r['last'])} (<b>{r['pnl']:+.2f}%</b>) · max +{r['best']:.1f}% · dd {r['worst']:.1f}%{day}")
 
@@ -1507,7 +1505,7 @@ def send_alert_stats_report(rows, now_ist):
         return "14:00 por"
 
     def _score(r):
-        if str(r.get("type", "")).startswith("ORB") or r.get("type") in ("BB", "MOVE15"):
+        if str(r.get("type", "")).startswith("ORB") or r.get("type") == "BB":
             return "score nei"
         try:
             p, tt = str(r.get("score")).split("/")
@@ -1524,7 +1522,7 @@ def send_alert_stats_report(rows, now_ist):
         return "market er sathe" if (t == "UP") == (d == "BULLISH") else "market er biruddhe"
 
     groups = [
-        ("Alert type", lambda r: {"ORB15": "ORB 15-min", "ORB30": "ORB 30-min", "ORB60": "ORB 1-hour", "BB": "Bollinger", "MOVE15": "1st 15-min 2% move"}.get(r.get("type"), "MACD 15-min")),
+        ("Alert type", lambda r: {"ORB15": "ORB 15-min", "ORB30": "ORB 30-min", "ORB60": "ORB 1-hour", "BB": "Bollinger"}.get(r.get("type"), "MACD 15-min")),
         ("Direction", lambda r: "🟢 Bullish" if r.get("direction") == "BULLISH" else "🔴 Bearish"),
         ("Shomoy", _tbucket),
         ("Score", _score),
