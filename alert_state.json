@@ -13196,6 +13196,20 @@
         "nifty": null,
         "vol": null,
         "sector": "Media Entertainment & Publication"
+      },
+      {
+        "symbol": "SAIL",
+        "direction": "BEARISH",
+        "time": "2026-11-23 10:45:00+05:30",
+        "price": 160.33,
+        "key": "NSE_EQ|INE114A01011",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.42,
+        "sector": "Metals & Mining"
       }
     ]
   },
@@ -14447,5 +14461,8 @@
   ],
   "PVRINOX::BB_BREAK:BULLISH": [
     "2026-11-23 10:30:00+05:30"
+  ],
+  "SAIL::BB_BREAK:BEARISH": [
+    "2026-11-23 10:45:00+05:30"
   ]
 }
