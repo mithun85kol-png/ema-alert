@@ -1955,6 +1955,12 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     # gets, so it's available from the first alert of the day.
     df15 = resample_15min(combined_75)
     df15 = drop_unclosed_candle(df15, now_ist, candle_minutes=15)
+    _df5_multi = None
+    if symbol in config.COMMODITIES and getattr(config, "BB_5MIN_COMMODITIES", False):
+        try:   # multi-day 5-min candles for the commodity 5-min Bollinger alert (2026-11-24)
+            _df5_multi = drop_unclosed_candle(resample_5min(combined_75), now_ist, candle_minutes=5)
+        except Exception:
+            _df5_multi = None
 
     # Remember which 1-min bars today's data really starts/ends with, so the
     # 1st-15-min Open=High/Open=Low check can refuse to judge a candle that is
@@ -1969,6 +1975,8 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
 
     df75 = resample_75min(combined_75)
     df75 = drop_unclosed_candle(df75, now_ist, candle_minutes=75)
+    if _df5_multi is not None:
+        df15.attrs["df5_multi"] = _df5_multi
     return symbol, df5, df75, df15
 
 
@@ -5080,6 +5088,70 @@ def _bb_times(st, key, direction, day):
     return sorted(t for t in state._get_times(st, f"{key}:{direction}") if str(t).startswith(day))
 
 
+def _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, levels):
+    """Commodity 5-MIN Bollinger alert (2026-11-24), in ADDITION to the 15-min one. Same candle rule (80% outside,
+    previous candle same colour, volume, MACD side), RSI info only. Last BB_5MIN_LOOKBACK closed 5-min candles are
+    checked (catch-up when the cron runs every 15 min). Own state keys, same re-arm rule (needs a close back inside
+    the band before the next alert). Never raises."""
+    try:
+        df5m = df15.attrs.get("df5_multi") if df15 is not None else None
+        if df5m is None or df5m.empty:
+            return
+        d = _bb_eval(df5m)
+        if d is None:
+            return
+        day = now_ist.date().isoformat()
+        idxs = [i for i in range(len(d)) if str(d.iloc[i]["timestamp"]).startswith(day)][-int(getattr(config, "BB_5MIN_LOOKBACK", 3)):]
+        pdi = prev_day_info(df15, now_ist)
+        _h = (pdi or {}).get("high") or (levels or {}).get("high")
+        _l = (pdi or {}).get("low") or (levels or {}).get("low")
+        _c = (pdi or {}).get("close") or (levels or {}).get("prev_close")
+        r1 = s1 = None
+        if _h and _l and _c:
+            _p = (float(_h) + float(_l) + float(_c)) / 3.0
+            r1, s1 = 2 * _p - float(_l), 2 * _p - float(_h)
+        for i in idxs:
+            r = d.iloc[i]
+            if pd.isna(r["bb_up"]) or pd.isna(r["rsi"]):
+                continue
+            ct = str(r["timestamp"])
+            close = float(r["close"])
+            for direction in ("BULLISH", "BEARISH"):
+                if direction == "BEARISH" and not getattr(config, "BB_BEARISH_ENABLED", True):
+                    continue
+                bull = direction == "BULLISH"
+                brk = _bb_times(saved_state, f"{symbol}::BB5_BREAK", direction, day)
+                rev = _bb_times(saved_state, f"{symbol}::BB5_REENTRY", direction, day)
+                active = bool(brk) and (not rev or max(brk) > max(rev))
+                outside = close > float(r["bb_up"]) if bull else close < float(r["bb_lo"])
+                if active and ct > max(brk) and not outside:
+                    if not state.already_alerted(saved_state, f"{symbol}::BB5_REENTRY", direction, ct):
+                        state.mark_alerted(saved_state, f"{symbol}::BB5_REENTRY", direction, ct)
+                    continue
+                if active or not outside:
+                    continue
+                _bq = _bb_candle_check(d, i, bull)
+                if _bq is None:
+                    continue
+                if not ((float(r["macd"]) > float(r["macd_sig"])) if bull else (float(r["macd"]) < float(r["macd_sig"]))):
+                    continue
+                if state.already_alerted(saved_state, f"{symbol}::BB5_BREAK", direction, ct):
+                    continue
+                state.mark_alerted(saved_state, f"{symbol}::BB5_BREAK", direction, ct)
+                stl = r["st_line"]
+                hit = {"symbol": symbol, "direction": direction, "r1": r1, "s1": s1, "instrument_key": instrument_key,
+                       "macd": float(r["macd"]), "macd_sig": float(r["macd_sig"]), "vol_ratio": _bq.get("vol_ratio"),
+                       "outside_pct": _bq.get("outside_pct"), "close": close,
+                       "day_pct": ((close - float(_c)) / float(_c) * 100.0) if _c else None, "rsi": float(r["rsi"]),
+                       "is_fno": False, "kind": "Commodity", "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
+                       "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": None,
+                       "tf": "5-min", "chart_link": build_chart_link(symbol, "5-min"), "log_type": "BB"}
+                bb_hits["break"].append(hit)
+                _log_orb15_for_eod(saved_state, hit, symbol, instrument_key)
+    except Exception as e:
+        print(f"BB 5-min scan failed for {symbol}: {e}", flush=True)
+
+
 def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, instrument_key=None, levels=None, df5=None):
     """BREAK: candle CLOSES above the upper Bollinger band with RSI >= 70 and Supertrend support (uptrend, close above
     the line), or below the lower band with RSI <= 30 and Supertrend resistance (BEARISH). RE-ENTRY: later, when the
@@ -5094,6 +5166,8 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
         if not (is_index or (is_comm and getattr(config, "BB_STANDALONE_COMMODITIES", False))
                 or (not is_index and not is_comm and getattr(config, "BB_ALERT_STOCKS", False))):
             return   # 2026-11-24: stocks / commodities get Bollinger as a condition INSIDE the 15-min MACD alert instead
+        if is_comm and getattr(config, "BB_5MIN_COMMODITIES", False):
+            _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, levels)
         d = _bb_eval(df15)
         if d is None:
             return
@@ -5395,9 +5469,9 @@ def send_bb_summary(hits, now_ist, kind):
         return
     nb = sum(1 for h in hits if h["direction"] == "BULLISH")
     ns = len(hits) - nb
-    ct0 = str(hits[0]["candle_time"])[11:16]
+    ct0 = max(str(h["candle_time"]) for h in hits)[11:16]
     cnt = " \u00b7 ".join(x for x in ((f"\U0001F7E2 {nb} bullish" if nb else ""), (f"\U0001F534 {ns} bearish" if ns else "")) if x)
-    header = f"\U0001F4C8 <b>15-MIN BB ALERTS</b> ({ct0})\n{cnt}   <i>{_html.escape(BUILD_TAG_SHORT())}</i>"
+    header = f"\U0001F4C8 <b>BB ALERTS</b> (last candle {ct0})\n{cnt}   <i>{_html.escape(BUILD_TAG_SHORT())}</i>"
     items = []
     for h in sorted(hits, key=lambda h: (h["direction"] != "BULLISH", h["symbol"])):
         try:
@@ -5411,8 +5485,8 @@ def send_bb_summary(hits, now_ist, kind):
                 links.append(f"\U0001F4CA <a href=\"https://www.screener.in/company/{urllib.parse.quote(h['symbol'])}/consolidated/\">Screener</a>")
             mv = f" ({h['day_pct']:+.2f}%)" if h.get("day_pct") is not None else ""
             top = (f"{icon} <b>{_html.escape(h['symbol'])}</b>{sec}  " + "  \u00b7  ".join(links)
-                   + f"\nRSI {h['rsi']:.1f} \u00b7 {h['close']:g}{mv} \u00b7 \U0001F4CABB\u2705")
-            body = [f"{h['candle_time'][:10]} {str(h['candle_time'])[11:16]}  |  {kindtxt}" + ("  \u2705" if kindtxt == "F&O" else "")]
+                   + f"\nRSI {h['rsi']:.1f} \u00b7 {h['close']:g}{mv} \u00b7 \U0001F4CABB\u2705 \u00b7 \u23F1{h.get('tf', '15-min')}")
+            body = [f"{h['candle_time'][:10]} {str(h['candle_time'])[11:16]} ({h.get('tf', '15-min')} candle)  |  {kindtxt}" + ("  \u2705" if kindtxt == "F&O" else "")]
             if h.get("outside_pct") is not None:
                 body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): candle {h['outside_pct']:.0f}% {'upper' if bull else 'lower'} band {band:.2f} er bahire \u00b7 ager candle {'green' if bull else 'red'}")
             else:
@@ -5421,7 +5495,7 @@ def send_bb_summary(hits, now_ist, kind):
                 body.append(f"\u2705 Volume {h['vol_ratio']:.1f}x (20-candle avg er)")
             rsi_must = kindtxt in ("F&O", "Cash") and getattr(config, "BB_RSI_REQUIRED", False)
             _ri = mk(True) if rsi_must else "\u2139\ufe0f"
-            body.append(f"{_ri} RSI {h['rsi']:.1f}" + (" (must 70/30)" if rsi_must else " (info)"))
+            body.append(f"{_ri} RSI {h['rsi']:.1f}" + (f" (must {getattr(config, 'BB_RSI_UPPER', 70):g}/{getattr(config, 'BB_RSI_LOWER', 30):g})" if rsi_must else " (info)"))
             body.append(f"\u2705 MACD {h['macd']:.2f} / {h['macd_sig']:.2f}")
             if bull and h.get("r1"):
                 body.append(f"{mk(h['close'] > h['r1'])} R1 {h['r1']:.2f} (info)")

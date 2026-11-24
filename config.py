@@ -1223,8 +1223,8 @@ BB_ALERT_ENABLED = True
 BB_PERIOD = 20
 BB_STD = 1.2   # 2026-11-24: 1.2 standard deviations (per request)
 BB_RSI_PERIOD = 14
-BB_RSI_UPPER = 70   # CHANGED 2026-11-23 (was 65)
-BB_RSI_LOWER = 30   # CHANGED 2026-11-23 (was 35)
+BB_RSI_UPPER = 69.5   # 2026-11-24: ~70 (69.5 or more)
+BB_RSI_LOWER = 30.5   # 2026-11-24: ~30 (30.5 or less)
 ST_PERIOD = 10
 ST_MULT = 3.0
 BB_REQUIRE_SUPERTREND = False   # 2026-11-24: Supertrend tick is information only
@@ -1330,3 +1330,7 @@ BB_RSI_INFO_ONLY_KINDS = ("index", "commodity")   # ... but only information for
 EOD_SPLIT_BY_TYPE = True          # day-end performance: MACD / Bollinger / ORB-move reported separately
 
 BB_MSG_OPTIONS = "full"   # 2026-11-24: inside the tap block: Lot, ATM CE/PE + IV, max Call/Put OI strikes
+
+# ---- 2026-11-24: commodity Bollinger alert on 5-min candles too (5-min AND 15-min) ----
+BB_5MIN_COMMODITIES = True
+BB_5MIN_LOOKBACK = 3     # last 3 closed 5-min candles are checked each run (the cron runs every 15 min)
