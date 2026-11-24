@@ -2905,12 +2905,6 @@ def run_fo_scan(now_ist, index_only=False):
                           f"({signal['strength']['passed']}/{signal['strength']['total']}, need {signal['strength']['need']}, failed must: {signal['strength']['mandatory_failed']})", flush=True)
                     continue
 
-                if signal.get("is_fno") and getattr(config, "ATM_OPTION_INFO_ENABLED", True):
-                    try:
-                        signal["option_text"] = get_atm_option_text(symbol, watchlist.get(symbol), now_ist.date(), short=False)
-                    except Exception:
-                        signal["option_text"] = ""
-
                 # Same-direction cooldown (added, per request) — blocks
                 # only if this exact (symbol, direction) already
                 # alerted within config.SAME_DIRECTION_COOLDOWN_MINUTES,
@@ -2938,6 +2932,12 @@ def run_fo_scan(now_ist, index_only=False):
                 # future run until fixed. Marking first means a
                 # send failure costs at most one missed alert, never
                 # an infinite duplicate loop.
+                if signal.get("is_fno") and getattr(config, "ATM_OPTION_INFO_ENABLED", True):
+                    try:
+                        signal["option_text"] = get_atm_option_text(symbol, watchlist.get(symbol), now_ist.date(), short=False)
+                    except Exception:
+                        signal["option_text"] = ""
+
                 state.mark_alerted(saved_state, symbol, signal["direction"], signal["candle_time"])
                 try:
                     signal["alert_count"] = state.alert_day_streak(saved_state, symbol, signal["direction"], signal["candle_time"])
@@ -3450,12 +3450,6 @@ def run_nifty500_scan(now_ist):
                           f"({signal['strength']['passed']}/{signal['strength']['total']}, need {signal['strength']['need']}, failed must: {signal['strength']['mandatory_failed']})", flush=True)
                     continue
 
-                if signal.get("is_fno") and getattr(config, "ATM_OPTION_INFO_ENABLED", True):
-                    try:
-                        signal["option_text"] = get_atm_option_text(symbol, watchlist.get(symbol), now_ist.date(), short=False)
-                    except Exception:
-                        signal["option_text"] = ""
-
                 # Same-direction cooldown — see the matching comment in
                 # run_fo_scan() above.
                 if state.in_cooldown(saved_state, state_symbol, signal["direction"], signal["candle_time"], config.SAME_DIRECTION_COOLDOWN_MINUTES):
@@ -3473,6 +3467,11 @@ def run_nifty500_scan(now_ist):
 
                 # Mark BEFORE sending -- see the matching comment in
                 # run_fo_scan() above for why.
+                if signal.get("is_fno") and getattr(config, "ATM_OPTION_INFO_ENABLED", True):
+                    try:
+                        signal["option_text"] = get_atm_option_text(symbol, watchlist.get(symbol), now_ist.date(), short=False)
+                    except Exception:
+                        signal["option_text"] = ""
                 state.mark_alerted(saved_state, state_symbol, signal["direction"], signal["candle_time"])
                 try:
                     signal["alert_count"] = state.alert_day_streak(saved_state, state_symbol, signal["direction"], signal["candle_time"])
@@ -5188,10 +5187,14 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                     bb_hits["break"].append(base)
                     base["log_type"] = "BB"
                     _log_orb15_for_eod(saved_state, base, symbol, instrument_key)
-                elif active and five_min is None and getattr(config, "BB_REENTRY_ALERT", True) and ct > max(brk) and not outside:
+                elif active and five_min is None and ct > max(brk) and not outside:
+                    # candle closed back INSIDE the band: re-arm (a new alert needs a fresh qualifying break after this).
+                    # The re-entry MESSAGE itself is only sent when BB_REENTRY_ALERT is on.
                     if state.already_alerted(saved_state, f"{symbol}::BB_REENTRY", direction, ct):
                         continue
                     state.mark_alerted(saved_state, f"{symbol}::BB_REENTRY", direction, ct)
+                    if not getattr(config, "BB_REENTRY_ALERT", False):
+                        continue
                     b = d[d["timestamp"].astype(str) == max(brk)]
                     base["break_time"] = max(brk)
                     base["break_price"] = float(b.iloc[0]["close"]) if not b.empty else None
