@@ -5421,7 +5421,7 @@ def send_bb_summary(hits, now_ist, kind):
                 body.append(f"\u2705 Volume {h['vol_ratio']:.1f}x (20-candle avg er)")
             rsi_must = kindtxt in ("F&O", "Cash") and getattr(config, "BB_RSI_REQUIRED", False)
             _ri = mk(True) if rsi_must else "\u2139\ufe0f"
-            body.append(f"{_ri} RSI {h['rsi']:.1f}" + (" (must 70/30)" if rsi_must else " (info)"))
+            body.append(f"{_ri} RSI {h['rsi']:.1f}" + (f" (must {getattr(config, 'BB_RSI_UPPER', 70):g}/{getattr(config, 'BB_RSI_LOWER', 30):g})" if rsi_must else " (info)"))
             body.append(f"\u2705 MACD {h['macd']:.2f} / {h['macd_sig']:.2f}")
             if bull and h.get("r1"):
                 body.append(f"{mk(h['close'] > h['r1'])} R1 {h['r1']:.2f} (info)")
