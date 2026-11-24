@@ -99,7 +99,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v69 (2026-11-23)"
+BUILD_TAG = "short-v72 (2026-11-24)"
 
 
 def _ema920_line(info15, info75):
@@ -218,6 +218,29 @@ def _sector_label(symbol):
         return ""
 
 
+
+def _bb_line(signal):
+    """Bollinger info on the 15-min MACD alert (2026-11-24). RSI and R1/S1 are information only."""
+    b = signal.get("bb_info")
+    if not b:
+        return ""
+    bull = signal.get("direction") == "BULLISH"
+    ok = lambda v: "\u2705" if v else "\u274C"
+    parts = [f"BB({b.get('std', 1.2):g}) candle {b['outside_pct']:.0f}% {'upper' if bull else 'lower'} band er bahire \u2705",
+             f"ager candle {'green' if bull else 'red'} \u2705"]
+    if b.get("vol_ratio") is not None:
+        parts.append(f"Vol {b['vol_ratio']:.1f}x \u2705")
+    if b.get("rsi") is not None:
+        parts.append(f"RSI {b['rsi']:.1f}")
+    if bull and b.get("r1"):
+        parts.append(f"R1 {b['r1']:.2f} {ok(b.get('r1s1_ok'))}")
+    elif (not bull) and b.get("s1"):
+        parts.append(f"S1 {b['s1']:.2f} {ok(b.get('r1s1_ok'))}")
+    if str(b.get("candle_time")) != str(signal.get("candle_time")):
+        parts.append(f"({str(b['candle_time'])[11:16]} candle)")
+    return "\U0001F4CA " + " \u00b7 ".join(parts)
+
+
 def _build_compact_alert_text(signal, parts=False):
     """
     SHORT MACD+RSI alert (rewritten 2026-10-21 — "message ta short koro, baki
@@ -280,6 +303,12 @@ def _build_compact_alert_text(signal, parts=False):
     pdv, avg_v = signal.get("prev_day_volume"), signal.get("volume_avg_1m")
     dp, avg_d = signal.get("delivery_pct"), signal.get("delivery_avg_1m")
     rows = []
+    _bbl = _bb_line(signal)
+    if _bbl:
+        rows.append(_bbl)
+    _ot = signal.get("option_text")
+    if _ot:
+        rows.append(_ot)
 
     # 0) DAILY / MONTHLY RSI (one short row)
     _bull = direction == "BULLISH"
@@ -445,7 +474,8 @@ def flush_pending_alerts():
                 body = "\n".join(p["rows"])
                 line = (f"{'🟢' if s['direction'] == 'BULLISH' else '🔴'} <b>{s['symbol']}</b>{_sec}"
                         + ("  " + "  ·  ".join(links) if links else "")
-                        + f"\n{score.strip()} · {_p(float(s['close']))}{dc_txt}{_count_txt(s)}{_orb_tag(s)}")
+                        + f"\n{score.strip()} · {_p(float(s['close']))}{dc_txt}{_count_txt(s)}{_orb_tag(s)}"
+                        + (" · 📊BB✅" if s.get("bb_info") else ""))
                 # first 3 lines of the block (the only ones Telegram shows collapsed) are a short
                 # label + two invisible lines, so nothing readable shows before the tap
                 items.append(f"{line}\n<blockquote expandable>{body}</blockquote>")
@@ -1328,7 +1358,7 @@ def _chart_a(symbol):
         return ""
 
 
-def send_eod_alert_report(results, now_ist):
+def _send_eod_group(results, now_ist, label=""):
     """End-of-day summary: every stock that alerted today and how it moved since the alert.
     pnl is in TRADE terms: bullish = price up is +, bearish = price down is +."""
     day_txt = now_ist.strftime("%d %b")
@@ -1356,7 +1386,7 @@ def send_eod_alert_report(results, now_ist):
     bull = [r for r in results if r["direction"] == "BULLISH"]
     bear = [r for r in results if r["direction"] == "BEARISH"]
     allok = [r for r in results if r["pnl"] is not None]
-    head = [f"📋 <b>DAILY ALERT SUMMARY</b> — {day_txt}  ({len(results)} alerts)"]
+    head = [f"📋 <b>DAILY ALERT SUMMARY{label}</b> — {day_txt}  ({len(results)} alerts)"]
     if bull:
         head.append(f"🟢 Bullish ({len(bull)}): {_stats(bull)}")
     if bear:
@@ -1408,6 +1438,20 @@ def send_eod_alert_report(results, now_ist):
         msgs.append("\n".join(cur))
     for text in msgs:
         _post(text)
+
+
+def send_eod_alert_report(results, now_ist):
+    """Day-end performance, one message group per alert family (2026-11-24): BB alerts and the 15-min MACD alerts
+    are reported separately (EOD_SPLIT_BY_TYPE), other alerts (ORB / 15m move) in their own group."""
+    if not results or not getattr(config, "EOD_SPLIT_BY_TYPE", True):
+        return _send_eod_group(results, now_ist)
+    def fam(r):
+        ty = str(r.get("type", ""))
+        return "BB" if ty == "BB" else ("OTHER" if (ty.startswith("ORB") or ty == "MOVE15") else "MACD")
+    for key, label in (("MACD", " \u2014 MACD 15-min"), ("BB", " \u2014 BOLLINGER"), ("OTHER", " \u2014 ORB / MOVE")):
+        grp = [r for r in results if fam(r) == key]
+        if grp:
+            _send_eod_group(grp, now_ist, label)
 
 
 def _post_html_chunks(head, body, tag):

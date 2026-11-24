@@ -1221,13 +1221,13 @@ DAY_MOVERS_WINDOW_MIN = 90
 #  RE-ENTRY : after a BREAK alert today, when the same stock's candle closes back INSIDE the band -> second summary.
 BB_ALERT_ENABLED = True
 BB_PERIOD = 20
-BB_STD = 2.0   # 2026-11-22: back to 2.0 standard deviations
+BB_STD = 1.2   # 2026-11-24: 1.2 standard deviations (per request)
 BB_RSI_PERIOD = 14
 BB_RSI_UPPER = 70   # CHANGED 2026-11-23 (was 65)
 BB_RSI_LOWER = 30   # CHANGED 2026-11-23 (was 35)
 ST_PERIOD = 10
 ST_MULT = 3.0
-BB_REQUIRE_SUPERTREND = True
+BB_REQUIRE_SUPERTREND = False   # 2026-11-24: Supertrend tick is information only
 BB_BEARISH_ENABLED = True       # cash stocks still follow CASH_STOCKS_BULLISH_ONLY
 BB_REENTRY_ALERT = False   # OFF 2026-11-22 (apatoto re-entry bondho)
 BB_MIN_BARS = 30
@@ -1239,7 +1239,7 @@ BB_MIN_BARS = 30
 #      5) Top gainers / losers report
 # OFF: the 15-min MACD alert (stocks, indices, commodities) and every other report.
 # To bring the 15-min MACD alert back: MACD15_ALERT_ENABLED = True (and add "index" to ENABLED_SCAN_MODES).
-MACD15_ALERT_ENABLED = False
+MACD15_ALERT_ENABLED = True   # 2026-11-24: ON again (stocks) - now needs the Bollinger condition below
 
 # ---- 2026-11-21 update ----
 OPENING_15M_REPORT_ENABLED = True       # 1st 15-min Open=Low/High + sector report (auto from a normal run; same report as SCAN_MODE=opening_bias_report)
@@ -1247,7 +1247,7 @@ OPENING_15M_RUN_AFTER = "09:31"
 BB_INCLUDE_INDICES = True               # NIFTY 50 / NIFTY BANK / SENSEX Bollinger alerts
 BB_INCLUDE_COMMODITIES = True           # commodity Bollinger alerts
 MACD15_ALERT_COMMODITIES = True         # commodities keep the 15-min MACD alert even though MACD15_ALERT_ENABLED is False
-BB_REQUIRE_R1S1 = True          # ADDED 2026-11-22: bullish close must also be above R1, bearish below S1 (floor pivots of the previous day)
+BB_REQUIRE_R1S1 = False          # ADDED 2026-11-22: bullish close must also be above R1, bearish below S1 (floor pivots of the previous day)
 BB_VOL_GOOD_RATIO = 1.5      # candle volume vs avg of the last 20 candles: >= this shows a tick on the alert (informational)
 
 # Result / dividend line on the Bollinger alert (ADDED 2026-11-22) — from Yahoo Finance via yfinance ("SYMBOL.NS").
@@ -1268,8 +1268,8 @@ BB_FIRST2_5MIN_ENABLED = False   # OFF 2026-11-23: alert only on the 15-min cand
 # (BB_PERIOD, DAILY_BB_STD) with daily RSI(14) > DAILY_BB_RSI_MIN. Runs on the first normal run at/after DAILY_BB_RUN_AFTER.
 DAILY_BB_ENABLED = True
 DAILY_BB_RUN_AFTER = "09:00"
-DAILY_BB_RSI_MIN = 65
-DAILY_BB_STD = 2.0
+DAILY_BB_RSI_MIN = 0    # 2026-11-24: RSI is information only (set 65 to make it a must again)
+DAILY_BB_STD = 1.2
 DAILY_BB_HISTORY_DAYS = 180
 DAILY_BB_UNIVERSE = "fo"            # "fo" or "fo+n500"
 DAILY_BB_INCLUDE_LOWER = False      # True = also list closes below the lower band with RSI < 35
@@ -1295,3 +1295,38 @@ MOVE15_ALERT_ENABLED = False   # OFF 2026-11-23 (move % is now shown inside the 
 MOVE15_MIN_PCT = 2.0
 MOVE15_BEARISH_ENABLED = True       # cash stocks still follow CASH_STOCKS_BULLISH_ONLY
 MOVE15_UNTIL = "10:30"
+
+
+# ---------- 2026-11-24: Bollinger inside the 15-min MACD/score alert; fewer alerts ----------
+# The 15-min MACD alert (stocks + commodities) is sent only when a Bollinger-qualified candle exists among the last
+# MACD_BB_LOOKBACK closed candles up to the signal candle. A candle qualifies when:
+#   - >= BB_CANDLE_OUTSIDE_PCT % of its range (low..high) is outside the band (BB_PERIOD, BB_STD) and it closes outside
+#   - the previous candle has the SAME colour (green->green above the upper band, red->red below the lower band)
+#   - candle volume >= BB_MIN_VOL_RATIO x the 20-candle average (skipped when there is no volume data)
+# RSI, R1/S1 and Supertrend are shown as information only.
+MACD_REQUIRE_BB = True
+MACD_BB_LOOKBACK = 3              # signal candle + 2 earlier candles
+BB_CANDLE_OUTSIDE_PCT = 80        # 100 = whole candle outside
+BB_PREV_SAME_COLOR = True
+BB_MIN_VOL_RATIO = 1.5
+BB_RSI_REQUIRED = False           # True = RSI >= BB_RSI_UPPER / <= BB_RSI_LOWER becomes a must again
+MACD15_ALERT_INDICES = False      # indices keep the standalone Bollinger alert instead
+BB_ALERT_STOCKS = False           # standalone Bollinger alert for stocks OFF (it is inside the MACD alert now)
+BB_STANDALONE_COMMODITIES = False # commodities get BB inside their MACD alert
+
+# ---------- 2026-11-24: Top-5 gainers / losers reports ----------
+# vs previous close: LAST DAY (previous trading day vs the day before) ~09:00, 1st 15-min ~09:31, 30-min ~09:47, 1-hour ~10:17.
+TOP5_ENABLED = True
+TOP5_COUNT = 5
+TOP5_SCHEDULE = {"day": "09:00", "15": "09:31", "30": "09:47", "60": "10:17"}   # IST, first run at/after the time
+
+
+# ---------- 2026-11-24 (v71): BB and MACD are SEPARATE alerts again ----------
+MACD_REQUIRE_BB = False           # 15-min MACD alert (score, Monthly/Daily RSI ...) works as before, no Bollinger condition
+BB_ALERT_STOCKS = True            # separate Bollinger alert for F&O + Nifty500 cash stocks
+BB_STANDALONE_COMMODITIES = True  # commodities: separate Bollinger alert too (plus their MACD alert)
+BB_RSI_REQUIRED = True            # RSI >= 70 (bullish) / <= 30 (bearish) is a MUST for STOCKS ...
+BB_RSI_INFO_ONLY_KINDS = ("index", "commodity")   # ... but only information for index / commodity
+EOD_SPLIT_BY_TYPE = True          # day-end performance: MACD / Bollinger / ORB-move reported separately
+
+BB_MSG_OPTIONS = "full"   # 2026-11-24: inside the tap block: Lot, ATM CE/PE + IV, max Call/Put OI strikes

@@ -2380,8 +2380,7 @@ def run_fo_scan(now_ist, index_only=False):
             _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels, df5)
             _move15_scan_symbol(symbol, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, move15_hits)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
-            if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
-                    getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
+            if not _macd15_allowed(symbol):
                 continue
             # prev_day_high/prev_day_low (added, per request, 2026-09-05)
             # — feeds the Liquidity Sweep scan below.
@@ -2901,10 +2900,16 @@ def run_fo_scan(now_ist, index_only=False):
                 # independent confirmations agree with the cross; weak ones are dropped
                 # (not marked alerted). config.ALERT_MIN_STRENGTH_RATIO = 0 sends all.
                 signal["strength"] = compute_alert_strength(signal)
-                if signal["strength"]["mandatory_failed"] or not signal["strength"]["meets_min"] or _daily_support_blocks(signal):
+                if signal["strength"]["mandatory_failed"] or not signal["strength"]["meets_min"] or _daily_support_blocks(signal) or _macd_bb_blocks(signal, df15, now_ist, levels):
                     print(f"[strength] {symbol} {signal['direction']} {signal['candle_time']} skipped "
                           f"({signal['strength']['passed']}/{signal['strength']['total']}, need {signal['strength']['need']}, failed must: {signal['strength']['mandatory_failed']})", flush=True)
                     continue
+
+                if signal.get("is_fno") and getattr(config, "ATM_OPTION_INFO_ENABLED", True):
+                    try:
+                        signal["option_text"] = get_atm_option_text(symbol, watchlist.get(symbol), now_ist.date(), short=False)
+                    except Exception:
+                        signal["option_text"] = ""
 
                 # Same-direction cooldown (added, per request) — blocks
                 # only if this exact (symbol, direction) already
@@ -3149,8 +3154,7 @@ def run_nifty500_scan(now_ist):
             _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels, df5)
             _move15_scan_symbol(symbol, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, move15_hits)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
-            if not getattr(config, "MACD15_ALERT_ENABLED", True) and not (
-                    getattr(config, "MACD15_ALERT_COMMODITIES", False) and symbol in config.COMMODITIES):
+            if not _macd15_allowed(symbol):
                 continue
             # prev_day_high/prev_day_low (added, per request, 2026-09-05)
             # — feeds the Liquidity Sweep scan below.
@@ -3441,10 +3445,16 @@ def run_nifty500_scan(now_ist):
                 # independent confirmations agree with the cross; weak ones are dropped
                 # (not marked alerted). config.ALERT_MIN_STRENGTH_RATIO = 0 sends all.
                 signal["strength"] = compute_alert_strength(signal)
-                if signal["strength"]["mandatory_failed"] or not signal["strength"]["meets_min"] or _daily_support_blocks(signal):
+                if signal["strength"]["mandatory_failed"] or not signal["strength"]["meets_min"] or _daily_support_blocks(signal) or _macd_bb_blocks(signal, df15, now_ist, levels):
                     print(f"[strength] {symbol} {signal['direction']} {signal['candle_time']} skipped "
                           f"({signal['strength']['passed']}/{signal['strength']['total']}, need {signal['strength']['need']}, failed must: {signal['strength']['mandatory_failed']})", flush=True)
                     continue
+
+                if signal.get("is_fno") and getattr(config, "ATM_OPTION_INFO_ENABLED", True):
+                    try:
+                        signal["option_text"] = get_atm_option_text(symbol, watchlist.get(symbol), now_ist.date(), short=False)
+                    except Exception:
+                        signal["option_text"] = ""
 
                 # Same-direction cooldown — see the matching comment in
                 # run_fo_scan() above.
@@ -4638,18 +4648,32 @@ def run_daily_bb_report(now_ist):
                 vavg = sum(vols[-21:-1]) / 20.0 if len(vols) >= 21 else 0
                 row = {"symbol": sym, "close": close, "chg": (close - prev) / prev * 100.0 if prev else 0.0,
                        "rsi": rsi, "vol": (vols[-1] / vavg) if vavg > 0 else None}
-                if close > up and rsi > rsi_min:
-                    row.update(band=up, away=(close / up - 1) * 100.0)
-                    ups.append(row)
-                elif lower_on and close < lo and rsi < (100 - rsi_min):
-                    row.update(band=lo, away=(close / lo - 1) * 100.0)
-                    lows.append(row)
+                _o = [float(r.get("open") or r["close"]) for r in h[-2:]]
+                _h2 = float(h[-1].get("high") or close)
+                _l2 = float(h[-1].get("low") or close)
+                _rng = _h2 - _l2
+                _need = float(getattr(config, "BB_CANDLE_OUTSIDE_PCT", 80)) / 100.0
+                _same = getattr(config, "BB_PREV_SAME_COLOR", True)
+                _vol_ok = row["vol"] is None or row["vol"] >= float(getattr(config, "BB_MIN_VOL_RATIO", 1.5))
+                _rsi_up = rsi > rsi_min
+                _rsi_lo = rsi < (100 - rsi_min)
+                if _rng > 0 and len(_o) == 2:
+                    _out_up = (_h2 - max(_l2, up)) / _rng
+                    _out_lo = (min(_h2, lo) - _l2) / _rng
+                    if (close > up and close > _o[1] and _out_up + 1e-9 >= _need and _vol_ok and _rsi_up
+                            and (not _same or float(h[-2]["close"]) > float(h[-2].get("open") or h[-2]["close"]))):
+                        row.update(band=up, away=(close / up - 1) * 100.0, out_pct=_out_up * 100.0)
+                        ups.append(row)
+                    elif (lower_on and close < lo and close < _o[1] and _out_lo + 1e-9 >= _need and _vol_ok and _rsi_lo
+                            and (not _same or float(h[-2]["close"]) < float(h[-2].get("open") or h[-2]["close"]))):
+                        row.update(band=lo, away=(close / lo - 1) * 100.0, out_pct=_out_lo * 100.0)
+                        lows.append(row)
             except Exception as e:
                 print(f"Daily BB: {sym} failed: {e}", flush=True)
         day_txt = dt.date.fromisoformat(latest).strftime("%d %b")
         when = "AJKER (day-end)" if use_today else "AGER DIN"
         head = [f"\U0001F4CA <b>DAILY BOLLINGER \u2014 {when} \u2014 UPPER BAND CLOSE</b>  {now_ist.strftime('%d %b %H:%M')}",
-                f"<i>{day_txt} er daily close upper band (20, 2) er upore \u00b7 daily RSI &gt; {rsi_min:g} \u00b7 {len(ups)} ta stock</i>"]
+                f"<i>{day_txt} er daily candle upper band (20, {k:g}) er 80%+ bahire, ager candle o green, volume bhalo \u00b7 RSI &gt; {rsi_min:g} \u00b7 {len(ups)} ta stock</i>"]
         body = []
 
         def _lines(rows, icon, word):
@@ -4658,7 +4682,8 @@ def run_daily_bb_report(now_ist):
                 body.append(f"{i}. <b>{_html.escape(r['symbol'])}</b> ({_html.escape(sec)}) "
                             f"<a href=\"{build_chart_link(r['symbol'])}\">Chart</a>\n"
                             f"    {r['close']:g} ({r['chg']:+.2f}%) \u00b7 {word} band {r['band']:.2f} ({r['away']:+.1f}%) "
-                            f"\u00b7 RSI {r['rsi']:.1f}" + (f" \u00b7 Vol {r['vol']:.1f}x" if r.get("vol") else ""))
+                            f"\u00b7 RSI {r['rsi']:.1f}" + (f" \u00b7 Vol {r['vol']:.1f}x" if r.get("vol") else "")
+                            + (f" \u00b7 candle {r['out_pct']:.0f}% bahire" if r.get("out_pct") is not None else ""))
 
         _lines(ups, "\U0001F7E2", "upper")
         if lows:
@@ -4953,6 +4978,105 @@ def _bb_eval(df15):
     return d
 
 
+
+def _macd15_allowed(symbol):
+    """Which symbols may send the 15-min MACD/score alert (2026-11-24): stocks (MACD15_ALERT_ENABLED), commodities
+    (MACD15_ALERT_COMMODITIES), indices only if MACD15_ALERT_INDICES (indices keep the standalone Bollinger alert)."""
+    if symbol in config.INDICES:
+        return bool(getattr(config, "MACD15_ALERT_INDICES", False))
+    if symbol in config.COMMODITIES:
+        return bool(getattr(config, "MACD15_ALERT_COMMODITIES", True) or getattr(config, "MACD15_ALERT_ENABLED", True))
+    return bool(getattr(config, "MACD15_ALERT_ENABLED", True))
+
+
+def _bb_candle_check(d, i, bull):
+    """Bollinger condition on candle i of the _bb_eval frame d (2026-11-24):
+      * >= BB_CANDLE_OUTSIDE_PCT % of the candle's range (low..high) lies outside the band AND it closes outside
+        (bullish: above the upper band; bearish: below the lower band)
+      * previous candle has the SAME colour (green->green / red->red)  [BB_PREV_SAME_COLOR]
+      * good volume: candle volume >= BB_MIN_VOL_RATIO x average of the last 20 candles (skipped if no volume data)
+    Returns a dict (RSI / R1-S1 are added by the caller as information only) or None."""
+    try:
+        if i < 1 or i >= len(d):
+            return None
+        r, p = d.iloc[i], d.iloc[i - 1]
+        band = r["bb_up"] if bull else r["bb_lo"]
+        if pd.isna(band):
+            return None
+        o, h, l, c = float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"])
+        band = float(band)
+        if bull and not (c > band and c > o):
+            return None
+        if (not bull) and not (c < band and c < o):
+            return None
+        rng = h - l
+        if rng <= 0:
+            return None
+        out = (h - max(l, band)) / rng if bull else (min(h, band) - l) / rng
+        need = float(getattr(config, "BB_CANDLE_OUTSIDE_PCT", 80)) / 100.0
+        if out + 1e-9 < need:
+            return None
+        if getattr(config, "BB_PREV_SAME_COLOR", True):
+            po, pc = float(p["open"]), float(p["close"])
+            if (bull and not pc > po) or ((not bull) and not pc < po):
+                return None
+        va, vol = r.get("vol_avg"), float(r["volume"] or 0)
+        vol_ratio = None
+        if va is not None and not pd.isna(va) and float(va) > 0 and vol > 0:
+            vol_ratio = vol / float(va)
+            if vol_ratio < float(getattr(config, "BB_MIN_VOL_RATIO", 1.5)):
+                return None
+        return {"candle_time": str(r["timestamp"]), "outside_pct": out * 100.0, "band": band, "vol_ratio": vol_ratio,
+                "rsi": None if pd.isna(r["rsi"]) else float(r["rsi"]), "close": c}
+    except Exception:
+        return None
+
+
+def _macd_bb_blocks(signal, df15, now_ist, levels=None):
+    """True (= block the MACD alert) when MACD_REQUIRE_BB is on and no Bollinger-qualified candle exists among the
+    last MACD_BB_LOOKBACK closed candles up to the signal candle. On success signal['bb_info'] is filled for the
+    message (RSI and R1/S1 are INFORMATION only). Missing data never crashes; too little data = blocked."""
+    try:
+        if not getattr(config, "MACD_REQUIRE_BB", True):
+            return False
+        d = _bb_eval(df15)
+        if d is None:
+            print(f"[bb-gate] {signal.get('symbol')} skipped (not enough candles for Bollinger)", flush=True)
+            return True
+        bull = signal["direction"] == "BULLISH"
+        ct = str(signal["candle_time"])
+        idx = d.index[d["timestamp"].astype(str) <= ct]
+        if len(idx) == 0:
+            return True
+        last = int(idx[-1])
+        look = max(1, int(getattr(config, "MACD_BB_LOOKBACK", 3)))
+        hit = None
+        for i in range(last, max(last - look, 0), -1):
+            hit = _bb_candle_check(d, i, bull)
+            if hit:
+                break
+        if not hit:
+            print(f"[bb-gate] {signal.get('symbol')} {signal['direction']} {ct} skipped (no BB-qualified candle in last {look})", flush=True)
+            return True
+        r1 = s1 = None
+        pdi = prev_day_info(df15, now_ist)
+        _h = (pdi or {}).get("high") or (levels or {}).get("high")
+        _l = (pdi or {}).get("low") or (levels or {}).get("low")
+        _c = (pdi or {}).get("close") or (levels or {}).get("prev_close")
+        if _h and _l and _c:
+            _p = (float(_h) + float(_l) + float(_c)) / 3.0
+            r1, s1 = 2 * _p - float(_l), 2 * _p - float(_h)
+        px = hit["close"]
+        hit["r1s1_ok"] = None if (r1 is None or s1 is None) else ((px > r1) if bull else (px < s1))
+        hit["r1"], hit["s1"] = r1, s1
+        hit["std"] = float(getattr(config, "BB_STD", 1.2))
+        signal["bb_info"] = hit
+        return False
+    except Exception as e:
+        print(f"[bb-gate] failed for {signal.get('symbol')}: {e}", flush=True)
+        return True
+
+
 def _bb_times(st, key, direction, day):
     return sorted(t for t in state._get_times(st, f"{key}:{direction}") if str(t).startswith(day))
 
@@ -4968,6 +5092,9 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
         is_index, is_comm = symbol in index_symbols_orb, symbol in config.COMMODITIES
         if (is_index and not getattr(config, "BB_INCLUDE_INDICES", True)) or (is_comm and not getattr(config, "BB_INCLUDE_COMMODITIES", True)):
             return
+        if not (is_index or (is_comm and getattr(config, "BB_STANDALONE_COMMODITIES", False))
+                or (not is_index and not is_comm and getattr(config, "BB_ALERT_STOCKS", False))):
+            return   # 2026-11-24: stocks / commodities get Bollinger as a condition INSIDE the 15-min MACD alert instead
         d = _bb_eval(df15)
         if d is None:
             return
@@ -5023,7 +5150,11 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                 rev = _bb_times(saved_state, f"{symbol}::BB_REENTRY", direction, day)
                 active = bool(brk) and (not rev or max(brk) > max(rev))
                 outside = close > float(r["bb_up"]) if bull else close < float(r["bb_lo"])
-                rsi_ok = rsi >= rsi_hi if bull else rsi <= rsi_lo
+                qualifies = (five_min is None and _bb_candle_check(d, int(r.name), bull) is not None
+                             and ((float(r["macd"]) > float(r["macd_sig"])) if bull else (float(r["macd"]) < float(r["macd_sig"]))))
+                _info_only = (is_index and "index" in getattr(config, "BB_RSI_INFO_ONLY_KINDS", ())) or \
+                             (is_comm and "commodity" in getattr(config, "BB_RSI_INFO_ONLY_KINDS", ()))
+                rsi_ok = (rsi >= rsi_hi if bull else rsi <= rsi_lo) if (getattr(config, "BB_RSI_REQUIRED", False) and not _info_only) else True
                 st_ok = True
                 if need_st:
                     st_ok = (stl is not None and not pd.isna(stl) and ((std_ == 1 and close > float(stl)) if bull
@@ -5049,7 +5180,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                         "day_pct": ((close - float(_c)) / float(_c) * 100.0) if _c else None, "rsi": rsi, "is_fno": is_fno, "kind": kind_tag,
                         "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                         "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": five_min}
-                if outside and rsi_ok and st_ok and pv_ok and not active:
+                if outside and qualifies and rsi_ok and st_ok and pv_ok and not active:
                     if state.already_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct):
                         continue
                     state.mark_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct)
@@ -5232,83 +5363,104 @@ def get_corp_event_text(symbol, today=None):
 
 
 def send_bb_summary(hits, now_ist, kind):
-    """ONE summary message per run: 'break' = close outside the Bollinger band (+RSI +Supertrend);
-    'reentry' = those stocks closing back inside the band."""
+    """'break' = 15-min candle outside the Bollinger band (same look as the MACD alert: one short line per stock,
+    tap to open the details; F&O stocks show Lot, ATM CE/PE + IV, max Call/Put OI strikes). 'reentry' = back inside."""
     import html as _html
     from telegram_notifier import _sector_label
     if not hits:
         return
-    if kind == "break":
-        out = [f"\U0001F4C8 <b>BB + RSI + R1/S1 BREAK</b>  {now_ist.strftime('%H:%M')}"]
-    else:
+    mk = lambda ok: "\u2705" if ok else "\u274C"
+    if kind != "break":
         out = [f"\U0001F501 <b>BOLLINGER BAND RE-ENTRY</b>  {now_ist.strftime('%H:%M')}",
                "<i>ager alert howa stock ebar band er bhitore fire close korlo</i>"]
-    for direction, icon in (("BULLISH", "\U0001F7E2"), ("BEARISH", "\U0001F534")):
-        grp = sorted((h for h in hits if h["direction"] == direction), key=lambda h: h["symbol"])
-        if not grp:
-            continue
-        out.append(f"\n{icon} <b>{direction}</b> ({len(grp)})")
-        for h in grp:
-            bull = direction == "BULLISH"
-            kindtxt = h.get("kind") or ("F&O" if h.get("is_fno") else "Cash")
+        for h in sorted(hits, key=lambda h: h["symbol"]):
+            bull = h["direction"] == "BULLISH"
             band = h["bb_up"] if bull else h["bb_lo"]
-            sec = "" if kindtxt in ("Index", "Commodity") else f" ({_html.escape(_sector_label(h['symbol']) or 'Other')})"
-            head = (f"{icon} <b>{_html.escape(h['symbol'])}</b>{sec} [{kindtxt}] "
-                    f"<a href=\"{h.get('chart_link', '')}\">Chart</a> {str(h['candle_time'])[11:16]}")
-            if kind == "break" and h.get("five_min"):
-                head += f" \u23F1 5-min {str(h['five_min'])[11:16]} candle e"
-            if kind == "break":
-                # COMPACT (2026-11-23): only the conditions that decided the alert; extras are switchable in config (BB_MSG_*)
-                mk = lambda ok: "\u2705" if ok else "\u274C"
-                lvl = ""
-                if bull and h.get("r1"):
-                    lvl = f" \u00b7 R1 {h['r1']:.2f} \u2705"
-                elif (not bull) and h.get("s1"):
-                    lvl = f" \u00b7 S1 {h['s1']:.2f} \u2705"
-                st = " \u00b7 ST \u2705" if h.get("st_line") else ""
-                _mv = f" ({h['day_pct']:+.2f}%)" if h.get("day_pct") is not None else ""
-                line = f"    {h['close']:g}{_mv} \u00b7 band {band:.2f} \u00b7 RSI {h['rsi']:.1f}{lvl}{st}"
-                ex = []
-                if getattr(config, "BB_MSG_MACD", False):
-                    ex.append(f"MACD {h['macd']:.2f}/{h['macd_sig']:.2f} {mk((h['macd'] > h['macd_sig']) == bull)}")
-                if getattr(config, "BB_MSG_VOL", False) and h.get("vol_ratio") is not None:
-                    ex.append(f"Vol {h['vol_ratio']:.1f}x")
-                if getattr(config, "BB_MSG_1M", False) and h.get("month_pct") is not None:
-                    ex.append(f"1M {h['month_pct']:+.1f}%")
-                if ex:
-                    line += "\n    " + " \u00b7 ".join(ex)
-                if h.get("is_fno") and kindtxt == "F&O":
-                    mode_o = getattr(config, "BB_MSG_OPTIONS", "short")
-                    if mode_o in ("short", "full"):
-                        ao = get_atm_option_text(h["symbol"], h.get("instrument_key"), now_ist.date(), short=(mode_o == "short"))
-                        if ao:
-                            line += f"\n    {ao}"
-                if kindtxt in ("F&O", "Cash"):
-                    if getattr(config, "BB_MSG_EVENTS", True):
-                        ev = get_corp_event_text(h["symbol"], now_ist.date())
-                        if ev:
-                            line += f"\n    {ev}"
-                    if getattr(config, "BB_MSG_NEWS", False):
-                        sym_q = urllib.parse.quote_plus(h["symbol"])
-                        line += (f"\n    \U0001F4F0 <a href=\"https://news.google.com/search?q={sym_q}+share+news&hl=en-IN&gl=IN&ceid=IN:en\">News</a>"
-                                 f" \u00b7 \U0001F5D3 <a href=\"https://news.google.com/search?q={sym_q}+result+OR+dividend+date&hl=en-IN&gl=IN&ceid=IN:en\">Result/Dividend</a>")
-            else:
-                bp = h.get("break_price")
-                mv = ""
-                if bp:
-                    pnl = (h["close"] - bp) / bp * 100.0 * (1 if bull else -1)
-                    mv = f" \u00b7 alert {str(h.get('break_time'))[11:16]} @ {bp:g} \u2192 {pnl:+.2f}%"
-                line = (f"    {h['close']:g} \u00b7 {'upper' if bull else 'lower'} band {band:.2f} er bhitore"
-                        f" \u00b7 RSI {h['rsi']:.1f}{mv}")
-            out.append(head + "\n" + line)
-    text = "\n".join(out)
-    for i in range(0, len(text), 3900):
+            bp = h.get("break_price")
+            mv = ""
+            if bp:
+                pnl = (h["close"] - bp) / bp * 100.0 * (1 if bull else -1)
+                mv = f" \u00b7 alert {str(h.get('break_time'))[11:16]} @ {bp:g} \u2192 {pnl:+.2f}%"
+            out.append(f"{'🟢' if bull else '🔴'} <b>{_html.escape(h['symbol'])}</b> {h['close']:g} \u00b7 {'upper' if bull else 'lower'} band {band:.2f} er bhitore \u00b7 RSI {h['rsi']:.1f}{mv}")
+        text = "\n".join(out)
         try:
             requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
-                          data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text[i:i + 3900], "parse_mode": "HTML",
+                          data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text[:3900], "parse_mode": "HTML",
                                 "disable_web_page_preview": True}, timeout=20)
         except Exception as e:
             print(f"BB summary send failed: {e}", flush=True)
+        return
+    nb = sum(1 for h in hits if h["direction"] == "BULLISH")
+    ns = len(hits) - nb
+    ct0 = str(hits[0]["candle_time"])[11:16]
+    cnt = " \u00b7 ".join(x for x in ((f"\U0001F7E2 {nb} bullish" if nb else ""), (f"\U0001F534 {ns} bearish" if ns else "")) if x)
+    header = f"\U0001F4C8 <b>15-MIN BB ALERTS</b> ({ct0})\n{cnt}   <i>{_html.escape(BUILD_TAG_SHORT())}</i>"
+    items = []
+    for h in sorted(hits, key=lambda h: (h["direction"] != "BULLISH", h["symbol"])):
+        try:
+            bull = h["direction"] == "BULLISH"
+            icon = "\U0001F7E2" if bull else "\U0001F534"
+            kindtxt = h.get("kind") or ("F&O" if h.get("is_fno") else "Cash")
+            band = h["bb_up"] if bull else h["bb_lo"]
+            sec = "" if kindtxt in ("Index", "Commodity") else f" <i>({_html.escape(_sector_label(h['symbol']) or 'Other')})</i>"
+            links = [f"\U0001F4C8 <a href=\"{h.get('chart_link', '')}\">Chart</a>"]
+            if kindtxt in ("F&O", "Cash"):
+                links.append(f"\U0001F4CA <a href=\"https://www.screener.in/company/{urllib.parse.quote(h['symbol'])}/consolidated/\">Screener</a>")
+            mv = f" ({h['day_pct']:+.2f}%)" if h.get("day_pct") is not None else ""
+            top = (f"{icon} <b>{_html.escape(h['symbol'])}</b>{sec}  " + "  \u00b7  ".join(links)
+                   + f"\nRSI {h['rsi']:.1f} \u00b7 {h['close']:g}{mv} \u00b7 \U0001F4CABB\u2705")
+            body = [f"{h['candle_time'][:10]} {str(h['candle_time'])[11:16]}  |  {kindtxt}" + ("  \u2705" if kindtxt == "F&O" else "")]
+            if h.get("outside_pct") is not None:
+                body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): candle {h['outside_pct']:.0f}% {'upper' if bull else 'lower'} band {band:.2f} er bahire \u00b7 ager candle {'green' if bull else 'red'}")
+            else:
+                body.append(f"\u2705 BB close {'upper' if bull else 'lower'} band {band:.2f} er bahire")
+            if h.get("vol_ratio") is not None:
+                body.append(f"\u2705 Volume {h['vol_ratio']:.1f}x (20-candle avg er)")
+            rsi_must = kindtxt in ("F&O", "Cash") and getattr(config, "BB_RSI_REQUIRED", False)
+            _ri = mk(True) if rsi_must else "\u2139\ufe0f"
+            body.append(f"{_ri} RSI {h['rsi']:.1f}" + (" (must 70/30)" if rsi_must else " (info)"))
+            body.append(f"\u2705 MACD {h['macd']:.2f} / {h['macd_sig']:.2f}")
+            if bull and h.get("r1"):
+                body.append(f"{mk(h['close'] > h['r1'])} R1 {h['r1']:.2f} (info)")
+            elif (not bull) and h.get("s1"):
+                body.append(f"{mk(h['close'] < h['s1'])} S1 {h['s1']:.2f} (info)")
+            if h.get("st_line"):
+                body.append(f"{mk((h['close'] > h['st_line']) == bull)} Supertrend {h['st_line']:.2f} (info)")
+            if h.get("month_pct") is not None:
+                body.append(f"\U0001F4C5 1 mash: {h['month_pct']:+.1f}% ({h.get('month_days')} din)")
+            if h.get("is_fno") and kindtxt == "F&O" and getattr(config, "BB_MSG_OPTIONS", "full") != "off":
+                ao = get_atm_option_text(h["symbol"], h.get("instrument_key"), now_ist.date(), short=False)
+                if ao:
+                    body.append(ao)
+            if kindtxt in ("F&O", "Cash") and getattr(config, "BB_MSG_EVENTS", True):
+                ev = get_corp_event_text(h["symbol"], now_ist.date())
+                if ev:
+                    body.append(ev)
+            items.append(f"{top}\n<blockquote expandable>" + "\n".join(body) + "</blockquote>")
+        except Exception as e:
+            print(f"BB message build failed for {h.get('symbol')}: {e}", flush=True)
+    groups, cur, size = [], [], 0
+    for it in items:
+        if cur and size + len(it) + 400 > 3800:
+            groups.append(cur); cur, size = [], 0
+        cur.append(it); size += len(it) + 2
+    if cur:
+        groups.append(cur)
+    for g in groups:
+        try:
+            requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                          data={"chat_id": config.TELEGRAM_CHAT_ID, "text": header + "\n" + "\n".join(g), "parse_mode": "HTML",
+                                "disable_web_page_preview": True}, timeout=20)
+        except Exception as e:
+            print(f"BB summary send failed: {e}", flush=True)
+
+
+def BUILD_TAG_SHORT():
+    try:
+        from telegram_notifier import BUILD_TAG
+        return BUILD_TAG.split(" ")[0]
+    except Exception:
+        return ""
 
 
 # ---------- 1st 15-min candle 2% move alert (ADDED 2026-11-23) ----------
@@ -5451,6 +5603,85 @@ def maybe_run_day_movers_once_a_day(now_ist):
         state.mark_alerted(st, f"DAYMOVERS_{hhmm}", "DONE", today)
         state.save_state(st)
         run_day_movers_report(now_ist)
+
+
+def run_top5_report(now_ist, window):
+    """TOP 5 GAINERS / LOSERS (F&O stocks) for window 'day' (previous trading day: its close vs the day before),
+    '15' / '30' / '60' (price at the close of the first 15 / 30 / 60 minutes of today vs previous close). ADDED 2026-11-24."""
+    import html as _html
+    n = int(getattr(config, "TOP5_COUNT", 5))
+    fo_watch = None if config.USE_FULL_FO_LIST else config.FO_STOCK_WATCHLIST
+    watchlist = instruments.resolve_fo_stock_list(fo_watch)
+    pivots = build_pivot_levels(watchlist)
+    dfs, _failed = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
+    rows = []
+    for sym, tup in dfs.items():
+        try:
+            df15 = tup[2]
+            if df15 is None or df15.empty:
+                continue
+            dts = df15["timestamp"].dt.date
+            if window == "day":
+                days = sorted(d for d in set(dts) if d < now_ist.date())
+                if len(days) < 2:
+                    continue
+                c1 = float(df15[dts == days[-1]].iloc[-1]["close"])
+                c0 = float(df15[dts == days[-2]].iloc[-1]["close"])
+                px, base = c1, c0
+            else:
+                mins = int(window)
+                t0 = pd.Timestamp(now_ist.date().isoformat() + " 09:15:00")
+                if df15["timestamp"].dt.tz is not None:
+                    t0 = t0.tz_localize(df15["timestamp"].dt.tz)
+                win = df15[(df15["timestamp"] >= t0) & (df15["timestamp"] < t0 + pd.Timedelta(minutes=mins))]
+                if len(win) < mins // 15:
+                    continue
+                base = (pivots.get(sym) or {}).get("prev_close")
+                if not base:
+                    continue
+                px = float(win.iloc[-1]["close"])
+            rows.append({"symbol": sym, "close": px, "pct": (px - float(base)) / float(base) * 100.0})
+        except Exception:
+            continue
+    if not rows:
+        print(f"[top5:{window}] no data - nothing sent", flush=True)
+        return
+    label = {"day": "LAST DAY", "15": "1st 15-MIN", "30": "1st 30-MIN", "60": "1st 1-HOUR"}[window]
+    sub = "prev day close vs day before" if window == "day" else "vs prev close"
+    out = [f"\U0001F3C6 <b>TOP {n} GAINERS / LOSERS \u2014 {label}</b>  {now_ist.strftime('%d %b %H:%M')}  (F&amp;O, {sub})"]
+    for title, icon, sel in (("GAINERS", "\U0001F7E2", sorted(rows, key=lambda x: -x["pct"])[:n]),
+                             ("LOSERS", "\U0001F534", sorted(rows, key=lambda x: x["pct"])[:n])):
+        out.append(f"\n{icon} <b>{title}</b>")
+        for i, r in enumerate(sel, 1):
+            out.append(f"{i}. <b>{_html.escape(r['symbol'])}</b> ({_html.escape(_sector_chart_label(r['symbol']))}) "
+                       f"<b>{r['pct']:+.2f}%</b> \u00b7 {r['close']:g} "
+                       f"<a href=\"{build_chart_link(r['symbol'])}\">Chart</a>")
+    try:
+        requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                      data={"chat_id": config.TELEGRAM_CHAT_ID, "text": "\n".join(out)[:4000], "parse_mode": "HTML",
+                            "disable_web_page_preview": True}, timeout=20)
+    except Exception as e:
+        print(f"[top5:{window}] send failed: {e}", flush=True)
+
+
+def maybe_run_top5_once_a_day(now_ist):
+    """Top-5 gainers/losers for last day / 15 / 30 / 60 min, each once a day at the first run at/after its time (until 12:00)."""
+    if not getattr(config, "TOP5_ENABLED", False) or now_ist.weekday() >= 5:
+        return
+    today = now_ist.date().isoformat()
+    for window, hhmm in getattr(config, "TOP5_SCHEDULE", {}).items():
+        hh, mm = (int(x) for x in hhmm.split(":"))
+        if not (dt.time(hh, mm) <= now_ist.time() <= dt.time(12, 0)):
+            continue
+        st = state.load_state()
+        if state.already_alerted(st, f"TOP5_{window}", "DONE", today):
+            continue
+        state.mark_alerted(st, f"TOP5_{window}", "DONE", today)   # mark first: a crash must not retry every run
+        state.save_state(st)
+        try:
+            run_top5_report(now_ist, window)
+        except Exception as e:
+            print(f"Top5 {window} failed: {e}", flush=True)
 
 
 def _send_eod_chart_list(results, now_ist):
@@ -5879,6 +6110,12 @@ def _run_inner():
         maybe_run_day_movers_once_a_day(now_ist)
     except Exception as e:
         print(f"Day movers report failed this run (non-blocking): {e}", flush=True)
+
+    # Top-5 gainers / losers: last day, 1st 15 / 30 / 60 min.
+    try:
+        maybe_run_top5_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Top5 report failed this run (non-blocking): {e}", flush=True)
 
     # 1st 15-min Open=Low/High + sector report (~09:31).
     try:
