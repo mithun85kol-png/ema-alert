@@ -2387,8 +2387,7 @@ def run_fo_scan(now_ist, index_only=False, commodity_only=False):
             prev_close = levels.get("prev_close") if levels else None
             # Opening-range-break alerts (1st 15-min / 30-min / 1-hour, price above/below VWAP) — stocks only.
             _orb_scan_symbol(symbol, df5, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, orb_hits)
-            if getattr(config, "BB_IN_FULL_RUN", False):   # F&O / index / commodity BB runs in the fast bb_fast mode instead
-                _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels, df5)
+            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, watchlist.get(symbol), levels, df5)
             _move15_scan_symbol(symbol, df15, prev_close, now_ist, saved_state, watchlist.get(symbol), fno_underlyings, move15_hits)
             # ONLY-SELECTED-ALERTS MODE (2026-11-21): when MACD15_ALERT_ENABLED is False the 15-min MACD alert is sent for commodities only (MACD15_ALERT_COMMODITIES)
             if not _macd15_allowed(symbol):
@@ -3079,47 +3078,6 @@ def build_nifty500_watchlist(now_ist=None):
     if not _in_stock_session(now_ist):
         return {}
     return instruments.resolve_nifty500_stocks()
-
-
-def _run_bb_only(now_ist, only_commodities=False, n500=False):
-    """BB-ONLY fast run (2026-11-25, "BB alert first priority"): fetch the watchlist and run ONLY the Bollinger scan,
-    no MACD / score / report work, so the alert goes out within ~1-3 minutes of the candle close.
-    SCAN_MODE=bb_fast        : F&O stocks + indices + commodities, 15-min candles
-    SCAN_MODE=commodity_bb   : commodities only, 5-min candles (own cron, own concurrency group)"""
-    if n500:   # Nifty 500 cash-only stocks (the ones that are not F&O)
-        _fno = instruments.get_fno_underlyings()
-        watchlist = {s: k for s, k in (build_nifty500_watchlist(now_ist) or {}).items() if s.upper() not in _fno}
-    else:
-        watchlist = build_watchlist(now_ist)
-    if only_commodities:
-        watchlist = {s: k for s, k in watchlist.items() if s in config.COMMODITIES}
-    print(f"BB-only scan ({'commodity 5-min' if only_commodities else 'F&O+index+commodity 15-min'}): {len(watchlist)} instruments", flush=True)
-    if not watchlist:
-        return 0
-    pivots = build_pivot_levels(watchlist)
-    hist_cache = build_hist1min_cache(watchlist)
-    dfs, failed = fetch_all(watchlist, now_ist, config.FETCH_WORKERS, hist_cache)
-    fno = instruments.get_fno_underlyings()
-    saved_state = state.load_state()
-    bb_hits = {"break": [], "reentry": []}
-    for symbol, (df5, df75, df15) in dfs.items():
-        if df15 is None or df15.empty:
-            continue
-        levels = pivots.get(symbol)
-        if only_commodities:
-            _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, watchlist.get(symbol), levels)
-        else:
-            _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno, bb_hits, watchlist.get(symbol), levels, df5, do_5m=False)
-    n = 0
-    for _k, _hits in bb_hits.items():
-        if _hits:
-            send_bb_summary(_hits, now_ist, _k)
-            n += len(_hits)
-    state.save_state(saved_state)
-    if failed:
-        print(f"{len(failed)} instrument(s) failed to fetch: {failed}", flush=True)
-    print(f"BB-only scan done. {n} alert(s) sent.", flush=True)
-    return n
 
 
 def run_nifty500_scan(now_ist):
@@ -5294,7 +5252,7 @@ def _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, lev
         print(f"BB 5-min scan failed for {symbol}: {e}", flush=True)
 
 
-def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, instrument_key=None, levels=None, df5=None, do_5m=True):
+def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits, instrument_key=None, levels=None, df5=None):
     """BREAK: candle CLOSES above the upper Bollinger band with RSI >= 70 and Supertrend support (uptrend, close above
     the line), or below the lower band with RSI <= 30 and Supertrend resistance (BEARISH). RE-ENTRY: later, when the
     same stock's candle closes back INSIDE the band after a BREAK alert today. Last 2 closed candles are checked (catch-up).
@@ -5308,7 +5266,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
         if not (is_index or (is_comm and getattr(config, "BB_STANDALONE_COMMODITIES", False))
                 or (not is_index and not is_comm and getattr(config, "BB_ALERT_STOCKS", False))):
             return   # 2026-11-24: stocks / commodities get Bollinger as a condition INSIDE the 15-min MACD alert instead
-        if do_5m and is_comm and getattr(config, "BB_5MIN_COMMODITIES", False):
+        if is_comm and getattr(config, "BB_5MIN_COMMODITIES", False):
             _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, levels)
         d = _bb_eval(df15)
         if d is None:
@@ -6045,78 +6003,6 @@ def _run_telegram_test():
         sys.exit(1)
 
 
-def _run_periodic_reports(now_ist):
-    """Once-a-day reports (daily MACD, daily BB, top-5, opening 15/30/60, day movers, EOD ...). They run AFTER the alert
-    scans since 2026-11-25: they fetch the whole F&O list and used to delay the 15-min alerts by 10+ minutes."""
-    if getattr(config, "BB_ONLY_MODE", False):
-        # BB-only mode: only the Daily BB report and the day-end performance (BB alerts) stay on.
-        for _fn, _nm in ((maybe_run_daily_bb_once_a_day, "Daily BB"), (maybe_run_eod_report_once_a_day, "EOD report")):
-            try:
-                _fn(now_ist)
-            except Exception as e:
-                print(f"{_nm} failed this run (non-blocking): {e}", flush=True)
-        return
-    # Daily MACD+RSI alert: first run of the day from 08:00 IST (the 09:00 cron run
-    # is before the trading session, so this sits ahead of the session gate).
-    try:
-        maybe_run_daily_scan_once_a_day(now_ist)
-    except Exception as e:
-        print(f"Daily scan failed this run (non-blocking): {e}", flush=True)
-        try:
-            send_mode_failure_notice("daily_scan", e, now_ist)
-        except Exception:
-            pass
-
-    # Daily Bollinger band report (first run at/after DAILY_BB_RUN_AFTER, ~09:01).
-    try:
-        maybe_run_daily_bb_once_a_day(now_ist)
-    except Exception as e:
-        print(f"Daily BB report failed this run (non-blocking): {e}", flush=True)
-
-    # End-of-day summary of today's alerts (first run at/after 15:40 IST).
-    try:
-        maybe_run_eod_report_once_a_day(now_ist)
-    except Exception as e:
-        print(f"EOD report failed this run (non-blocking): {e}", flush=True)
-
-    # Top 10 gainers / losers (auto times in config.DAY_MOVERS_AUTO_TIMES).
-    try:
-        maybe_run_day_movers_once_a_day(now_ist)
-    except Exception as e:
-        print(f"Day movers report failed this run (non-blocking): {e}", flush=True)
-
-    # Top-5 gainers / losers: last day, 1st 15 / 30 / 60 min.
-    try:
-        maybe_run_top5_once_a_day(now_ist)
-    except Exception as e:
-        print(f"Top5 report failed this run (non-blocking): {e}", flush=True)
-
-    # 1st 15-min Open=Low/High + sector report (~09:31).
-    try:
-        maybe_run_opening_15m_once_a_day(now_ist)
-    except Exception as e:
-        print(f"Opening 15M report failed this run (non-blocking): {e}", flush=True)
-
-    # 1st 30-min Open=Low/High + sector report (~09:47).
-    try:
-        maybe_run_opening_30m_once_a_day(now_ist)
-    except Exception as e:
-        print(f"Opening 30M report failed this run (non-blocking): {e}", flush=True)
-
-    # 1st 1-hour Open=Low/High + sector report (~10:17).
-    try:
-        maybe_run_opening_1h_once_a_day(now_ist)
-    except Exception as e:
-        print(f"Opening 1H report failed this run (non-blocking): {e}", flush=True)
-
-    # Daily RSI < 30 list (morning, ~9:30) + its day-end performance report.
-    try:
-        maybe_run_oversold_once_a_day(now_ist)
-    except Exception as e:
-        print(f"Oversold alert failed this run (non-blocking): {e}", flush=True)
-
-
-
 def _run_inner():
     if os.environ.get("SCAN_MODE", "full") == "telegram_test":
         _run_telegram_test()
@@ -6152,13 +6038,7 @@ def _run_inner():
         if not (dt.time(9, 0) <= now_ist.time() <= dt.time(23, 35)) or now_ist.weekday() >= 5:
             print(f"Outside commodity session ({now_ist.strftime('%H:%M')} IST) - commodity_bb scan skipping.", flush=True)
             return
-        _run_bb_only(now_ist, only_commodities=True)
-        return
-    if mode == "bb_fast":
-        if not (dt.time(9, 0) <= now_ist.time() <= dt.time(23, 35)) or now_ist.weekday() >= 5:
-            print(f"Outside market hours ({now_ist.strftime('%H:%M')} IST) - bb_fast scan skipping.", flush=True)
-            return
-        _run_bb_only(now_ist)
+        run_fo_scan(now_ist, commodity_only=True)
         return
     if mode == "index":
         if not _in_stock_session(now_ist):
@@ -6393,24 +6273,70 @@ def _run_inner():
                 send_mode_failure_notice("monthly_scan", e, now_ist)
         return
 
+    # Daily MACD+RSI alert: first run of the day from 08:00 IST (the 09:00 cron run
+    # is before the trading session, so this sits ahead of the session gate).
+    try:
+        maybe_run_daily_scan_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Daily scan failed this run (non-blocking): {e}", flush=True)
+        try:
+            send_mode_failure_notice("daily_scan", e, now_ist)
+        except Exception:
+            pass
+
+    # Daily Bollinger band report (first run at/after DAILY_BB_RUN_AFTER, ~09:01).
+    try:
+        maybe_run_daily_bb_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Daily BB report failed this run (non-blocking): {e}", flush=True)
+
+    # End-of-day summary of today's alerts (first run at/after 15:40 IST).
+    try:
+        maybe_run_eod_report_once_a_day(now_ist)
+    except Exception as e:
+        print(f"EOD report failed this run (non-blocking): {e}", flush=True)
+
+    # Top 10 gainers / losers (auto times in config.DAY_MOVERS_AUTO_TIMES).
+    try:
+        maybe_run_day_movers_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Day movers report failed this run (non-blocking): {e}", flush=True)
+
+    # Top-5 gainers / losers: last day, 1st 15 / 30 / 60 min.
+    try:
+        maybe_run_top5_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Top5 report failed this run (non-blocking): {e}", flush=True)
+
+    # 1st 15-min Open=Low/High + sector report (~09:31).
+    try:
+        maybe_run_opening_15m_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Opening 15M report failed this run (non-blocking): {e}", flush=True)
+
+    # 1st 30-min Open=Low/High + sector report (~09:47).
+    try:
+        maybe_run_opening_30m_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Opening 30M report failed this run (non-blocking): {e}", flush=True)
+
+    # 1st 1-hour Open=Low/High + sector report (~10:17).
+    try:
+        maybe_run_opening_1h_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Opening 1H report failed this run (non-blocking): {e}", flush=True)
+
+    # Daily RSI < 30 list (morning, ~9:30) + its day-end performance report.
+    try:
+        maybe_run_oversold_once_a_day(now_ist)
+    except Exception as e:
+        print(f"Oversold alert failed this run (non-blocking): {e}", flush=True)
+
     if not (_in_stock_session(now_ist) or _in_commodity_session(now_ist)):
         print(f"Outside all trading sessions ({now_ist.strftime('%H:%M')} IST) — skipping.", flush=True)
         return
 
-    if getattr(config, "BB_ONLY_MODE", False):
-        # ONLY the Bollinger alert (everything else is off): F&O + index + commodity first, then Nifty 500 cash stocks.
-        _run_bb_only(now_ist)
-        if getattr(config, "BB_ONLY_INCLUDE_N500", True) and getattr(config, "BB_ALERT_STOCKS", True) and _in_stock_session(now_ist):
-            try:
-                _run_bb_only(now_ist, n500=True)
-            except Exception as e:
-                print(f"BB-only Nifty 500 scan failed (non-blocking): {e}", flush=True)
-        return
     _, fo_failed, fo_total, fo_ds_hits, fo_ts_hits = run_fo_scan(now_ist)
-    try:   # F&O alerts go out NOW, not after the Nifty 500 scan
-        flush_pending_alerts()
-    except Exception as e:
-        print(f"flush_pending_alerts (after F&O scan) failed: {e}", flush=True)
 
     # 1-month MACD+RSI alert: once a day, non-blocking (see config.MONTHLY_ALERT_*)
     try:
@@ -6547,11 +6473,6 @@ def run():
             flush_pending_alerts()
         except Exception as e:
             print(f"flush_pending_alerts failed: {e}", flush=True)
-    if os.environ.get("SCAN_MODE", "full") == "full":
-        try:
-            _run_periodic_reports(_now_ist())
-        except Exception as e:
-            print(f"periodic reports failed (non-blocking): {e}", flush=True)
 
 
 if __name__ == "__main__":
