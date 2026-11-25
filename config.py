@@ -1379,3 +1379,23 @@ BB_MACD_CROSS_REQUIRED = True    # MACD line crossed its signal line on the BB c
 BB_MACD_CROSS_LOOKBACK = 3       # 1 = the cross must be on the BB candle itself
 BB_MACD_CROSS_GENUINE = True     # gap now >= gap on the cross candle (momentum still growing, not a fading touch)
 BB_MACD_MIN_GAP_PCT = 0          # extra minimum gap (% of price); 0 = a cross is enough
+
+
+# ---- 2026-11-25: MACD = INFORMATION ONLY in the Bollinger alert ("macd ta informative kore dao") ----
+# False: the BB alert no longer needs MACD at all (neither the MACD cross nor "MACD on the signal's side"); the message just
+#        shows MACD / signal, bullish or bearish, and "CROSS ei candle e / N candle age" when a cross happened (lookback
+#        BB_MACD_CROSS_LOOKBACK). ✅ = MACD agrees with the alert's direction, ⚠️ = MACD points the other way.
+# True : the old behaviour (see BB_MACD_CROSS_REQUIRED / BB_MACD_CROSS_LOOKBACK / BB_MACD_CROSS_GENUINE / BB_MACD_MIN_GAP*).
+BB_MACD_REQUIRED = False
+
+
+# ---- 2026-11-25: MACD information-only, PER KIND ("commodity te macd ta informative") ----
+# BB_MACD_REQUIRED is the master switch (False = MACD is information for EVERY kind). With BB_MACD_REQUIRED = True, MACD
+# (cross / side, see BB_MACD_CROSS_*) is a condition ONLY for the kinds NOT listed here, e.g. ("commodity", "index") = stocks still
+# need the MACD cross but commodities / indices only show it.
+BB_MACD_INFO_ONLY_KINDS = ("commodity", "index", "stock")
+
+# ---- 2026-11-25: ORB OFF ("orb report off koro") ----
+# Both opening-range alerts are OFF (ORB 15/30/60-min break + the 1st-15-min 2% move). Nothing ORB is sent or logged for the day-end report.
+ORB15_MOVE_ALERT_ENABLED = False
+MOVE15_ALERT_ENABLED = False
