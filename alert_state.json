@@ -8623,6 +8623,20 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Capital Goods"
+      },
+      {
+        "symbol": "CGCL",
+        "direction": "BULLISH",
+        "time": "2026-11-25 13:00:00+05:30",
+        "price": 236.95,
+        "key": "NSE_EQ|INE180C01042",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 6.4,
+        "sector": "Financial Services"
       }
     ]
   },
@@ -17025,5 +17039,8 @@
     "2026-09-25 14:15:00+05:30",
     "2026-10-19 14:30:00+05:30",
     "2026-11-06 13:45:00+05:30"
+  ],
+  "CGCL::BB_BREAK:BULLISH": [
+    "2026-11-25 13:00:00+05:30"
   ]
 }
