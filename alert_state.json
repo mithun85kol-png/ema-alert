@@ -474,7 +474,8 @@
     "2026-09-07 09:15:00+05:30"
   ],
   "VIJAYA::BB_BREAK:BULLISH": [
-    "2026-11-23 09:30:00+05:30"
+    "2026-11-23 09:30:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "PNBHOUSING::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-25 09:15:00+05:30"
@@ -556,7 +557,8 @@
     "2026-09-10 10:00:00+05:30"
   ],
   "APLAPOLLO::BB_BREAK:BEARISH": [
-    "2026-11-23 09:15:00+05:30"
+    "2026-11-23 09:15:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "NETWEB::SWEEP::BEARISH:BEARISH": [
     "2026-09-07 09:15:00+05:30"
@@ -944,7 +946,8 @@
     "2026-11-11 09:15:00+05:30"
   ],
   "PNB::BB_BREAK:BEARISH": [
-    "2026-11-23 09:15:00+05:30"
+    "2026-11-23 09:15:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "TMPV::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-25 14:15:00+05:30"
@@ -2912,7 +2915,8 @@
     "2026-09-07 09:15:00+05:30"
   ],
   "COHANCE::BB_BREAK:BULLISH": [
-    "2026-11-23 11:45:00+05:30"
+    "2026-11-23 11:45:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "PIIND::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-24 10:45:00+05:30"
@@ -3519,7 +3523,8 @@
     "2026-08-31 15:00:00+05:30",
     "2026-09-02 12:45:00+05:30",
     "2026-11-17 12:30:00+05:30",
-    "2026-11-18 14:15:00+05:30"
+    "2026-11-18 14:15:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "ONESOURCE::N500:BULLISH": [
     "2026-10-27 09:15:00+05:30"
@@ -3647,7 +3652,8 @@
     "2026-10-14 14:15:00+05:30"
   ],
   "TOP5_15:DONE": [
-    "2026-11-24"
+    "2026-11-24",
+    "2026-11-25"
   ],
   "JUBLINGREA::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-24 13:15:00+05:30"
@@ -11568,6 +11574,324 @@
         "day": 1,
         "nifty": "UP",
         "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "PNB",
+        "direction": "BEARISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 146.71,
+        "key": "NSE_EQ|INE160A01022",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.98,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "TATACONSUM",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 1169.9,
+        "key": "NSE_EQ|INE192A01025",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 4.26,
+        "sector": "Fast Moving Consumer Goods"
+      },
+      {
+        "symbol": "ICICILIFE",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 485.5,
+        "key": "NSE_EQ|INE726G01019",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 4.22,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "VOLTAS",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 1250.0,
+        "key": "NSE_EQ|INE226A01021",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.86,
+        "sector": "Consumer Durables"
+      },
+      {
+        "symbol": "LICHSGFIN",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 616.0,
+        "key": "NSE_EQ|INE115A01026",
+        "score": "10/10",
+        "fno": true,
+        "day": 1,
+        "nifty": "FLAT",
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "APLAPOLLO",
+        "direction": "BEARISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 1416.4,
+        "key": "NSE_EQ|INE702C01027",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 3.79,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "UJJIVANSFB",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 62.16,
+        "key": "NSE_EQ|INE551W01018",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.26,
+        "sector": "Bank"
+      },
+      {
+        "symbol": "BAJAJFINSV",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 1921.2,
+        "key": "NSE_EQ|INE918I01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 6.09,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "HYUNDAI",
+        "direction": "BEARISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 2110.0,
+        "key": "NSE_EQ|INE0V6F01027",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.0,
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "MFSL",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 1531.0,
+        "key": "NSE_EQ|INE180A01020",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 6.36,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "SBICARD",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 595.65,
+        "key": "NSE_EQ|INE018E01016",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 11.06,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "DABUR",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 411.85,
+        "key": "NSE_EQ|INE016A01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.21,
+        "sector": "Fast Moving Consumer Goods"
+      },
+      {
+        "symbol": "AADHARHFC",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 430.7,
+        "key": "NSE_EQ|INE883F01010",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 2.63,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "CEATLTD",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 3591.5,
+        "key": "NSE_EQ|INE482A01020",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 12.91,
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "INTELLECT",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 594.35,
+        "key": "NSE_EQ|INE306R01017",
+        "score": "8/10",
+        "fno": false,
+        "day": 1,
+        "nifty": "FLAT",
+        "sector": "Information Technology"
+      },
+      {
+        "symbol": "COHANCE",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 492.65,
+        "key": "NSE_EQ|INE03QK01018",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 7.55,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "NUVOCO",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 366.5,
+        "key": "NSE_EQ|INE118D01016",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 9.84,
+        "sector": "Construction Materials"
+      },
+      {
+        "symbol": "CANHLIFE",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 128.0,
+        "key": "NSE_EQ|INE01TY01017",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 3.5,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "VIJAYA",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 1635.2,
+        "key": "NSE_EQ|INE043W01024",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 3.61,
+        "sector": "Healthcare"
+      },
+      {
+        "symbol": "JWL",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 204.05,
+        "key": "NSE_EQ|INE209L01016",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 23.23,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "SOBHA",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 1279.5,
+        "key": "NSE_EQ|INE671H01015",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 9.64,
+        "sector": "Realty"
+      },
+      {
+        "symbol": "CREDITACC",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 1044.0,
+        "key": "NSE_EQ|INE741K01010",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 12.06,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "ABSLAMC",
+        "direction": "BULLISH",
+        "time": "2026-11-25 09:30:00+05:30",
+        "price": 954.3,
+        "key": "NSE_EQ|INE404A01024",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 5.72,
+        "sector": "Financial Services"
       }
     ]
   },
@@ -11813,7 +12137,8 @@
     "2026-08-21 12:45:00+05:30"
   ],
   "HYUNDAI::BB_BREAK:BEARISH": [
-    "2026-11-23 09:15:00+05:30"
+    "2026-11-23 09:15:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "MMTC::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-24 14:30:00+05:30"
@@ -13147,7 +13472,8 @@
   ],
   "SILVER::BB_BREAK:BEARISH": [
     "2026-11-24 18:45:00+05:30",
-    "2026-11-24 20:45:00+05:30"
+    "2026-11-24 20:45:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "RUBICON::BB_BREAK:BULLISH": [
     "2026-11-23 09:15:00+05:30"
@@ -15611,7 +15937,8 @@
     "2026-11-23 09:15:00+05:30"
   ],
   "INTELLECT::N500:BULLISH": [
-    "2026-10-21 09:30:00+05:30"
+    "2026-10-21 09:30:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "PETRONET:BULLISH": [
     "2026-08-14 10:30:00+05:30",
@@ -15946,7 +16273,8 @@
     "2026-08-21 13:15:00+05:30"
   ],
   "DABUR::BB_BREAK:BULLISH": [
-    "2026-11-23 09:15:00+05:30"
+    "2026-11-23 09:15:00+05:30",
+    "2026-11-25 09:30:00+05:30"
   ],
   "HBLENGINE::SWEEP::BEARISH:BEARISH": [
     "2026-09-07 09:15:00+05:30"
@@ -16246,5 +16574,59 @@
     "2026-08-21 11:00:00+05:30",
     "2026-08-24 14:30:00+05:30",
     "2026-08-25 13:30:00+05:30"
+  ],
+  "TATACONSUM::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "ICICILIFE::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "VOLTAS::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "UJJIVANSFB::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "BAJAJFINSV::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "MFSL::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "SBICARD::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "AADHARHFC::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "CEATLTD::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "KIMS::BB_REENTRY:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "STARHEALTH::BB_REENTRY:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "NUVOCO::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "CANHLIFE::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "JWL::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "LTTS::BB_REENTRY:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "SOBHA::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "CREDITACC::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
+  ],
+  "ABSLAMC::BB_BREAK:BULLISH": [
+    "2026-11-25 09:30:00+05:30"
   ]
 }
