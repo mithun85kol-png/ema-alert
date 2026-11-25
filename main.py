@@ -2253,7 +2253,7 @@ def _daily_support_blocks(signal):
     return not (ds["macd_ok"] and ds["rsi_ok"] and ds["vol_ok"] is not False)
 
 
-def run_fo_scan(now_ist, index_only=False):
+def run_fo_scan(now_ist, index_only=False, commodity_only=False):
     """
     index_only=True restricts the watchlist to just the 3 index
     instruments (NIFTY 50 / NIFTY BANK / SENSEX) — used by the
@@ -2263,6 +2263,8 @@ def run_fo_scan(now_ist, index_only=False):
     watchlist = build_watchlist(now_ist)
     if index_only:
         watchlist = {sym: watchlist[sym] for sym in config.INDICES.keys() if sym in watchlist}
+    if commodity_only:   # SCAN_MODE=commodity_bb: light 5-min cron run for the commodity Bollinger alerts only
+        watchlist = {sym: watchlist[sym] for sym in config.COMMODITIES.keys() if sym in watchlist}
     print(f"Scanning {len(watchlist)} instruments...")
 
     pivots = build_pivot_levels(watchlist)
@@ -4609,6 +4611,91 @@ def maybe_run_daily_scan_once_a_day(now_ist):
 
 
 # ---------- Daily Bollinger band report (ADDED 2026-11-22) ----------
+def _dbb_prepare(h, period, k):
+    """Daily arrays (date, open, high, low, close, volume, upper/lower band, RSI) of one symbol's daily history."""
+    cl = pd.Series([float(r["close"]) for r in h])
+    ma, sd = cl.rolling(period).mean(), cl.rolling(period).std(ddof=0)
+    return {"date": [str(r["date"])[:10] for r in h], "close": cl.tolist(),
+            "open": [float(r.get("open") or r["close"]) for r in h],
+            "high": [float(r.get("high") or r["close"]) for r in h],
+            "low": [float(r.get("low") or r["close"]) for r in h],
+            "vol": [float(r.get("volume") or 0) for r in h],
+            "up": (ma + k * sd).tolist(), "lo": (ma - k * sd).tolist(),
+            "rsi": _rsi_series(cl.tolist(), 14).tolist()}
+
+
+def _dbb_at(p, i, rsi_min, lower_on):
+    """Daily Bollinger signal on daily candle i, or None: >= BB_CANDLE_OUTSIDE_PCT % of the candle outside the band and
+    closing outside, previous candle same colour, wick <= BB_MAX_WICK_PCT, volume >= BB_MIN_VOL_RATIO x 20-day average.
+    RSI only counts when rsi_min > 0 (> rsi_min for upper, < 100 - rsi_min for lower)."""
+    if i < 1 or pd.isna(p["up"][i]) or pd.isna(p["rsi"][i]):
+        return None
+    o, h_, l_, c = p["open"][i], p["high"][i], p["low"][i], p["close"][i]
+    rng = h_ - l_
+    if rng <= 0:
+        return None
+    wick = (1.0 - abs(c - o) / rng) * 100.0
+    if wick > float(getattr(config, "BB_MAX_WICK_PCT", 30)) + 1e-9:
+        return None
+    vols = p["vol"]
+    vavg = sum(vols[max(0, i - 20):i]) / 20.0 if i >= 20 else 0
+    vol = (vols[i] / vavg) if vavg > 0 else None
+    if vol is not None and vol < float(getattr(config, "BB_MIN_VOL_RATIO", 1.5)):
+        return None
+    need = float(getattr(config, "BB_CANDLE_OUTSIDE_PCT", 80)) / 100.0
+    same = getattr(config, "BB_PREV_SAME_COLOR", True)
+    po, pc = p["open"][i - 1], p["close"][i - 1]
+    rsi = float(p["rsi"][i])
+    prev_close = p["close"][i - 1]
+    row = {"close": c, "chg": (c - prev_close) / prev_close * 100.0 if prev_close else 0.0, "rsi": rsi, "vol": vol,
+           "wick": wick, "date": p["date"][i], "idx": i}
+    up, lo = p["up"][i], p["lo"][i]
+    if c > up and c > o and (h_ - max(l_, up)) / rng + 1e-9 >= need and (not same or pc > po) and (rsi_min <= 0 or rsi > rsi_min):
+        return dict(row, direction="BULLISH", band=up, away=(c / up - 1) * 100.0, out_pct=(h_ - max(l_, up)) / rng * 100.0)
+    if lower_on and c < lo and c < o and (min(h_, lo) - l_) / rng + 1e-9 >= need and (not same or pc < po) and (rsi_min <= 0 or rsi < 100 - rsi_min):
+        return dict(row, direction="BEARISH", band=lo, away=(c / lo - 1) * 100.0, out_pct=(min(h_, lo) - l_) / rng * 100.0)
+    return None
+
+
+def _dbb_performance(preps, latest, rsi_min, lower_on, days):
+    """For every daily-BB signal of the last `days` trading days (before `latest`): P/L from the close of the outside
+    candle until the price TOUCHES the band again (bullish: a later daily low <= that day's upper band; exit at the band,
+    or at the open if it gapped below). Not touched yet = open P/L at the latest close. Returns list of dicts."""
+    out = []
+    for sym, p in preps.items():
+        try:
+            n = len(p["close"])
+            if p["date"][-1] != latest:
+                continue
+            for i in range(max(1, n - 1 - days), n - 1):
+                s = _dbb_at(p, i, rsi_min, lower_on)
+                if not s:
+                    continue
+                bull = s["direction"] == "BULLISH"
+                entry = s["close"]
+                sign = 1 if bull else -1
+                best = 0.0
+                res = None
+                for j in range(i + 1, n):
+                    band = p["up"][j] if bull else p["lo"][j]
+                    touched = (p["low"][j] <= band) if bull else (p["high"][j] >= band)
+                    if not pd.isna(band) and touched:
+                        o = p["open"][j]
+                        exit_px = o if ((bull and o <= band) or ((not bull) and o >= band)) else band
+                        res = {"status": "TOUCH", "exit": exit_px, "exit_date": p["date"][j], "days": j - i}
+                        break
+                    ext = p["high"][j] if bull else p["low"][j]
+                    best = max(best, (ext - entry) / entry * 100.0 * sign)
+                if res is None:
+                    res = {"status": "OPEN", "exit": p["close"][-1], "exit_date": p["date"][-1], "days": n - 1 - i}
+                res["pnl"] = (res["exit"] - entry) / entry * 100.0 * sign
+                res.update(symbol=sym, direction=s["direction"], entry=entry, entry_date=s["date"], best=best)
+                out.append(res)
+        except Exception as e:
+            print(f"Daily BB perf: {sym} failed: {e}", flush=True)
+    return sorted(out, key=lambda r: (r["entry_date"], r["symbol"]))
+
+
 def run_daily_bb_report(now_ist):
     """Every morning: F&O stocks whose LAST COMPLETED daily candle closed ABOVE the daily upper Bollinger band
     (20, 2) with daily RSI > DAILY_BB_RSI_MIN (65). One summary with sector + Chart, strongest RSI first.
@@ -4642,45 +4729,24 @@ def run_daily_bb_report(now_ist):
         rsi_min = float(getattr(config, "DAILY_BB_RSI_MIN", 65))
         lower_on = getattr(config, "DAILY_BB_INCLUDE_LOWER", False)
         ups, lows = [], []
+        preps = {}
         for sym, h in histories.items():
             try:
-                if str(h[-1]["date"])[:10] != latest or len(h) < period + 15:
+                if len(h) < period + 15:
                     continue
-                cl = pd.Series([float(r["close"]) for r in h])
-                ma, sd = cl.rolling(period).mean(), cl.rolling(period).std(ddof=0)
-                up, lo = float((ma + k * sd).iloc[-1]), float((ma - k * sd).iloc[-1])
-                rsi = float(_rsi_series(cl.tolist(), 14).iloc[-1])
-                close, prev = float(cl.iloc[-1]), float(cl.iloc[-2])
-                vols = [float(r.get("volume") or 0) for r in h]
-                vavg = sum(vols[-21:-1]) / 20.0 if len(vols) >= 21 else 0
-                row = {"symbol": sym, "close": close, "chg": (close - prev) / prev * 100.0 if prev else 0.0,
-                       "rsi": rsi, "vol": (vols[-1] / vavg) if vavg > 0 else None}
-                _o = [float(r.get("open") or r["close"]) for r in h[-2:]]
-                _h2 = float(h[-1].get("high") or close)
-                _l2 = float(h[-1].get("low") or close)
-                _rng = _h2 - _l2
-                _need = float(getattr(config, "BB_CANDLE_OUTSIDE_PCT", 80)) / 100.0
-                _same = getattr(config, "BB_PREV_SAME_COLOR", True)
-                _vol_ok = row["vol"] is None or row["vol"] >= float(getattr(config, "BB_MIN_VOL_RATIO", 1.5))
-                _rsi_up = rsi > rsi_min
-                _rsi_lo = rsi < (100 - rsi_min)
-                if _rng > 0 and len(_o) == 2:
-                    _out_up = (_h2 - max(_l2, up)) / _rng
-                    _out_lo = (min(_h2, lo) - _l2) / _rng
-                    if (close > up and close > _o[1] and _out_up + 1e-9 >= _need and _vol_ok and _rsi_up
-                            and (not _same or float(h[-2]["close"]) > float(h[-2].get("open") or h[-2]["close"]))):
-                        row.update(band=up, away=(close / up - 1) * 100.0, out_pct=_out_up * 100.0)
-                        ups.append(row)
-                    elif (lower_on and close < lo and close < _o[1] and _out_lo + 1e-9 >= _need and _vol_ok and _rsi_lo
-                            and (not _same or float(h[-2]["close"]) < float(h[-2].get("open") or h[-2]["close"]))):
-                        row.update(band=lo, away=(close / lo - 1) * 100.0, out_pct=_out_lo * 100.0)
-                        lows.append(row)
+                pr = _dbb_prepare(h, period, k)
+                preps[sym] = pr
+                if str(h[-1]["date"])[:10] != latest:
+                    continue
+                res = _dbb_at(pr, len(h) - 1, rsi_min, lower_on)
+                if res:
+                    (ups if res["direction"] == "BULLISH" else lows).append(dict(res, symbol=sym))
             except Exception as e:
                 print(f"Daily BB: {sym} failed: {e}", flush=True)
         day_txt = dt.date.fromisoformat(latest).strftime("%d %b")
         when = "AJKER (day-end)" if use_today else "AGER DIN"
         head = [f"\U0001F4CA <b>DAILY BOLLINGER \u2014 {when} \u2014 UPPER BAND CLOSE</b>  {now_ist.strftime('%d %b %H:%M')}",
-                f"<i>{day_txt} er daily candle upper band (20, {k:g}) er 80%+ bahire, ager candle o green, volume bhalo \u00b7 RSI &gt; {rsi_min:g} \u00b7 {len(ups)} ta stock</i>"]
+                f"<i>{day_txt} er daily candle upper band (20, {k:g}) er 80%+ bahire, wick kom, ager candle o green, volume bhalo \u00b7 RSI info \u00b7 {len(ups)} ta stock</i>"]
         body = []
 
         def _lines(rows, icon, word):
@@ -4702,6 +4768,33 @@ def run_daily_bb_report(now_ist):
                 return True
             body.append(f"{day_txt} e kono F&amp;O stock upper band er upore close kore ni (RSI &gt; {rsi_min:g}).")
         _post_html_chunks(head, body, "daily_bb")
+        if getattr(config, "DAILY_BB_PERF_ENABLED", True):
+            try:
+                perf = _dbb_performance(preps, latest, rsi_min, lower_on, int(getattr(config, "DAILY_BB_PERF_DAYS", 10)))
+                if perf:
+                    tch = [r for r in perf if r["status"] == "TOUCH"]
+                    opn = [r for r in perf if r["status"] == "OPEN"]
+                    ph = [f"\U0001F4C8 <b>DAILY BB PERFORMANCE</b>  (last {getattr(config, 'DAILY_BB_PERF_DAYS', 10)} din)",
+                          "<i>outside candle er close \u2192 price band touch korar porjonto profit/loss</i>"]
+                    if tch:
+                        w = sum(1 for r in tch if r["pnl"] > 0)
+                        ph.append(f"\U0001F3AF Band touch hoyeche: {len(tch)} \u00b7 \u2705 {w} \u00b7 \u274C {len(tch) - w} \u00b7 avg {sum(r['pnl'] for r in tch) / len(tch):+.2f}%")
+                    if opn:
+                        ph.append(f"\u23F3 Ekhono band er bahire: {len(opn)} \u00b7 avg open {sum(r['pnl'] for r in opn) / len(opn):+.2f}%")
+                    pb = []
+                    for r in perf:
+                        ic = "\u2705" if r["pnl"] > 0 else "\u274C"
+                        ed = dt.date.fromisoformat(r["entry_date"]).strftime("%d %b")
+                        if r["status"] == "TOUCH":
+                            xd = dt.date.fromisoformat(r["exit_date"]).strftime("%d %b")
+                            pb.append(f"{ic} <b>{_html.escape(r['symbol'])}</b> {ed} @ {r['entry']:g} \u2192 band touch {xd} @ {r['exit']:.2f} "
+                                      f"(<b>{r['pnl']:+.2f}%</b>) \u00b7 {r['days']} din \u00b7 max +{r['best']:.1f}%")
+                        else:
+                            pb.append(f"\u23F3 <b>{_html.escape(r['symbol'])}</b> {ed} @ {r['entry']:g} \u2192 ekhono bahire, ekhon {r['exit']:.2f} "
+                                      f"(<b>{r['pnl']:+.2f}%</b>) \u00b7 {r['days']} din")
+                    _post_html_chunks(ph, pb, "daily_bb_perf")
+            except Exception as e:
+                print(f"Daily BB performance failed: {e}", flush=True)
         print(f"Daily BB report done: {len(ups)} upper, {len(lows)} lower, {len(failed)} fetch failures.", flush=True)
         return True
     except Exception as e:
@@ -4992,7 +5085,7 @@ def _macd15_allowed(symbol):
     if symbol in config.INDICES:
         return bool(getattr(config, "MACD15_ALERT_INDICES", False))
     if symbol in config.COMMODITIES:
-        return bool(getattr(config, "MACD15_ALERT_COMMODITIES", True) or getattr(config, "MACD15_ALERT_ENABLED", True))
+        return bool(getattr(config, "MACD15_ALERT_COMMODITIES", False))
     return bool(getattr(config, "MACD15_ALERT_ENABLED", True))
 
 
@@ -5027,6 +5120,14 @@ def _bb_candle_check(d, i, bull):
             po, pc = float(p["open"]), float(p["close"])
             if (bull and not pc > po) or ((not bull) and not pc < po):
                 return None
+        wick = (1.0 - abs(c - o) / rng) * 100.0          # total wick share of the candle range (0 = no wick)
+        if wick > float(getattr(config, "BB_MAX_WICK_PCT", 30)) + 1e-9:
+            return None
+        gap = float(r["macd"]) - float(r["macd_sig"])      # MACD divergence (MACD line - signal line)
+        mg = max(float(getattr(config, "BB_MACD_MIN_GAP", 0)),
+                 float(getattr(config, "BB_MACD_MIN_GAP_PCT", 0)) / 100.0 * abs(c))   # gap as % of the candle close
+        if (bull and gap < max(mg, 1e-12)) or ((not bull) and gap > -max(mg, 1e-12)):
+            return None
         va, vol = r.get("vol_avg"), float(r["volume"] or 0)
         vol_ratio = None
         if va is not None and not pd.isna(va) and float(va) > 0 and vol > 0:
@@ -5034,6 +5135,7 @@ def _bb_candle_check(d, i, bull):
             if vol_ratio < float(getattr(config, "BB_MIN_VOL_RATIO", 1.5)):
                 return None
         return {"candle_time": str(r["timestamp"]), "outside_pct": out * 100.0, "band": band, "vol_ratio": vol_ratio,
+                "wick_pct": wick, "macd_gap": gap, "macd_gap_pct": (abs(gap) / abs(c) * 100.0) if c else None,
                 "rsi": None if pd.isna(r["rsi"]) else float(r["rsi"]), "close": c}
     except Exception:
         return None
@@ -5133,15 +5235,13 @@ def _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, lev
                 _bq = _bb_candle_check(d, i, bull)
                 if _bq is None:
                     continue
-                if not ((float(r["macd"]) > float(r["macd_sig"])) if bull else (float(r["macd"]) < float(r["macd_sig"]))):
-                    continue
                 if state.already_alerted(saved_state, f"{symbol}::BB5_BREAK", direction, ct):
                     continue
                 state.mark_alerted(saved_state, f"{symbol}::BB5_BREAK", direction, ct)
                 stl = r["st_line"]
                 hit = {"symbol": symbol, "direction": direction, "r1": r1, "s1": s1, "instrument_key": instrument_key,
                        "macd": float(r["macd"]), "macd_sig": float(r["macd_sig"]), "vol_ratio": _bq.get("vol_ratio"),
-                       "outside_pct": _bq.get("outside_pct"), "close": close,
+                       "outside_pct": _bq.get("outside_pct"), "wick_pct": _bq.get("wick_pct"), "macd_gap": _bq.get("macd_gap"), "macd_gap_pct": _bq.get("macd_gap_pct"), "close": close,
                        "day_pct": ((close - float(_c)) / float(_c) * 100.0) if _c else None, "rsi": float(r["rsi"]),
                        "is_fno": False, "kind": "Commodity", "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                        "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": None,
@@ -5223,8 +5323,8 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                 rev = _bb_times(saved_state, f"{symbol}::BB_REENTRY", direction, day)
                 active = bool(brk) and (not rev or max(brk) > max(rev))
                 outside = close > float(r["bb_up"]) if bull else close < float(r["bb_lo"])
-                qualifies = (five_min is None and _bb_candle_check(d, int(r.name), bull) is not None
-                             and ((float(r["macd"]) > float(r["macd_sig"])) if bull else (float(r["macd"]) < float(r["macd_sig"]))))
+                _qc = _bb_candle_check(d, int(r.name), bull) if five_min is None else None
+                qualifies = _qc is not None
                 _info_only = (is_index and "index" in getattr(config, "BB_RSI_INFO_ONLY_KINDS", ())) or \
                              (is_comm and "commodity" in getattr(config, "BB_RSI_INFO_ONLY_KINDS", ()))
                 rsi_ok = (rsi >= rsi_hi if bull else rsi <= rsi_lo) if (getattr(config, "BB_RSI_REQUIRED", False) and not _info_only) else True
@@ -5253,6 +5353,10 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                         "day_pct": ((close - float(_c)) / float(_c) * 100.0) if _c else None, "rsi": rsi, "is_fno": is_fno, "kind": kind_tag,
                         "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                         "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": five_min}
+                if _qc:
+                    base.update(outside_pct=_qc["outside_pct"], wick_pct=_qc["wick_pct"], macd_gap=_qc["macd_gap"], macd_gap_pct=_qc.get("macd_gap_pct"))
+                    if _qc.get("vol_ratio") is not None:
+                        base["vol_ratio"] = _qc["vol_ratio"]
                 if outside and qualifies and rsi_ok and st_ok and pv_ok and not active:
                     if state.already_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct):
                         continue
@@ -5491,12 +5595,16 @@ def send_bb_summary(hits, now_ist, kind):
                 body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): candle {h['outside_pct']:.0f}% {'upper' if bull else 'lower'} band {band:.2f} er bahire \u00b7 ager candle {'green' if bull else 'red'}")
             else:
                 body.append(f"\u2705 BB close {'upper' if bull else 'lower'} band {band:.2f} er bahire")
+            if h.get("wick_pct") is not None:
+                body.append(f"\u2705 Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%) \u00b7 max {getattr(config, 'BB_MAX_WICK_PCT', 30):g}%")
             if h.get("vol_ratio") is not None:
                 body.append(f"\u2705 Volume {h['vol_ratio']:.1f}x (20-candle avg er)")
             rsi_must = kindtxt in ("F&O", "Cash") and getattr(config, "BB_RSI_REQUIRED", False)
             _ri = mk(True) if rsi_must else "\u2139\ufe0f"
             body.append(f"{_ri} RSI {h['rsi']:.1f}" + (f" (must {getattr(config, 'BB_RSI_UPPER', 70):g}/{getattr(config, 'BB_RSI_LOWER', 30):g})" if rsi_must else " (info)"))
-            body.append(f"\u2705 MACD {h['macd']:.2f} / {h['macd_sig']:.2f}")
+            _gp = (f" \u00b7 divergence {abs(h['macd_gap']):.2f} ({h['macd_gap_pct']:.2f}% of price, min {getattr(config, 'BB_MACD_MIN_GAP_PCT', 0):g}%)"
+                   if h.get("macd_gap_pct") is not None else "")
+            body.append(f"\u2705 MACD {h['macd']:.2f} / {h['macd_sig']:.2f}{_gp}")
             if bull and h.get("r1"):
                 body.append(f"{mk(h['close'] > h['r1'])} R1 {h['r1']:.2f} (info)")
             elif (not bull) and h.get("s1"):
@@ -5925,6 +6033,12 @@ def _run_inner():
     mode = os.environ.get("SCAN_MODE", "full")
     if mode not in getattr(config, "ENABLED_SCAN_MODES", {mode}):
         print(f"SCAN_MODE={mode} is switched off (config.ENABLED_SCAN_MODES) — nothing sent.", flush=True)
+        return
+    if mode == "commodity_bb":
+        if not (dt.time(9, 0) <= now_ist.time() <= dt.time(23, 35)) or now_ist.weekday() >= 5:
+            print(f"Outside commodity session ({now_ist.strftime('%H:%M')} IST) - commodity_bb scan skipping.", flush=True)
+            return
+        run_fo_scan(now_ist, commodity_only=True)
         return
     if mode == "index":
         if not _in_stock_session(now_ist):

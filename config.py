@@ -939,7 +939,7 @@ POSITION_75MIN_EMA_MIN_BARS = 60
 ENABLED_SCAN_MODES = {
     "full",            # Bollinger + commodity MACD + daily/monthly/EOD/day-movers/opening hooks run from this
     "opening_bias_report", "opening_bias_report_30m", "opening_bias_report_1h",
-    "daily_scan", "daily_bb", "monthly_scan", "eod_report", "alert_stats", "day_movers", "telegram_test",
+    "daily_scan", "daily_bb", "commodity_bb", "monthly_scan", "eod_report", "alert_stats", "day_movers", "telegram_test",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -1334,3 +1334,17 @@ BB_MSG_OPTIONS = "full"   # 2026-11-24: inside the tap block: Lot, ATM CE/PE + I
 # ---- 2026-11-24: commodity Bollinger alert on 5-min candles too (5-min AND 15-min) ----
 BB_5MIN_COMMODITIES = True
 BB_5MIN_LOOKBACK = 3     # last 3 closed 5-min candles are checked each run (the cron runs every 15 min)
+
+# ---- 2026-11-24: commodity + index: MACD alert OFF, only the Bollinger alert stays ----
+MACD15_ALERT_COMMODITIES = False
+MACD15_ALERT_INDICES = False
+
+# ---- 2026-11-25 ----
+BB_MAX_WICK_PCT = 30        # BB candle: total wick (upper+lower) at most 30% of the candle range (0 = no wick at all, lower = stricter)
+BB_MACD_MIN_GAP = 0         # BB alert: MACD must be on the signal's side AND |MACD - signal| >= this (0 = just the side). NOTE: price units -
+                            # on a Rs 300 stock the gap is usually < 1, so 4 lets only big-price stocks / index / commodity through.
+DAILY_BB_PERF_ENABLED = True   # daily BB report also shows how earlier daily-BB signals did: close of the outside candle -> band touch
+DAILY_BB_PERF_DAYS = 10        # look at signals of the last N trading days
+
+# 2026-11-25: MACD divergence as a % of price (fair for every stock): |MACD - signal| >= this % of the candle close.
+BB_MACD_MIN_GAP_PCT = 0.2   # gap >= 0.2% of price (price 300 -> 0.6 ; price 24000 -> 48). 0.4 was too strict in tests. Lower = more alerts.
