@@ -1347,7 +1347,6 @@ DAILY_BB_PERF_ENABLED = True   # daily BB report also shows how earlier daily-BB
 DAILY_BB_PERF_DAYS = 10        # look at signals of the last N trading days
 
 # 2026-11-25: MACD divergence as a % of price (fair for every stock): |MACD - signal| >= this % of the candle close.
-BB_MACD_MIN_GAP_PCT = 0.15  # gap >= 0.15% of price (price 9500 -> 14.3 ; price 300 -> 0.45). Lower = more alerts, higher = fewer.
 
 # ---- 2026-11-25: BB alert = first priority ----
 # SCAN_MODE=bb_fast (own cron, own GitHub concurrency group) scans F&O + index + commodity for the Bollinger alert ONLY, so it is
@@ -1363,3 +1362,20 @@ BB_IN_FULL_RUN = False
 BB_ONLY_MODE = True
 BB_ONLY_INCLUDE_N500 = True
 BB_IN_FULL_RUN = True
+
+BB_FIRST_OUTSIDE_ONLY = True    # previous candle must have closed INSIDE the band
+
+# ---- 2026-11-25: BB alert only on the FIRST candle that closes outside the band ----
+# The previous candle must have closed INSIDE its own band (so a stock that has been outside the band for several candles
+# never alerts late). Same rule for the daily BB report. False = old behaviour.
+BB_FIRST_CANDLE_ONLY = True
+
+# ---- 2026-11-25 (v86) ----
+BB_ONE_PER_DIRECTION = True   # same stock: after a BB alert, the next one (same direction) needs a candle close back INSIDE the band first; a direction change (bullish <-> bearish) alerts at once. Per day, per timeframe
+BB_5MIN_INDICES = True        # NIFTY 50 / NIFTY BANK / SENSEX: 5-min AND 15-min BB alerts (commodities already have both)
+
+# ---- 2026-11-25 (v88): MACD must really CROSS ----
+BB_MACD_CROSS_REQUIRED = True    # MACD line crossed its signal line on the BB candle or within BB_MACD_CROSS_LOOKBACK candles
+BB_MACD_CROSS_LOOKBACK = 3       # 1 = the cross must be on the BB candle itself
+BB_MACD_CROSS_GENUINE = True     # gap now >= gap on the cross candle (momentum still growing, not a fading touch)
+BB_MACD_MIN_GAP_PCT = 0          # extra minimum gap (% of price); 0 = a cross is enough

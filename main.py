@@ -1956,7 +1956,8 @@ def _fetch_and_resample_one(symbol, instrument_key, now_ist, hist_candles=None):
     df15 = resample_15min(combined_75)
     df15 = drop_unclosed_candle(df15, now_ist, candle_minutes=15)
     _df5_multi = None
-    if symbol in config.COMMODITIES and getattr(config, "BB_5MIN_COMMODITIES", False):
+    if ((symbol in config.COMMODITIES and getattr(config, "BB_5MIN_COMMODITIES", False))
+            or (symbol in config.INDICES and getattr(config, "BB_5MIN_INDICES", False))):
         try:   # multi-day 5-min candles for the commodity 5-min Bollinger alert (2026-11-24)
             _df5_multi = drop_unclosed_candle(resample_5min(combined_75), now_ist, candle_minutes=5)
         except Exception:
@@ -3091,8 +3092,8 @@ def _run_bb_only(now_ist, only_commodities=False, n500=False):
         watchlist = {s: k for s, k in (build_nifty500_watchlist(now_ist) or {}).items() if s.upper() not in _fno}
     else:
         watchlist = build_watchlist(now_ist)
-    if only_commodities:
-        watchlist = {s: k for s, k in watchlist.items() if s in config.COMMODITIES}
+    if only_commodities:   # the 5-min universe: commodities + indices
+        watchlist = {s: k for s, k in watchlist.items() if s in config.COMMODITIES or s in config.INDICES}
     print(f"BB-only scan ({'commodity 5-min' if only_commodities else 'F&O+index+commodity 15-min'}): {len(watchlist)} instruments", flush=True)
     if not watchlist:
         return 0
@@ -3101,6 +3102,7 @@ def _run_bb_only(now_ist, only_commodities=False, n500=False):
     dfs, failed = fetch_all(watchlist, now_ist, config.FETCH_WORKERS, hist_cache)
     fno = instruments.get_fno_underlyings()
     saved_state = state.load_state()
+    _sync_state_from_remote(saved_state)
     bb_hits = {"break": [], "reentry": []}
     for symbol, (df5, df75, df15) in dfs.items():
         if df15 is None or df15.empty:
@@ -4687,14 +4689,28 @@ def _dbb_at(p, i, rsi_min, lower_on):
     need = float(getattr(config, "BB_CANDLE_OUTSIDE_PCT", 80)) / 100.0
     same = getattr(config, "BB_PREV_SAME_COLOR", True)
     po, pc = p["open"][i - 1], p["close"][i - 1]
+    if getattr(config, "BB_FIRST_CANDLE_ONLY", True):   # first daily close outside the band only
+        _pu, _pl = p["up"][i - 1], p["lo"][i - 1]
+        if (not pd.isna(_pu) and pc > _pu) or (not pd.isna(_pl) and pc < _pl):
+            return None
     rsi = float(p["rsi"][i])
     prev_close = p["close"][i - 1]
     row = {"close": c, "chg": (c - prev_close) / prev_close * 100.0 if prev_close else 0.0, "rsi": rsi, "vol": vol,
            "wick": wick, "date": p["date"][i], "idx": i}
     up, lo = p["up"][i], p["lo"][i]
-    if c > up and c > o and (h_ - max(l_, up)) / rng + 1e-9 >= need and (not same or pc > po) and (rsi_min <= 0 or rsi > rsi_min):
+    first = getattr(config, "BB_FIRST_CANDLE_ONLY", True)
+    pup, plo = p["up"][i - 1], p["lo"][i - 1]
+    if first and not pd.isna(pup) and pc > pup:
+        up_first_ok = False
+    else:
+        up_first_ok = True
+    if first and not pd.isna(plo) and pc < plo:
+        lo_first_ok = False
+    else:
+        lo_first_ok = True
+    if up_first_ok and c > up and c > o and (h_ - max(l_, up)) / rng + 1e-9 >= need and (not same or pc > po) and (rsi_min <= 0 or rsi > rsi_min):
         return dict(row, direction="BULLISH", band=up, away=(c / up - 1) * 100.0, out_pct=(h_ - max(l_, up)) / rng * 100.0)
-    if lower_on and c < lo and c < o and (min(h_, lo) - l_) / rng + 1e-9 >= need and (not same or pc < po) and (rsi_min <= 0 or rsi < 100 - rsi_min):
+    if lo_first_ok and lower_on and c < lo and c < o and (min(h_, lo) - l_) / rng + 1e-9 >= need and (not same or pc < po) and (rsi_min <= 0 or rsi < 100 - rsi_min):
         return dict(row, direction="BEARISH", band=lo, away=(c / lo - 1) * 100.0, out_pct=(min(h_, lo) - l_) / rng * 100.0)
     return None
 
@@ -5158,6 +5174,11 @@ def _bb_candle_check(d, i, bull):
         need = float(getattr(config, "BB_CANDLE_OUTSIDE_PCT", 80)) / 100.0
         if out + 1e-9 < need:
             return None
+        if getattr(config, "BB_FIRST_CANDLE_ONLY", True):
+            # must be the FIRST candle that closes outside the band: the previous candle closed INSIDE its own band
+            pb = p["bb_up"] if bull else p["bb_lo"]
+            if not pd.isna(pb) and ((bull and float(p["close"]) > float(pb)) or ((not bull) and float(p["close"]) < float(pb))):
+                return None
         if getattr(config, "BB_PREV_SAME_COLOR", True):
             po, pc = float(p["open"]), float(p["close"])
             if (bull and not pc > po) or ((not bull) and not pc < po):
@@ -5170,6 +5191,30 @@ def _bb_candle_check(d, i, bull):
                  float(getattr(config, "BB_MACD_MIN_GAP_PCT", 0)) / 100.0 * abs(c))   # gap as % of the candle close
         if (bull and gap < max(mg, 1e-12)) or ((not bull) and gap > -max(mg, 1e-12)):
             return None
+        cross_ago = None
+        if getattr(config, "BB_MACD_CROSS_REQUIRED", True):
+            # MACD must have CROSSED its signal line (not just sit on that side): the latest cross is on this candle or
+            # within the last BB_MACD_CROSS_LOOKBACK candles, MACD is still on the right side now, and (genuine) the gap
+            # has not shrunk since the cross candle (momentum continues, not a fading touch).
+            look = max(1, int(getattr(config, "BB_MACD_CROSS_LOOKBACK", 3)))
+            cj = None
+            for j in range(i, max(i - look, 0), -1):
+                g0 = float(d.iloc[j - 1]["macd"]) - float(d.iloc[j - 1]["macd_sig"])
+                g1 = float(d.iloc[j]["macd"]) - float(d.iloc[j]["macd_sig"])
+                if (bull and g0 <= 0 < g1) or ((not bull) and g0 >= 0 > g1):
+                    cj = j
+                    cg = g1
+                    break
+            if cj is None:
+                return None
+            if getattr(config, "BB_MACD_CROSS_GENUINE", True) and abs(gap) + 1e-12 < abs(cg):
+                return None
+            cross_ago = i - cj
+        if getattr(config, "BB_FIRST_CANDLE_ONLY", True):
+            # only the FIRST candle that closes outside the band: the previous candle must have closed inside it
+            pb = p["bb_up"] if bull else p["bb_lo"]
+            if not pd.isna(pb) and ((bull and float(p["close"]) > float(pb)) or ((not bull) and float(p["close"]) < float(pb))):
+                return None
         va, vol = r.get("vol_avg"), float(r["volume"] or 0)
         vol_ratio = None
         if va is not None and not pd.isna(va) and float(va) > 0 and vol > 0:
@@ -5177,7 +5222,7 @@ def _bb_candle_check(d, i, bull):
             if vol_ratio < float(getattr(config, "BB_MIN_VOL_RATIO", 1.5)):
                 return None
         return {"candle_time": str(r["timestamp"]), "outside_pct": out * 100.0, "band": band, "vol_ratio": vol_ratio,
-                "wick_pct": wick, "macd_gap": gap, "macd_gap_pct": (abs(gap) / abs(c) * 100.0) if c else None,
+                "wick_pct": wick, "macd_gap": gap, "macd_gap_pct": (abs(gap) / abs(c) * 100.0) if c else None, "macd_cross_ago": cross_ago,
                 "rsi": None if pd.isna(r["rsi"]) else float(r["rsi"]), "close": c}
     except Exception:
         return None
@@ -5232,6 +5277,41 @@ def _bb_times(st, key, direction, day):
     return sorted(t for t in state._get_times(st, f"{key}:{direction}") if str(t).startswith(day))
 
 
+def _bb_last_dir(st, keyprefix, day):
+    """Direction of the latest BB alert today for this key prefix ('SYM::BB_BREAK' / 'SYM::BB5_BREAK'), or None."""
+    best_t, best_d = None, None
+    for d in ("BULLISH", "BEARISH"):
+        ts = _bb_times(st, keyprefix, d, day)
+        if ts and (best_t is None or max(ts) > best_t):
+            best_t, best_d = max(ts), d
+    return best_d
+
+
+def _sync_state_from_remote(saved_state):
+    """Safety net against duplicate alerts: union the latest alert_state.json from GitHub into this run's state, so a run
+    that started before another run's state commit still knows what that run already sent. Silent no-op outside git."""
+    try:
+        import json as _json, subprocess as _sp
+        if not os.path.isdir(".git"):
+            return
+        branch = _sp.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True, timeout=20).strip()
+        _sp.run(["git", "fetch", "--depth=1", "origin", branch], check=True, timeout=45, capture_output=True)
+        remote = _json.loads(_sp.check_output(["git", "show", "FETCH_HEAD:alert_state.json"], text=True, timeout=20))
+        n = 0
+        for k, v in remote.items():
+            if isinstance(v, list) and not str(k).startswith("_"):
+                cur = saved_state.get(k)
+                cur = cur if isinstance(cur, list) else []
+                add = [x for x in v if x not in cur]
+                if add:
+                    saved_state[k] = cur + add
+                    n += len(add)
+        if n:
+            print(f"[state-sync] merged {n} newer mark(s) from the remote alert_state.json", flush=True)
+    except Exception as e:
+        print(f"[state-sync] skipped: {type(e).__name__}", flush=True)
+
+
 def _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, levels):
     """Commodity 5-MIN Bollinger alert (2026-11-24), in ADDITION to the 15-min one. Same candle rule (80% outside,
     previous candle same colour, volume, MACD side), RSI info only. Last BB_5MIN_LOOKBACK closed 5-min candles are
@@ -5267,8 +5347,10 @@ def _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, lev
                 brk = _bb_times(saved_state, f"{symbol}::BB5_BREAK", direction, day)
                 rev = _bb_times(saved_state, f"{symbol}::BB5_REENTRY", direction, day)
                 active = bool(brk) and (not rev or max(brk) > max(rev))
+                if getattr(config, "BB_ONE_PER_DIRECTION", True):
+                    active = active and _bb_last_dir(saved_state, f"{symbol}::BB5_BREAK", day) == direction
                 outside = close > float(r["bb_up"]) if bull else close < float(r["bb_lo"])
-                if active and ct > max(brk) and not outside:
+                if active and brk and ct > max(brk) and not outside:
                     if not state.already_alerted(saved_state, f"{symbol}::BB5_REENTRY", direction, ct):
                         state.mark_alerted(saved_state, f"{symbol}::BB5_REENTRY", direction, ct)
                     continue
@@ -5283,9 +5365,9 @@ def _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, lev
                 stl = r["st_line"]
                 hit = {"symbol": symbol, "direction": direction, "r1": r1, "s1": s1, "instrument_key": instrument_key,
                        "macd": float(r["macd"]), "macd_sig": float(r["macd_sig"]), "vol_ratio": _bq.get("vol_ratio"),
-                       "outside_pct": _bq.get("outside_pct"), "wick_pct": _bq.get("wick_pct"), "macd_gap": _bq.get("macd_gap"), "macd_gap_pct": _bq.get("macd_gap_pct"), "close": close,
+                       "outside_pct": _bq.get("outside_pct"), "wick_pct": _bq.get("wick_pct"), "macd_gap": _bq.get("macd_gap"), "macd_gap_pct": _bq.get("macd_gap_pct"), "macd_cross_ago": _bq.get("macd_cross_ago"), "close": close,
                        "day_pct": ((close - float(_c)) / float(_c) * 100.0) if _c else None, "rsi": float(r["rsi"]),
-                       "is_fno": False, "kind": "Commodity", "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
+                       "is_fno": False, "kind": ("Index" if symbol in config.INDICES else "Commodity"), "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                        "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": None,
                        "tf": "5-min", "chart_link": build_chart_link(symbol, "5-min"), "log_type": "BB"}
                 bb_hits["break"].append(hit)
@@ -5308,7 +5390,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
         if not (is_index or (is_comm and getattr(config, "BB_STANDALONE_COMMODITIES", False))
                 or (not is_index and not is_comm and getattr(config, "BB_ALERT_STOCKS", False))):
             return   # 2026-11-24: stocks / commodities get Bollinger as a condition INSIDE the 15-min MACD alert instead
-        if do_5m and is_comm and getattr(config, "BB_5MIN_COMMODITIES", False):
+        if do_5m and ((is_comm and getattr(config, "BB_5MIN_COMMODITIES", False)) or (is_index and getattr(config, "BB_5MIN_INDICES", False))):
             _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, levels)
         d = _bb_eval(df15)
         if d is None:
@@ -5364,6 +5446,9 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                 brk = _bb_times(saved_state, f"{symbol}::BB_BREAK", direction, day)
                 rev = _bb_times(saved_state, f"{symbol}::BB_REENTRY", direction, day)
                 active = bool(brk) and (not rev or max(brk) > max(rev))
+                if getattr(config, "BB_ONE_PER_DIRECTION", True):
+                    # same stock: after an alert, a new one needs a close back INSIDE the band first, or a direction change (bullish <-> bearish), per day
+                    active = active and _bb_last_dir(saved_state, f"{symbol}::BB_BREAK", day) == direction
                 outside = close > float(r["bb_up"]) if bull else close < float(r["bb_lo"])
                 _qc = _bb_candle_check(d, int(r.name), bull) if five_min is None else None
                 qualifies = _qc is not None
@@ -5396,7 +5481,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                         "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                         "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": five_min}
                 if _qc:
-                    base.update(outside_pct=_qc["outside_pct"], wick_pct=_qc["wick_pct"], macd_gap=_qc["macd_gap"], macd_gap_pct=_qc.get("macd_gap_pct"))
+                    base.update(outside_pct=_qc["outside_pct"], wick_pct=_qc["wick_pct"], macd_gap=_qc["macd_gap"], macd_gap_pct=_qc.get("macd_gap_pct"), macd_cross_ago=_qc.get("macd_cross_ago"))
                     if _qc.get("vol_ratio") is not None:
                         base["vol_ratio"] = _qc["vol_ratio"]
                 if outside and qualifies and rsi_ok and st_ok and pv_ok and not active:
@@ -5407,7 +5492,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                     bb_hits["break"].append(base)
                     base["log_type"] = "BB"
                     _log_orb15_for_eod(saved_state, base, symbol, instrument_key)
-                elif active and five_min is None and ct > max(brk) and not outside:
+                elif active and brk and five_min is None and ct > max(brk) and not outside:
                     # candle closed back INSIDE the band: re-arm (a new alert needs a fresh qualifying break after this).
                     # The re-entry MESSAGE itself is only sent when BB_REENTRY_ALERT is on.
                     if state.already_alerted(saved_state, f"{symbol}::BB_REENTRY", direction, ct):
@@ -5644,8 +5729,12 @@ def send_bb_summary(hits, now_ist, kind):
             rsi_must = kindtxt in ("F&O", "Cash") and getattr(config, "BB_RSI_REQUIRED", False)
             _ri = mk(True) if rsi_must else "\u2139\ufe0f"
             body.append(f"{_ri} RSI {h['rsi']:.1f}" + (f" (must {getattr(config, 'BB_RSI_UPPER', 70):g}/{getattr(config, 'BB_RSI_LOWER', 30):g})" if rsi_must else " (info)"))
-            _gp = (f" \u00b7 divergence {abs(h['macd_gap']):.2f} ({h['macd_gap_pct']:.2f}% of price, min {getattr(config, 'BB_MACD_MIN_GAP_PCT', 0):g}%)"
-                   if h.get("macd_gap_pct") is not None else "")
+            _ca = h.get("macd_cross_ago")
+            _gp = ""
+            if _ca is not None:
+                _gp = " \u00b7 CROSS " + ("ei candle e" if _ca == 0 else f"{_ca} candle age")
+            if h.get("macd_gap_pct") is not None:
+                _gp += f" \u00b7 gap {abs(h['macd_gap']):.2f} ({h['macd_gap_pct']:.2f}% of price)"
             body.append(f"\u2705 MACD {h['macd']:.2f} / {h['macd_sig']:.2f}{_gp}")
             if bull and h.get("r1"):
                 body.append(f"{mk(h['close'] > h['r1'])} R1 {h['r1']:.2f} (info)")
@@ -6398,7 +6487,24 @@ def _run_inner():
         return
 
     if getattr(config, "BB_ONLY_MODE", False):
-        # ONLY the Bollinger alert (everything else is off): F&O + index + commodity first, then Nifty 500 cash stocks.
+        # ONLY the Bollinger alert (everything else is off).
+        # 1) 5-min candles for index + commodity (quick, every run).  2) 15-min candles for everything, once per closed
+        # 15-min candle (first run after it closes), so a 5-minute cron does not repeat the heavy stock scan.
+        if getattr(config, "BB_5MIN_COMMODITIES", False) or getattr(config, "BB_5MIN_INDICES", False):
+            try:
+                _run_bb_only(now_ist, only_commodities=True)
+            except Exception as e:
+                print(f"BB 5-min scan failed (non-blocking): {e}", flush=True)
+        _fl = now_ist.replace(second=0, microsecond=0)
+        _fl = _fl - dt.timedelta(minutes=_fl.minute % 15)
+        _cs = (_fl - dt.timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:00")   # start of the latest CLOSED 15-min candle
+        _st = state.load_state()
+        _sync_state_from_remote(_st)
+        if state.already_alerted(_st, "BB15_PASS", "DONE", _cs):
+            print(f"15-min BB pass for candle {_cs} already done - skipping the stock scan.", flush=True)
+            return
+        state.mark_alerted(_st, "BB15_PASS", "DONE", _cs)
+        state.save_state(_st)
         _run_bb_only(now_ist)
         if getattr(config, "BB_ONLY_INCLUDE_N500", True) and getattr(config, "BB_ALERT_STOCKS", True) and _in_stock_session(now_ist):
             try:
