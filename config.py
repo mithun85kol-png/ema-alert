@@ -1340,7 +1340,7 @@ MACD15_ALERT_COMMODITIES = False
 MACD15_ALERT_INDICES = False
 
 # ---- 2026-11-25 ----
-BB_MAX_WICK_PCT = 30        # BB candle: total wick (upper+lower) at most 30% of the candle range (0 = no wick at all, lower = stricter)
+BB_MAX_WICK_PCT = 10        # BB candle: total wick at most 10% of the candle range (almost no wick). 0 = none at all, higher = looser
 BB_MACD_MIN_GAP = 0         # BB alert: MACD must be on the signal's side AND |MACD - signal| >= this (0 = just the side). NOTE: price units -
                             # on a Rs 300 stock the gap is usually < 1, so 4 lets only big-price stocks / index / commodity through.
 DAILY_BB_PERF_ENABLED = True   # daily BB report also shows how earlier daily-BB signals did: close of the outside candle -> band touch
