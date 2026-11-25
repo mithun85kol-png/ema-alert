@@ -1223,8 +1223,6 @@ BB_ALERT_ENABLED = True
 BB_PERIOD = 20
 BB_STD = 1.2   # 2026-11-24: 1.2 standard deviations (per request)
 BB_RSI_PERIOD = 14
-BB_RSI_UPPER = 69.5   # 2026-11-24: ~70 (69.5 or more)
-BB_RSI_LOWER = 30.5   # 2026-11-24: ~30 (30.5 or less)
 ST_PERIOD = 10
 ST_MULT = 3.0
 BB_REQUIRE_SUPERTREND = False   # 2026-11-24: Supertrend tick is information only
@@ -1340,7 +1338,7 @@ MACD15_ALERT_COMMODITIES = False
 MACD15_ALERT_INDICES = False
 
 # ---- 2026-11-25 ----
-BB_MAX_WICK_PCT = 25        # BB candle: total wick at most 25% of the candle range (2026-11-25: was 10). 0 = none at all, higher = looser
+BB_MAX_WICK_PCT = 10        # BB candle: total wick at most 10% of the candle range (almost no wick). 0 = none at all, higher = looser
 BB_MACD_MIN_GAP = 0         # BB alert: MACD must be on the signal's side AND |MACD - signal| >= this (0 = just the side). NOTE: price units -
                             # on a Rs 300 stock the gap is usually < 1, so 4 lets only big-price stocks / index / commodity through.
 DAILY_BB_PERF_ENABLED = True   # daily BB report also shows how earlier daily-BB signals did: close of the outside candle -> band touch
@@ -1380,16 +1378,27 @@ BB_MACD_CROSS_LOOKBACK = 3       # 1 = the cross must be on the BB candle itself
 BB_MACD_CROSS_GENUINE = True     # gap now >= gap on the cross candle (momentum still growing, not a fading touch)
 BB_MACD_MIN_GAP_PCT = 0          # extra minimum gap (% of price); 0 = a cross is enough
 
-# ---- 2026-11-25 (v89): commodity = close-only BB alert; stock alerts from 09:30 ----
-# Commodity (5-min AND 15-min): the alert fires as soon as a candle CLOSES outside the Bollinger band (upper = BULLISH,
-# lower = BEARISH). RSI, MACD (side / cross / gap), wick, volume and "% of candle outside" are shown as INFO only and never
-# block. Still applied (your earlier settings): BB_FIRST_CANDLE_ONLY (previous candle closed inside the band) and
-# BB_ONE_PER_DIRECTION (after an alert, a close back inside the band is needed before the next one in the same direction).
-# False = commodities use the strict stock-style candle rules again.
-BB_COMMODITY_CLOSE_ONLY = True
-# Same close-only rule for the indices (NIFTY 50 / NIFTY BANK / SENSEX), 5-min AND 15-min. Volume, RSI, MACD, wick = info only.
-BB_INDEX_CLOSE_ONLY = True
+# ---- 2026-11-25 (v89): MACD is INFORMATION only on the BB alert ----
+# False = no MACD condition at all (the alert shows MACD, whether it crossed and how many candles ago, with a tick).
+# True  = the old rule: MACD on the signal's side (+ BB_MACD_MIN_GAP_PCT) and, with BB_MACD_CROSS_REQUIRED, a genuine cross.
+BB_MACD_REQUIRED = False
 
-# Stocks (F&O + Nifty 500 cash): send BB alerts only for candles that CLOSE at/after this time. "09:30" = the very first
-# 15-min candle (09:15-09:30) is included, so the first alert can come right after 09:30. "" = no time limit.
-BB_STOCK_ALERT_FROM = "09:30"
+# ---------- 2026-11-26 (v90): NEW BB RULES (per timeframe / kind) ----------
+# The candle must CLOSE outside the Bollinger band (BB_PERIOD, BB_STD). Then, per rule: must / information.
+#   wick_max   : total wick (upper+lower) as % of the candle range; a bigger wick = this candle is skipped and the NEXT candle
+#                (if it also closes outside the band and is solid) alerts instead (back-to-back two candles only)
+#   rsi_must   : RSI >= BB_RSI_UPPER (bullish) / <= BB_RSI_LOWER (bearish)
+#   macd_must  : MACD crossed its signal line within the last BB_MACD_CROSS_LOOKBACK candles (and is still on that side)
+#   vol_must   : candle volume > BB_VOL_VS_PREV_MIN x the previous candle's volume (no volume data, e.g. index = passes)
+#   same_color : previous candle has the same colour (green->green / red->red)
+BB_RULES = {
+    "stock_15":    {"wick_max": 20, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # F&O + cash stocks, 15-min
+    "comm_idx_15": {"wick_max": 20, "rsi_must": False, "macd_must": False, "vol_must": False, "same_color": True},    # commodity + index, 15-min
+    "comm_idx_5":  {"wick_max": 20, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # commodity + index, 5-min
+}
+BB_RSI_UPPER = 69
+BB_RSI_LOWER = 31
+BB_MACD_CROSS_LOOKBACK = 3     # cross on the BB candle or within the 2 candles before it
+BB_MACD_CROSS_GENUINE = True   # gap now >= gap on the cross candle (not a fading touch)
+BB_VOL_VS_PREV_MIN = 1.0
+BB_NEXT_CANDLE_IF_WICK = True

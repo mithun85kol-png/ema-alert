@@ -5147,56 +5147,13 @@ def _macd15_allowed(symbol):
     return bool(getattr(config, "MACD15_ALERT_ENABLED", True))
 
 
-def _bb_close_only_check(d, i, bull):
-    """Commodity + index rule (2026-11-25): alert when the candle CLOSES outside the Bollinger band. Wick, volume, MACD (side /
-    cross / gap), RSI and the % of the candle outside the band are only collected as information - they never block.
-    Still honoured: BB_FIRST_CANDLE_ONLY (previous candle closed INSIDE its band). Returns the same dict shape as
-    _bb_candle_check (+ "loose": True) or None."""
-    try:
-        if i < 1 or i >= len(d):
-            return None
-        r, p = d.iloc[i], d.iloc[i - 1]
-        band = r["bb_up"] if bull else r["bb_lo"]
-        if pd.isna(band):
-            return None
-        o, h, l, c = float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"])
-        band = float(band)
-        if (bull and not c > band) or ((not bull) and not c < band):
-            return None
-        if getattr(config, "BB_FIRST_CANDLE_ONLY", True):
-            pb = p["bb_up"] if bull else p["bb_lo"]
-            if not pd.isna(pb) and ((bull and float(p["close"]) > float(pb)) or ((not bull) and float(p["close"]) < float(pb))):
-                return None
-        rng = h - l
-        out = ((h - max(l, band)) / rng if bull else (min(h, band) - l) / rng) if rng > 0 else 1.0
-        wick = (1.0 - abs(c - o) / rng) * 100.0 if rng > 0 else 0.0
-        gap = float(r["macd"]) - float(r["macd_sig"])
-        cross_ago = None
-        look = max(1, int(getattr(config, "BB_MACD_CROSS_LOOKBACK", 3)))
-        for j in range(i, max(i - look, 0), -1):
-            g0 = float(d.iloc[j - 1]["macd"]) - float(d.iloc[j - 1]["macd_sig"])
-            g1 = float(d.iloc[j]["macd"]) - float(d.iloc[j]["macd_sig"])
-            if (bull and g0 <= 0 < g1) or ((not bull) and g0 >= 0 > g1):
-                cross_ago = i - j
-                break
-        va, vol = r.get("vol_avg"), float(r["volume"] or 0)
-        vol_ratio = (vol / float(va)) if (va is not None and not pd.isna(va) and float(va) > 0 and vol > 0) else None
-        return {"candle_time": str(r["timestamp"]), "outside_pct": out * 100.0, "band": band, "vol_ratio": vol_ratio,
-                "wick_pct": wick, "macd_gap": gap, "macd_gap_pct": (abs(gap) / abs(c) * 100.0) if c else None,
-                "macd_cross_ago": cross_ago, "rsi": None if pd.isna(r["rsi"]) else float(r["rsi"]), "close": c, "loose": True}
-    except Exception:
-        return None
-
-
-def _bb_candle_check(d, i, bull, loose=False):
+def _bb_candle_check(d, i, bull):
     """Bollinger condition on candle i of the _bb_eval frame d (2026-11-24):
       * >= BB_CANDLE_OUTSIDE_PCT % of the candle's range (low..high) lies outside the band AND it closes outside
         (bullish: above the upper band; bearish: below the lower band)
       * previous candle has the SAME colour (green->green / red->red)  [BB_PREV_SAME_COLOR]
       * good volume: candle volume >= BB_MIN_VOL_RATIO x average of the last 20 candles (skipped if no volume data)
     Returns a dict (RSI / R1-S1 are added by the caller as information only) or None."""
-    if loose:   # commodity close-only mode (BB_COMMODITY_CLOSE_ONLY)
-        return _bb_close_only_check(d, i, bull)
     try:
         if i < 1 or i >= len(d):
             return None
@@ -5232,10 +5189,11 @@ def _bb_candle_check(d, i, bull, loose=False):
         gap = float(r["macd"]) - float(r["macd_sig"])      # MACD divergence (MACD line - signal line)
         mg = max(float(getattr(config, "BB_MACD_MIN_GAP", 0)),
                  float(getattr(config, "BB_MACD_MIN_GAP_PCT", 0)) / 100.0 * abs(c))   # gap as % of the candle close
-        if (bull and gap < max(mg, 1e-12)) or ((not bull) and gap > -max(mg, 1e-12)):
+        _macd_must = getattr(config, "BB_MACD_REQUIRED", False)   # False = MACD is INFORMATION only (2026-11-25)
+        if _macd_must and ((bull and gap < max(mg, 1e-12)) or ((not bull) and gap > -max(mg, 1e-12))):
             return None
         cross_ago = None
-        if getattr(config, "BB_MACD_CROSS_REQUIRED", True):
+        if _macd_must and getattr(config, "BB_MACD_CROSS_REQUIRED", True):
             # MACD must have CROSSED its signal line (not just sit on that side): the latest cross is on this candle or
             # within the last BB_MACD_CROSS_LOOKBACK candles, MACD is still on the right side now, and (genuine) the gap
             # has not shrunk since the cross candle (momentum continues, not a fading touch).
@@ -5253,6 +5211,13 @@ def _bb_candle_check(d, i, bull, loose=False):
             if getattr(config, "BB_MACD_CROSS_GENUINE", True) and abs(gap) + 1e-12 < abs(cg):
                 return None
             cross_ago = i - cj
+        elif not _macd_must:   # information only: when did MACD last cross (within the last 5 candles), if at all
+            for j in range(i, max(i - 5, 0), -1):
+                g0 = float(d.iloc[j - 1]["macd"]) - float(d.iloc[j - 1]["macd_sig"])
+                g1 = float(d.iloc[j]["macd"]) - float(d.iloc[j]["macd_sig"])
+                if (bull and g0 <= 0 < g1) or ((not bull) and g0 >= 0 > g1):
+                    cross_ago = i - j
+                    break
         if getattr(config, "BB_FIRST_CANDLE_ONLY", True):
             # only the FIRST candle that closes outside the band: the previous candle must have closed inside it
             pb = p["bb_up"] if bull else p["bb_lo"]
@@ -5314,6 +5279,91 @@ def _macd_bb_blocks(signal, df15, now_ist, levels=None):
     except Exception as e:
         print(f"[bb-gate] failed for {signal.get('symbol')}: {e}", flush=True)
         return True
+
+
+def _bb_closed_outside(d, j, bull):
+    try:
+        b = d.iloc[j]["bb_up"] if bull else d.iloc[j]["bb_lo"]
+        c = float(d.iloc[j]["close"])
+        return (not pd.isna(b)) and (c > float(b) if bull else c < float(b))
+    except Exception:
+        return False
+
+
+def _bb_rule_eval(d, i, bull, rule):
+    """Evaluate the Bollinger alert on candle i with a RULE (config.BB_RULES entry) (2026-11-26).
+    The candle must CLOSE outside the band (green for bullish, red for bearish). RSI (>= BB_RSI_UPPER / <= BB_RSI_LOWER),
+    MACD (a cross within the last BB_MACD_CROSS_LOOKBACK candles, still on the side), volume (more than the previous
+    candle) and same-colour-previous-candle are MUST or INFORMATION according to the rule. The wick (total wick share of the
+    range) is judged separately (wick_ok) because a big-wick candle defers the alert to the next solid candle.
+    Returns a dict or None (not a candle that closed outside the band)."""
+    try:
+        if i < 1 or i >= len(d):
+            return None
+        r, p = d.iloc[i], d.iloc[i - 1]
+        band = r["bb_up"] if bull else r["bb_lo"]
+        if pd.isna(band) or pd.isna(r["rsi"]):
+            return None
+        o, h, l, c = float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"])
+        band = float(band)
+        if bull and not (c > band and c > o):
+            return None
+        if (not bull) and not (c < band and c < o):
+            return None
+        rng = h - l
+        if rng <= 0:
+            return None
+        wick = (1.0 - abs(c - o) / rng) * 100.0
+        out_pct = ((h - max(l, band)) / rng if bull else (min(h, band) - l) / rng) * 100.0
+        rsi = float(r["rsi"])
+        rsi_ok = rsi >= float(getattr(config, "BB_RSI_UPPER", 69)) if bull else rsi <= float(getattr(config, "BB_RSI_LOWER", 31))
+        gap = float(r["macd"]) - float(r["macd_sig"])
+        side_ok = gap > 0 if bull else gap < 0
+        look = max(1, int(getattr(config, "BB_MACD_CROSS_LOOKBACK", 3)))
+        cross_ago, cg = None, None
+        for j in range(i, max(i - look, 0), -1):
+            g0 = float(d.iloc[j - 1]["macd"]) - float(d.iloc[j - 1]["macd_sig"])
+            g1 = float(d.iloc[j]["macd"]) - float(d.iloc[j]["macd_sig"])
+            if (bull and g0 <= 0 < g1) or ((not bull) and g0 >= 0 > g1):
+                cross_ago, cg = i - j, g1
+                break
+        macd_ok = side_ok and cross_ago is not None
+        if macd_ok and getattr(config, "BB_MACD_CROSS_GENUINE", True) and abs(gap) + 1e-12 < abs(cg):
+            macd_ok = False
+        vol, pvol = float(r["volume"] or 0), float(p["volume"] or 0)
+        vol_ratio, vol_ok = None, True
+        if vol > 0 and pvol > 0:
+            vol_ratio = vol / pvol
+            vol_ok = vol_ratio > float(getattr(config, "BB_VOL_VS_PREV_MIN", 1.0))
+        po, pc = float(p["open"]), float(p["close"])
+        same_ok = (pc > po) if bull else (pc < po)
+        ok = not ((rule.get("rsi_must") and not rsi_ok) or (rule.get("macd_must") and not macd_ok)
+                  or (rule.get("vol_must") and not vol_ok) or (rule.get("same_color") and not same_ok))
+        return {"ok": ok, "wick_ok": wick <= float(rule.get("wick_max", 20)) + 1e-9, "wick_pct": wick, "outside_pct": out_pct,
+                "rsi": rsi, "rsi_ok": rsi_ok, "macd_ok": macd_ok, "macd_side_ok": side_ok, "macd_cross_ago": cross_ago,
+                "macd_gap": gap, "macd_gap_pct": (abs(gap) / abs(c) * 100.0) if c else None,
+                "vol_ratio": vol_ratio, "vol_ok": vol_ok, "same_ok": same_ok, "close": c,
+                "candle_time": str(r["timestamp"]), "rule": dict(rule)}
+    except Exception:
+        return None
+
+
+def _bb_signal(d, i, bull, rule):
+    """BB alert on candle i, or None. Alert when the candle closed outside the band, every MUST of the rule holds AND the wick is
+    small. If the FIRST candle outside the band had a big wick (everything else fine), the NEXT candle - if it also closes
+    outside the band and is solid - alerts instead (back-to-back two candles only). A candle that follows an already-outside
+    candle for any other reason never alerts (only the first outside candle counts)."""
+    cur = _bb_rule_eval(d, i, bull, rule)
+    if not cur or not cur["ok"] or not cur["wick_ok"]:
+        return None
+    if not _bb_closed_outside(d, i - 1, bull):
+        return cur                                   # first candle outside the band
+    if (getattr(config, "BB_NEXT_CANDLE_IF_WICK", True) and i >= 2 and not _bb_closed_outside(d, i - 2, bull)):
+        pv = _bb_rule_eval(d, i - 1, bull, rule)
+        if pv and pv["ok"] and not pv["wick_ok"]:    # previous candle failed ONLY because of its wick
+            cur["after_wick"] = True
+            return cur
+    return None
 
 
 def _bb_times(st, key, direction, day):
@@ -5399,7 +5449,7 @@ def _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, lev
                     continue
                 if active or not outside:
                     continue
-                _bq = _bb_candle_check(d, i, bull, loose=bool((symbol in config.COMMODITIES and getattr(config, "BB_COMMODITY_CLOSE_ONLY", False)) or (symbol in config.INDICES and getattr(config, "BB_INDEX_CLOSE_ONLY", False))))
+                _bq = _bb_signal(d, i, bull, getattr(config, "BB_RULES", {}).get("comm_idx_5", {}))
                 if _bq is None:
                     continue
                 if state.already_alerted(saved_state, f"{symbol}::BB5_BREAK", direction, ct):
@@ -5407,12 +5457,12 @@ def _bb_scan_5m(symbol, df15, now_ist, saved_state, bb_hits, instrument_key, lev
                 state.mark_alerted(saved_state, f"{symbol}::BB5_BREAK", direction, ct)
                 stl = r["st_line"]
                 hit = {"symbol": symbol, "direction": direction, "r1": r1, "s1": s1, "instrument_key": instrument_key,
-                       "macd": float(r["macd"]), "macd_sig": float(r["macd_sig"]), "vol_ratio": _bq.get("vol_ratio"),
-                       "outside_pct": _bq.get("outside_pct"), "wick_pct": _bq.get("wick_pct"), "macd_gap": _bq.get("macd_gap"), "macd_gap_pct": _bq.get("macd_gap_pct"), "macd_cross_ago": _bq.get("macd_cross_ago"), "close": close,
-                       "day_pct": ((close - float(_c)) / float(_c) * 100.0) if _c else None, "rsi": float(r["rsi"]),
+                       "macd": float(r["macd"]), "macd_sig": float(r["macd_sig"]), "close": close,
+                       "day_pct": ((close - float(_c)) / float(_c) * 100.0) if _c else None,
                        "is_fno": False, "kind": ("Index" if symbol in config.INDICES else "Commodity"), "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                        "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": None,
-                       "tf": "5-min", "chart_link": build_chart_link(symbol, "5-min"), "log_type": "BB", "loose": _bq.get("loose", False)}
+                       "tf": "5-min", "chart_link": build_chart_link(symbol, "5-min"), "log_type": "BB"}
+                hit.update(_bq)
                 bb_hits["break"].append(hit)
                 _log_orb15_for_eod(saved_state, hit, symbol, instrument_key)
     except Exception as e:
@@ -5457,17 +5507,7 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
         # units to evaluate: each of the last 2 closed 15-min candles, plus (BB_FIRST2_5MIN_ENABLED) the state of that
         # 15-min candle after its FIRST and SECOND 5-min candle (the 3rd one = the 15-min close itself, already covered).
         units = []
-        _from_t = None
-        if not is_index and not is_comm:   # stocks only: no BB alert for candles that close before BB_STOCK_ALERT_FROM
-            _fs = str(getattr(config, "BB_STOCK_ALERT_FROM", "") or "")
-            if _fs:
-                try:
-                    _from_t = dt.time(int(_fs.split(":")[0]), int(_fs.split(":")[1]))
-                except Exception:
-                    _from_t = None
         for i in today_idx[-2:]:
-            if _from_t is not None and (pd.Timestamp(d.iloc[i]["timestamp"]) + pd.Timedelta(minutes=15)).time() < _from_t:
-                continue
             units.append((d.iloc[i], None))
             if getattr(config, "BB_FIRST2_5MIN_ENABLED", True) and df5 is not None and not df5.empty:
                 try:
@@ -5503,11 +5543,11 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                     # same stock: after an alert, a new one needs a close back INSIDE the band first, or a direction change (bullish <-> bearish), per day
                     active = active and _bb_last_dir(saved_state, f"{symbol}::BB_BREAK", day) == direction
                 outside = close > float(r["bb_up"]) if bull else close < float(r["bb_lo"])
-                _qc = _bb_candle_check(d, int(r.name), bull, loose=bool((is_comm and getattr(config, "BB_COMMODITY_CLOSE_ONLY", False)) or (is_index and getattr(config, "BB_INDEX_CLOSE_ONLY", False)))) if five_min is None else None
+                _rules = getattr(config, "BB_RULES", {})
+                _rule = _rules.get("comm_idx_15" if (is_index or is_comm) else "stock_15", {})
+                _qc = _bb_signal(d, int(r.name), bull, _rule) if five_min is None else None
                 qualifies = _qc is not None
-                _info_only = (is_index and "index" in getattr(config, "BB_RSI_INFO_ONLY_KINDS", ())) or \
-                             (is_comm and "commodity" in getattr(config, "BB_RSI_INFO_ONLY_KINDS", ()))
-                rsi_ok = (rsi >= rsi_hi if bull else rsi <= rsi_lo) if (getattr(config, "BB_RSI_REQUIRED", False) and not _info_only) else True
+                rsi_ok = True   # RSI is judged inside _bb_signal (must for stocks, information for index / commodity 15-min)
                 st_ok = True
                 if need_st:
                     st_ok = (stl is not None and not pd.isna(stl) and ((std_ == 1 and close > float(stl)) if bull
@@ -5534,9 +5574,9 @@ def _bb_scan_symbol(symbol, df15, now_ist, saved_state, fno_underlyings, bb_hits
                         "bb_up": float(r["bb_up"]), "bb_lo": float(r["bb_lo"]),
                         "st_line": None if (stl is None or pd.isna(stl)) else float(stl), "candle_time": ct, "five_min": five_min}
                 if _qc:
-                    base.update(outside_pct=_qc["outside_pct"], wick_pct=_qc["wick_pct"], macd_gap=_qc["macd_gap"], macd_gap_pct=_qc.get("macd_gap_pct"), macd_cross_ago=_qc.get("macd_cross_ago"), loose=_qc.get("loose", False))
-                    if _qc.get("vol_ratio") is not None:
-                        base["vol_ratio"] = _qc["vol_ratio"]
+                    base.update(_qc)
+                    base["tf"] = "15-min"
+                    base["vol_ratio_prev"] = _qc.get("vol_ratio")
                 if outside and qualifies and rsi_ok and st_ok and pv_ok and not active:
                     if state.already_alerted(saved_state, f"{symbol}::BB_BREAK", direction, ct):
                         continue
@@ -5771,29 +5811,23 @@ def send_bb_summary(hits, now_ist, kind):
             top = (f"{icon} <b>{_html.escape(h['symbol'])}</b>{sec}  " + "  \u00b7  ".join(links)
                    + f"\nRSI {h['rsi']:.1f} \u00b7 {h['close']:g}{mv} \u00b7 \U0001F4CABB\u2705 \u00b7 \u23F1{h.get('tf', '15-min')}")
             body = [f"{h['candle_time'][:10]} {str(h['candle_time'])[11:16]} ({h.get('tf', '15-min')} candle)  |  {kindtxt}" + ("  \u2705" if kindtxt == "F&O" else "")]
-            if h.get("outside_pct") is not None and not h.get("loose"):
-                body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): candle {h['outside_pct']:.0f}% {'upper' if bull else 'lower'} band {band:.2f} er bahire \u00b7 ager candle {'green' if bull else 'red'}")
-            else:
-                body.append(f"\u2705 BB close {'upper' if bull else 'lower'} band {band:.2f} er bahire")
+            _ru = h.get("rule") or {}
+            _wm = float(_ru.get("wick_max", 20))
+            _after = "  (wick wala candle ignore, ei next solid candle e alert)" if h.get("after_wick") else ""
+            body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): {'upper' if bull else 'lower'} band {band:.2f} er bahire CLOSE" + (f" \u00b7 candle {h['outside_pct']:.0f}% bahire" if h.get("outside_pct") is not None else "") + _after)
             if h.get("wick_pct") is not None:
-                if h.get("loose"):
-                    body.append(f"\u2139\ufe0f Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%) (info)")
-                else:
-                    body.append(f"\u2705 Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%) \u00b7 max {getattr(config, 'BB_MAX_WICK_PCT', 30):g}%")
-            if h.get("vol_ratio") is not None:
-                _mk = "\u2139\ufe0f" if h.get("loose") else "\u2705"
-                body.append(f"{_mk} Volume {h['vol_ratio']:.1f}x (20-candle avg er)" + (" (info)" if h.get("loose") else ""))
-            rsi_must = kindtxt in ("F&O", "Cash") and getattr(config, "BB_RSI_REQUIRED", False)
-            _ri = mk(True) if rsi_must else "\u2139\ufe0f"
-            body.append(f"{_ri} RSI {h['rsi']:.1f}" + (f" (must {getattr(config, 'BB_RSI_UPPER', 70):g}/{getattr(config, 'BB_RSI_LOWER', 30):g})" if rsi_must else " (info)"))
+                body.append(f"{mk(h['wick_ok'])} Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%) \u00b7 max {_wm:g}%")
+            if _ru.get("same_color"):
+                body.append(f"{mk(h.get('same_ok'))} ager candle {'green' if bull else 'red'} (same colour)")
+            def _tag(must):
+                return f" (must)" if must else " (info)"
+            _ri = mk(h.get("rsi_ok"))
+            body.append(f"{_ri} RSI {h['rsi']:.1f} \u00b7 {getattr(config, 'BB_RSI_UPPER', 69):g}/{getattr(config, 'BB_RSI_LOWER', 31):g}" + _tag(_ru.get("rsi_must")))
             _ca = h.get("macd_cross_ago")
-            _gp = ""
-            if _ca is not None:
-                _gp = " \u00b7 CROSS " + ("ei candle e" if _ca == 0 else f"{_ca} candle age")
-            if h.get("macd_gap_pct") is not None:
-                _gp += f" \u00b7 gap {abs(h['macd_gap']):.2f} ({h['macd_gap_pct']:.2f}% of price)"
-            _mk = "\u2139\ufe0f" if h.get("loose") else "\u2705"
-            body.append(f"{_mk} MACD {h['macd']:.2f} / {h['macd_sig']:.2f}{_gp}" + (" (info)" if h.get("loose") else ""))
+            _gp = (" \u00b7 CROSS " + ("ei candle e" if _ca == 0 else f"{_ca} candle age")) if _ca is not None else " \u00b7 cross nei"
+            body.append(f"{mk(h.get('macd_ok'))} MACD {h['macd']:.2f} / {h['macd_sig']:.2f}{_gp}" + _tag(_ru.get("macd_must")))
+            if h.get("vol_ratio") is not None:
+                body.append(f"{mk(h.get('vol_ok'))} Volume {h['vol_ratio']:.1f}x of last candle" + _tag(_ru.get("vol_must")))
             if bull and h.get("r1"):
                 body.append(f"{mk(h['close'] > h['r1'])} R1 {h['r1']:.2f} (info)")
             elif (not bull) and h.get("s1"):
