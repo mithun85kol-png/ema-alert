@@ -6258,6 +6258,34 @@
         "nifty": null,
         "vol": 1.61,
         "sector": "Financial Services"
+      },
+      {
+        "symbol": "BEL",
+        "direction": "BULLISH",
+        "time": "2026-11-25 11:15:00+05:30",
+        "price": 403.45,
+        "key": "NSE_EQ|INE263A01024",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.71,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "M&MFIN",
+        "direction": "BULLISH",
+        "time": "2026-11-25 11:15:00+05:30",
+        "price": 301.75,
+        "key": "NSE_EQ|INE774D01024",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 2.1,
+        "sector": "Financial Services"
       }
     ]
   },
@@ -11950,7 +11978,8 @@
     "2026-10-23 13:00:00+05:30"
   ],
   "BEL::BB_BREAK:BULLISH": [
-    "2026-11-23 09:45:00+05:30"
+    "2026-11-23 09:45:00+05:30",
+    "2026-11-25 11:15:00+05:30"
   ],
   "APOLLOHOSP::ORB15_MOVE:BULLISH": [
     "2026-11-20"
@@ -16891,5 +16920,14 @@
   ],
   "TCS::ORB15_MOVE:BULLISH": [
     "2026-11-20"
+  ],
+  "TATACONSUM::BB_REENTRY:BULLISH": [
+    "2026-11-25 11:15:00+05:30"
+  ],
+  "COHANCE::BB_REENTRY:BULLISH": [
+    "2026-11-25 11:15:00+05:30"
+  ],
+  "M&MFIN::BB_BREAK:BULLISH": [
+    "2026-11-25 11:15:00+05:30"
   ]
 }
