@@ -2648,7 +2648,8 @@
   "WELSPUNLIV::N500:BULLISH": [
     "2026-08-14 09:15:00+05:30",
     "2026-08-31 09:45:00+05:30",
-    "2026-11-04 09:45:00+05:30"
+    "2026-11-04 09:45:00+05:30",
+    "2026-11-25 10:45:00+05:30"
   ],
   "CGPOWER:BEARISH": [
     "2026-08-03 14:15:00+05:30",
@@ -3849,7 +3850,8 @@
     "2026-10-22 14:00:00+05:30"
   ],
   "DELHIVERY::BB_BREAK:BULLISH": [
-    "2026-11-23 09:15:00+05:30"
+    "2026-11-23 09:15:00+05:30",
+    "2026-11-25 10:45:00+05:30"
   ],
   "PIRAMALFIN::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-24 10:45:00+05:30",
@@ -11138,6 +11140,60 @@
         "nifty": null,
         "vol": 2.63,
         "sector": "Services"
+      },
+      {
+        "symbol": "PFC",
+        "direction": "BULLISH",
+        "time": "2026-11-25 10:45:00+05:30",
+        "price": 333.9,
+        "key": "NSE_EQ|INE134E01011",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.19,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "ETERNAL",
+        "direction": "BULLISH",
+        "time": "2026-11-25 10:45:00+05:30",
+        "price": 372.75,
+        "key": "NSE_EQ|INE758T01015",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.5,
+        "sector": "Consumer Services"
+      },
+      {
+        "symbol": "DELHIVERY",
+        "direction": "BULLISH",
+        "time": "2026-11-25 10:45:00+05:30",
+        "price": 467.9,
+        "key": "NSE_EQ|INE148O01028",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.88,
+        "sector": "Services"
+      },
+      {
+        "symbol": "WELSPUNLIV",
+        "direction": "BULLISH",
+        "time": "2026-11-25 10:45:00+05:30",
+        "price": 276.81,
+        "key": "NSE_EQ|INE192B01031",
+        "score": "9/11",
+        "fno": false,
+        "day": 1,
+        "nifty": "UP",
+        "sector": "Textiles"
       }
     ]
   },
@@ -16763,5 +16819,41 @@
   ],
   "OBEROIRLTY::SWEEP::BULLISH:BULLISH": [
     "2026-09-07 09:15:00+05:30"
+  ],
+  "SENSEX::BB_BREAK:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "PNB::BB_REENTRY:BEARISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "PFC::BB_BREAK:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "ICICILIFE::BB_REENTRY:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "VOLTAS::BB_REENTRY:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "NAUKRI::BB_REENTRY:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "HYUNDAI::BB_REENTRY:BEARISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "HDFCLIFE::BB_REENTRY:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "FEDERALBNK::BB_REENTRY:BEARISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "SBICARD::BB_REENTRY:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "ETERNAL::BB_BREAK:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
+  ],
+  "AADHARHFC::BB_REENTRY:BULLISH": [
+    "2026-11-25 10:45:00+05:30"
   ]
 }
