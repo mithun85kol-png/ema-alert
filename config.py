@@ -939,7 +939,7 @@ POSITION_75MIN_EMA_MIN_BARS = 60
 ENABLED_SCAN_MODES = {
     "full",            # Bollinger + commodity MACD + daily/monthly/EOD/day-movers/opening hooks run from this
     "opening_bias_report", "opening_bias_report_30m", "opening_bias_report_1h",
-    "daily_scan", "daily_bb", "commodity_bb", "monthly_scan", "eod_report", "alert_stats", "day_movers", "telegram_test",
+    "daily_scan", "daily_bb", "commodity_bb", "bb_fast", "monthly_scan", "eod_report", "alert_stats", "day_movers", "telegram_test",
 }
 # Dividend / Bonus / Buyback / Order-win alerts (corporate_actions.py).
 CORPORATE_ACTIONS_ALERT_ENABLED = False
@@ -1340,11 +1340,26 @@ MACD15_ALERT_COMMODITIES = False
 MACD15_ALERT_INDICES = False
 
 # ---- 2026-11-25 ----
-BB_MAX_WICK_PCT = 30        # BB candle: total wick (upper+lower) at most 30% of the candle range (0 = no wick at all, lower = stricter)
+BB_MAX_WICK_PCT = 10        # BB candle: total wick at most 10% of the candle range (almost no wick). 0 = none at all, higher = looser
 BB_MACD_MIN_GAP = 0         # BB alert: MACD must be on the signal's side AND |MACD - signal| >= this (0 = just the side). NOTE: price units -
                             # on a Rs 300 stock the gap is usually < 1, so 4 lets only big-price stocks / index / commodity through.
 DAILY_BB_PERF_ENABLED = True   # daily BB report also shows how earlier daily-BB signals did: close of the outside candle -> band touch
 DAILY_BB_PERF_DAYS = 10        # look at signals of the last N trading days
 
 # 2026-11-25: MACD divergence as a % of price (fair for every stock): |MACD - signal| >= this % of the candle close.
-BB_MACD_MIN_GAP_PCT = 0.2   # gap >= 0.2% of price (price 300 -> 0.6 ; price 24000 -> 48). 0.4 was too strict in tests. Lower = more alerts.
+BB_MACD_MIN_GAP_PCT = 0.15  # gap >= 0.15% of price (price 9500 -> 14.3 ; price 300 -> 0.45). Lower = more alerts, higher = fewer.
+
+# ---- 2026-11-25: BB alert = first priority ----
+# SCAN_MODE=bb_fast (own cron, own GitHub concurrency group) scans F&O + index + commodity for the Bollinger alert ONLY, so it is
+# not stuck behind the long full scan. With BB_IN_FULL_RUN = False the normal "full" run no longer scans those for BB (it still
+# does the Nifty 500 cash stocks). Set True only if you do NOT use the bb_fast cron.
+BB_IN_FULL_RUN = False
+
+# ---- 2026-11-25: BB-ONLY MODE ("BB alert rekhe baki off") ----
+# True : the normal cron run (SCAN_MODE=full, e.g. 1,16,31,46) does ONLY the Bollinger alert (F&O + index + commodity + Nifty 500 cash),
+#        plus the Daily BB report and the day-end performance report. MACD alerts, opening / top-5 / day-mover / daily / monthly
+#        reports, corporate actions, bulk deals ... are all OFF. One cron is enough, no workflow change needed.
+# False: everything runs as before.
+BB_ONLY_MODE = True
+BB_ONLY_INCLUDE_N500 = True
+BB_IN_FULL_RUN = True
