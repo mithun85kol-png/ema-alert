@@ -1393,7 +1393,7 @@ BB_MACD_REQUIRED = False
 #   same_color : previous candle has the same colour (green->green / red->red)
 BB_RULES = {
     "stock_15":    {"wick_max": 20, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # F&O + cash stocks, 15-min
-    "comm_idx_15": {"wick_max": 20, "rsi_must": False, "macd_must": True, "vol_must": False, "same_color": True},    # commodity + index, 15-min
+    "comm_idx_15": {"wick_max": 20, "rsi_must": False, "macd_must": False, "vol_must": False, "same_color": True},    # commodity + index, 15-min
     "comm_idx_5":  {"wick_max": 20, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # commodity + index, 5-min
 }
 BB_RSI_UPPER = 69
@@ -1402,7 +1402,3 @@ BB_MACD_CROSS_LOOKBACK = 3     # cross on the BB candle or within the 2 candles 
 BB_MACD_CROSS_GENUINE = True   # gap now >= gap on the cross candle (not a fading touch)
 BB_VOL_VS_PREV_MIN = 1.0
 BB_NEXT_CANDLE_IF_WICK = True
-
-BB_QUIET_CANDLES = 4   # alert only if NONE of the previous 4 candles closed outside the band (same side); 1 = only the previous candle
-
-BB_MACD_NEED_CROSS = False   # False = MACD only has to be above signal (bullish) / below (bearish); True = a fresh cross within BB_MACD_CROSS_LOOKBACK candles is a must
