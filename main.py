@@ -5327,8 +5327,11 @@ def _bb_rule_eval(d, i, bull, rule):
             if (bull and g0 <= 0 < g1) or ((not bull) and g0 >= 0 > g1):
                 cross_ago, cg = i - j, g1
                 break
-        macd_ok = side_ok and cross_ago is not None
-        if macd_ok and getattr(config, "BB_MACD_CROSS_GENUINE", True) and abs(gap) + 1e-12 < abs(cg):
+        if getattr(config, "BB_MACD_NEED_CROSS", False):
+            macd_ok = side_ok and cross_ago is not None
+        else:
+            macd_ok = side_ok                       # MACD just has to be on the signal side (cross not needed)
+        if macd_ok and cross_ago is not None and getattr(config, "BB_MACD_CROSS_GENUINE", True) and abs(gap) + 1e-12 < abs(cg):
             macd_ok = False
         vol, pvol = float(r["volume"] or 0), float(p["volume"] or 0)
         vol_ratio, vol_ok = None, True
@@ -5356,9 +5359,12 @@ def _bb_signal(d, i, bull, rule):
     cur = _bb_rule_eval(d, i, bull, rule)
     if not cur or not cur["ok"] or not cur["wick_ok"]:
         return None
-    if not _bb_closed_outside(d, i - 1, bull):
-        return cur                                   # first candle outside the band
-    if (getattr(config, "BB_NEXT_CANDLE_IF_WICK", True) and i >= 2 and not _bb_closed_outside(d, i - 2, bull)):
+    _q = int(getattr(config, "BB_QUIET_CANDLES", 4))   # none of the previous _q candles may have closed outside the band
+    def _quiet(last):
+        return not any(_bb_closed_outside(d, j, bull) for j in range(max(0, last - _q + 1), last + 1))
+    if _quiet(i - 1):
+        return cur                                   # first candle outside the band (and quiet before it)
+    if (getattr(config, "BB_NEXT_CANDLE_IF_WICK", True) and i >= 2 and _quiet(i - 2)):
         pv = _bb_rule_eval(d, i - 1, bull, rule)
         if pv and pv["ok"] and not pv["wick_ok"]:    # previous candle failed ONLY because of its wick
             cur["after_wick"] = True
@@ -5816,7 +5822,7 @@ def send_bb_summary(hits, now_ist, kind):
             _after = "  (wick wala candle ignore, ei next solid candle e alert)" if h.get("after_wick") else ""
             body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): {'upper' if bull else 'lower'} band {band:.2f} er bahire CLOSE" + (f" \u00b7 candle {h['outside_pct']:.0f}% bahire" if h.get("outside_pct") is not None else "") + _after)
             if h.get("wick_pct") is not None:
-                body.append(f"{mk(h['wick_ok'])} Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%) \u00b7 max {_wm:g}%")
+                body.append(f"{mk(h['wick_ok'])} Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%) \u00b7 max {_wm:g}%" if _wm < 100 else " (info)")
             if _ru.get("same_color"):
                 body.append(f"{mk(h.get('same_ok'))} ager candle {'green' if bull else 'red'} (same colour)")
             def _tag(must):
@@ -5824,7 +5830,7 @@ def send_bb_summary(hits, now_ist, kind):
             _ri = mk(h.get("rsi_ok"))
             body.append(f"{_ri} RSI {h['rsi']:.1f} \u00b7 {getattr(config, 'BB_RSI_UPPER', 69):g}/{getattr(config, 'BB_RSI_LOWER', 31):g}" + _tag(_ru.get("rsi_must")))
             _ca = h.get("macd_cross_ago")
-            _gp = (" \u00b7 CROSS " + ("ei candle e" if _ca == 0 else f"{_ca} candle age")) if _ca is not None else " \u00b7 cross nei"
+            _gp = (" \u00b7 CROSS " + ("ei candle e" if _ca == 0 else f"{_ca} candle age")) if _ca is not None else " \u00b7 cross onek age hoyechhe"
             body.append(f"{mk(h.get('macd_ok'))} MACD {h['macd']:.2f} / {h['macd_sig']:.2f}{_gp}" + _tag(_ru.get("macd_must")))
             if h.get("vol_ratio") is not None:
                 body.append(f"{mk(h.get('vol_ok'))} Volume {h['vol_ratio']:.1f}x of last candle" + _tag(_ru.get("vol_must")))
