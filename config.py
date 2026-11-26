@@ -1393,7 +1393,7 @@ BB_MACD_REQUIRED = False
 #   same_color : previous candle has the same colour (green->green / red->red)
 BB_RULES = {
     "stock_15":    {"wick_max": 100, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # F&O + cash stocks, 15-min
-    "comm_idx_15": {"wick_max": 100, "rsi_must": False, "macd_must": True, "vol_must": False, "same_color": True},    # commodity + index, 15-min
+    "comm_idx_15": {"wick_max": 100, "rsi_must": True, "macd_must": True, "vol_must": False, "same_color": True},    # commodity + index, 15-min
     "comm_idx_5":  {"wick_max": 100, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # commodity + index, 5-min
 }
 BB_RSI_UPPER = 69
