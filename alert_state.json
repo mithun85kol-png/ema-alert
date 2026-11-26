@@ -2562,7 +2562,8 @@
     "2026-11-20",
     "2026-11-23",
     "2026-11-24",
-    "2026-11-25"
+    "2026-11-25",
+    "2026-11-26"
   ],
   "CGCL::BB_REENTRY:BULLISH": [
     "2026-11-25 14:30:00+05:30"
@@ -10807,7 +10808,12 @@
         "day": null,
         "nifty": null,
         "vol": 10.5,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 1441.0,
+        "pnl": 0.39,
+        "best": 1.261,
+        "worst": -0.488,
+        "outcome": "TARGET"
       },
       {
         "symbol": "CUMMINSIND",
@@ -10821,7 +10827,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.59,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 4100.9,
+        "pnl": -1.071,
+        "best": 1.298,
+        "worst": -1.071,
+        "outcome": "STOP"
       },
       {
         "symbol": "BSE",
@@ -10835,7 +10846,12 @@
         "day": null,
         "nifty": null,
         "vol": 37.3,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 3990.4,
+        "pnl": 2.399,
+        "best": 2.594,
+        "worst": -0.639,
+        "outcome": "STOP"
       },
       {
         "symbol": "BALRAMCHIN",
@@ -10849,7 +10865,12 @@
         "day": null,
         "nifty": null,
         "vol": 21.62,
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 645.3,
+        "pnl": 0.241,
+        "best": 1.67,
+        "worst": -3.021,
+        "outcome": "TARGET"
       },
       {
         "symbol": "HINDUNILVR",
@@ -10863,7 +10884,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.18,
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 2130.8,
+        "pnl": -1.557,
+        "best": 0.023,
+        "worst": -1.594,
+        "outcome": "STOP"
       },
       {
         "symbol": "DOMS",
@@ -10877,7 +10903,12 @@
         "day": null,
         "nifty": null,
         "vol": 39.48,
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 2290.0,
+        "pnl": 0.263,
+        "best": 1.699,
+        "worst": -0.21,
+        "outcome": "TARGET"
       },
       {
         "symbol": "THANGAMAYL",
@@ -10891,7 +10922,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.44,
-        "sector": "Consumer Durables"
+        "sector": "Consumer Durables",
+        "last": 3945.0,
+        "pnl": -0.379,
+        "best": 0.972,
+        "worst": -0.758,
+        "outcome": "TARGET"
       },
       {
         "symbol": "DEEPAKFERT",
@@ -10905,7 +10941,12 @@
         "day": null,
         "nifty": null,
         "vol": 10.49,
-        "sector": "Chemicals"
+        "sector": "Chemicals",
+        "last": 1448.0,
+        "pnl": -0.248,
+        "best": 2.225,
+        "worst": -1.316,
+        "outcome": "TARGET"
       },
       {
         "symbol": "JIOFIN",
@@ -10919,7 +10960,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.97,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 227.0,
+        "pnl": -0.513,
+        "best": 0.802,
+        "worst": -0.513,
+        "outcome": "TARGET"
       }
     ]
   },
@@ -16199,7 +16245,6 @@
     "2026-08-25 13:15:00+05:30"
   ],
   "BB15_PASS:DONE": [
-    "2026-11-25 17:30:00",
     "2026-11-25 17:45:00",
     "2026-11-25 18:00:00",
     "2026-11-25 18:15:00",
@@ -16248,7 +16293,9 @@
     "2026-11-26 14:30:00",
     "2026-11-26 14:45:00",
     "2026-11-26 15:00:00",
-    "2026-11-26 15:15:00"
+    "2026-11-26 15:15:00",
+    "2026-11-26 15:30:00",
+    "2026-11-25 17:30:00"
   ],
   "MOTHERSON::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-21 14:45:00+05:30",
