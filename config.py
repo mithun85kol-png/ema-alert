@@ -1392,9 +1392,9 @@ BB_MACD_REQUIRED = False
 #   vol_must   : candle volume > BB_VOL_VS_PREV_MIN x the previous candle's volume (no volume data, e.g. index = passes)
 #   same_color : previous candle has the same colour (green->green / red->red)
 BB_RULES = {
-    "stock_15":    {"wick_max": 100, "outside_min": 80, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # F&O + cash stocks, 15-min
-    "comm_idx_15": {"wick_max": 100, "outside_min": 80, "rsi_must": True, "macd_must": True, "vol_must": False, "same_color": True},    # commodity + index, 15-min
-    "comm_idx_5":  {"wick_max": 100, "outside_min": 80, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # commodity + index, 5-min
+    "stock_15":    {"wick_max": 100, "outside_min": 50, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # F&O + cash stocks, 15-min
+    "comm_idx_15": {"wick_max": 100, "outside_min": 50, "rsi_must": True, "macd_must": True, "vol_must": False, "same_color": True},    # commodity + index, 15-min
+    "comm_idx_5":  {"wick_max": 100, "outside_min": 50, "rsi_must": True,  "macd_must": True,  "vol_must": True,  "same_color": True},   # commodity + index, 5-min
 }
 BB_RSI_UPPER = 69
 BB_RSI_LOWER = 31
