@@ -5340,9 +5340,10 @@ def _bb_rule_eval(d, i, bull, rule):
             vol_ok = vol_ratio > float(getattr(config, "BB_VOL_VS_PREV_MIN", 1.0))
         po, pc = float(p["open"]), float(p["close"])
         same_ok = (pc > po) if bull else (pc < po)
-        ok = not ((rule.get("rsi_must") and not rsi_ok) or (rule.get("macd_must") and not macd_ok)
+        out_ok = out_pct + 1e-9 >= float(rule.get("outside_min", 0))
+        ok = not ((not out_ok) or (rule.get("rsi_must") and not rsi_ok) or (rule.get("macd_must") and not macd_ok)
                   or (rule.get("vol_must") and not vol_ok) or (rule.get("same_color") and not same_ok))
-        return {"ok": ok, "wick_ok": wick <= float(rule.get("wick_max", 20)) + 1e-9, "wick_pct": wick, "outside_pct": out_pct,
+        return {"ok": ok, "wick_ok": wick <= float(rule.get("wick_max", 20)) + 1e-9, "wick_pct": wick, "outside_pct": out_pct, "outside_ok": out_ok,
                 "rsi": rsi, "rsi_ok": rsi_ok, "macd_ok": macd_ok, "macd_side_ok": side_ok, "macd_cross_ago": cross_ago,
                 "macd_gap": gap, "macd_gap_pct": (abs(gap) / abs(c) * 100.0) if c else None,
                 "vol_ratio": vol_ratio, "vol_ok": vol_ok, "same_ok": same_ok, "close": c,
@@ -5820,7 +5821,7 @@ def send_bb_summary(hits, now_ist, kind):
             _ru = h.get("rule") or {}
             _wm = float(_ru.get("wick_max", 20))
             _after = "  (wick wala candle ignore, ei next solid candle e alert)" if h.get("after_wick") else ""
-            body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): {'upper' if bull else 'lower'} band {band:.2f} er bahire CLOSE" + (f" \u00b7 candle {h['outside_pct']:.0f}% bahire" if h.get("outside_pct") is not None else "") + _after)
+            body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): {'upper' if bull else 'lower'} band {band:.2f} er bahire CLOSE" + (f" \u00b7 candle {h['outside_pct']:.0f}% bahire (min {float((h.get('rule') or {}).get('outside_min', 0)):g}%)" if h.get("outside_pct") is not None else "") + _after)
             if h.get("wick_pct") is not None:
                 body.append(f"{mk(h['wick_ok'])} Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%) \u00b7 max {_wm:g}%" if _wm < 100 else " (info)")
             if _ru.get("same_color"):
