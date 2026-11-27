@@ -13627,6 +13627,34 @@
         "nifty": null,
         "vol": 3.25,
         "sector": "Financial Services"
+      },
+      {
+        "symbol": "PHOENIXLTD",
+        "direction": "BEARISH",
+        "time": "2026-11-27 13:30:00+05:30",
+        "price": 2239.4,
+        "key": "NSE_EQ|INE211B01039",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 3.41,
+        "sector": "Realty"
+      },
+      {
+        "symbol": "ADANIENSOL",
+        "direction": "BEARISH",
+        "time": "2026-11-27 13:30:00+05:30",
+        "price": 1347.0,
+        "key": "NSE_EQ|INE931S01010",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.69,
+        "sector": "Power"
       }
     ]
   },
@@ -16837,7 +16865,6 @@
     "2026-11-25 09:15:00+05:30"
   ],
   "BB15_PASS:DONE": [
-    "2026-11-26 15:30:00",
     "2026-11-26 15:45:00",
     "2026-11-26 16:00:00",
     "2026-11-26 16:15:00",
@@ -16886,7 +16913,9 @@
     "2026-11-27 12:30:00",
     "2026-11-27 12:45:00",
     "2026-11-27 13:00:00",
-    "2026-11-27 13:15:00"
+    "2026-11-27 13:15:00",
+    "2026-11-27 13:30:00",
+    "2026-11-26 15:30:00"
   ],
   "PRIVISCL::N500:BULLISH": [
     "2026-10-09 13:15:00+05:30",
@@ -18791,5 +18820,17 @@
   ],
   "JSWSTEEL::N500:BULLISH": [
     "2026-08-14 14:30:00+05:30"
+  ],
+  "BAJAJ-AUTO::BB_REENTRY:BEARISH": [
+    "2026-11-27 13:30:00+05:30"
+  ],
+  "PHOENIXLTD::BB_BREAK:BEARISH": [
+    "2026-11-27 13:30:00+05:30"
+  ],
+  "ADANIENSOL::BB_BREAK:BEARISH": [
+    "2026-11-27 13:30:00+05:30"
+  ],
+  "ASHOKLEY::BB_REENTRY:BEARISH": [
+    "2026-11-27 13:30:00+05:30"
   ]
 }
