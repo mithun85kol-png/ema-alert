@@ -2423,7 +2423,6 @@
     "2026-11-25 10:30:00+05:30"
   ],
   "BB15_PASS:DONE": [
-    "2026-11-26 11:45:00",
     "2026-11-26 12:00:00",
     "2026-11-26 12:15:00",
     "2026-11-26 12:30:00",
@@ -2472,7 +2471,9 @@
     "2026-11-26 23:15:00",
     "2026-11-27 09:00:00",
     "2026-11-27 09:15:00",
-    "2026-11-27 09:30:00"
+    "2026-11-27 09:30:00",
+    "2026-11-27 09:45:00",
+    "2026-11-26 11:45:00"
   ],
   "HAVELLS::N500:BULLISH": [
     "2026-08-14 11:45:00+05:30"
@@ -11333,6 +11334,90 @@
         "nifty": null,
         "vol": 1.88,
         "sector": "Fast Moving Consumer Goods"
+      },
+      {
+        "symbol": "COCHINSHIP",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 1124.5,
+        "key": "NSE_EQ|INE704P01025",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.9,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "ANGELONE",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:45:00+05:30",
+        "price": 374.2,
+        "key": "NSE_EQ|INE732I01021",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.23,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "BLUESTARCO",
+        "direction": "BEARISH",
+        "time": "2026-11-27 09:45:00+05:30",
+        "price": 1735.5,
+        "key": "NSE_EQ|INE472A01039",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 3.54,
+        "sector": "Consumer Durables"
+      },
+      {
+        "symbol": "ZENTEC",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 1790.4,
+        "key": "NSE_EQ|INE251B01027",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.45,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "WELCORP",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:45:00+05:30",
+        "price": 2310.3,
+        "key": "NSE_EQ|INE191B01025",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.2,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "AWL",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:45:00+05:30",
+        "price": 168.79,
+        "key": "NSE_EQ|INE699H01024",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.1,
+        "sector": "Fast Moving Consumer Goods"
       }
     ]
   },
@@ -11366,7 +11451,8 @@
     "2026-08-11 09:15:00+05:30"
   ],
   "SILVER::BB_BREAK:BULLISH": [
-    "2026-11-23 19:45:00+05:30"
+    "2026-11-23 19:45:00+05:30",
+    "2026-11-27 09:45:00+05:30"
   ],
   "HYUNDAI::BB_BREAK:BEARISH": [
     "2026-11-23 09:15:00+05:30",
@@ -14489,7 +14575,8 @@
     "2026-11-23 09:30:00+05:30"
   ],
   "ZENTEC::BB_BREAK:BULLISH": [
-    "2026-11-23 10:15:00+05:30"
+    "2026-11-23 10:15:00+05:30",
+    "2026-11-27 09:30:00+05:30"
   ],
   "THERMAX::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-21 13:00:00+05:30"
@@ -18157,5 +18244,20 @@
   ],
   "SANSERA::ORB15_MOVE:BULLISH": [
     "2026-11-20"
+  ],
+  "COCHINSHIP::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "ANGELONE::BB_BREAK:BULLISH": [
+    "2026-11-27 09:45:00+05:30"
+  ],
+  "BLUESTARCO::BB_BREAK:BEARISH": [
+    "2026-11-27 09:45:00+05:30"
+  ],
+  "WELCORP::BB_BREAK:BULLISH": [
+    "2026-11-27 09:45:00+05:30"
+  ],
+  "AWL::BB_BREAK:BULLISH": [
+    "2026-11-27 09:45:00+05:30"
   ]
 }
