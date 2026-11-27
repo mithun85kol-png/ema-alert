@@ -3681,7 +3681,8 @@
     "2026-09-02"
   ],
   "BALRAMCHIN::BB_BREAK:BULLISH": [
-    "2026-11-26 09:15:00+05:30"
+    "2026-11-26 09:15:00+05:30",
+    "2026-11-27 10:15:00+05:30"
   ],
   "GRSE::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-21 13:30:00+05:30",
@@ -12268,6 +12269,76 @@
         "nifty": null,
         "vol": 3.27,
         "sector": "Financial Services"
+      },
+      {
+        "symbol": "CUB",
+        "direction": "BEARISH",
+        "time": "2026-11-27 10:15:00+05:30",
+        "price": 233.36,
+        "key": "NSE_EQ|INE491A01021",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.23,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "NLCINDIA",
+        "direction": "BULLISH",
+        "time": "2026-11-27 10:15:00+05:30",
+        "price": 234.14,
+        "key": "NSE_EQ|INE589A01014",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 2.04,
+        "sector": "Power"
+      },
+      {
+        "symbol": "BALRAMCHIN",
+        "direction": "BULLISH",
+        "time": "2026-11-27 10:15:00+05:30",
+        "price": 669.35,
+        "key": "NSE_EQ|INE119A01028",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 2.57,
+        "sector": "Fast Moving Consumer Goods"
+      },
+      {
+        "symbol": "ACE",
+        "direction": "BULLISH",
+        "time": "2026-11-27 10:15:00+05:30",
+        "price": 1323.35,
+        "key": "NSE_EQ|INE731H01025",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.06,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "ECLERX",
+        "direction": "BULLISH",
+        "time": "2026-11-27 10:15:00+05:30",
+        "price": 1553.9,
+        "key": "NSE_EQ|INE738I01010",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 5.83,
+        "sector": "Services"
       }
     ]
   },
@@ -12665,7 +12736,8 @@
     "2026-09-07 09:15:00+05:30"
   ],
   "ECLERX::BB_BREAK:BULLISH": [
-    "2026-11-23 09:15:00+05:30"
+    "2026-11-23 09:15:00+05:30",
+    "2026-11-27 10:15:00+05:30"
   ],
   "IDEA:BEARISH": [
     "2026-09-30 13:30:00+05:30",
@@ -13250,7 +13322,6 @@
     "2026-08-25 09:15:00+05:30"
   ],
   "BB15_PASS:DONE": [
-    "2026-11-26 12:15:00",
     "2026-11-26 12:30:00",
     "2026-11-26 12:45:00",
     "2026-11-26 13:00:00",
@@ -13299,7 +13370,9 @@
     "2026-11-27 09:15:00",
     "2026-11-27 09:30:00",
     "2026-11-27 09:45:00",
-    "2026-11-27 10:00:00"
+    "2026-11-27 10:00:00",
+    "2026-11-27 10:15:00",
+    "2026-11-26 12:15:00"
   ],
   "PATANJALI::N500:BULLISH": [
     "2026-08-11 09:15:00+05:30",
@@ -18339,5 +18412,17 @@
   ],
   "KIMS::SWEEP::BEARISH:BEARISH": [
     "2026-09-07 09:15:00+05:30"
+  ],
+  "CUB::BB_BREAK:BEARISH": [
+    "2026-11-27 10:15:00+05:30"
+  ],
+  "NLCINDIA::BB_BREAK:BULLISH": [
+    "2026-11-27 10:15:00+05:30"
+  ],
+  "MMTC::BB_REENTRY:BULLISH": [
+    "2026-11-27 10:15:00+05:30"
+  ],
+  "ACE::BB_BREAK:BULLISH": [
+    "2026-11-27 10:15:00+05:30"
   ]
 }
