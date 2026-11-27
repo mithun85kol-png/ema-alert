@@ -714,7 +714,6 @@
     "2026-09-07 09:15:00+05:30"
   ],
   "BB15_PASS:DONE": [
-    "2026-11-26 13:15:00",
     "2026-11-26 13:30:00",
     "2026-11-26 13:45:00",
     "2026-11-26 14:00:00",
@@ -763,7 +762,9 @@
     "2026-11-27 10:15:00",
     "2026-11-27 10:30:00",
     "2026-11-27 10:45:00",
-    "2026-11-27 11:00:00"
+    "2026-11-27 11:00:00",
+    "2026-11-27 11:15:00",
+    "2026-11-26 13:15:00"
   ],
   "ESCORTS::BB_BREAK:BULLISH": [
     "2026-11-27 09:15:00+05:30"
@@ -6801,7 +6802,8 @@
     "2026-10-15 12:45:00+05:30"
   ],
   "HAVELLS::BB_BREAK:BEARISH": [
-    "2026-11-23 15:00:00+05:30"
+    "2026-11-23 15:00:00+05:30",
+    "2026-11-27 11:15:00+05:30"
   ],
   "EMCURE::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-25 12:45:00+05:30"
@@ -14876,6 +14878,48 @@
         "nifty": null,
         "vol": 1.1,
         "sector": "Construction"
+      },
+      {
+        "symbol": "BAJAJ-AUTO",
+        "direction": "BEARISH",
+        "time": "2026-11-27 11:00:00+05:30",
+        "price": 10638.0,
+        "key": "NSE_EQ|INE917I01010",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 3.72,
+        "sector": "Automobile and Auto Components"
+      },
+      {
+        "symbol": "HAVELLS",
+        "direction": "BEARISH",
+        "time": "2026-11-27 11:15:00+05:30",
+        "price": 1151.7,
+        "key": "NSE_EQ|INE176B01034",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.42,
+        "sector": "Consumer Durables"
+      },
+      {
+        "symbol": "SYRMA",
+        "direction": "BULLISH",
+        "time": "2026-11-27 11:15:00+05:30",
+        "price": 1525.4,
+        "key": "NSE_EQ|INE0DYJ01015",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.52,
+        "sector": "Capital Goods"
       }
     ]
   },
@@ -18560,5 +18604,32 @@
   ],
   "NMDC::SWEEP::BULLISH:BULLISH": [
     "2026-09-07 09:15:00+05:30"
+  ],
+  "NIFTY 50::BB5_BREAK:BEARISH": [
+    "2026-11-27 11:20:00+05:30"
+  ],
+  "NIFTY BANK::BB5_BREAK:BEARISH": [
+    "2026-11-27 11:25:00+05:30"
+  ],
+  "SENSEX::BB5_BREAK:BEARISH": [
+    "2026-11-27 11:25:00+05:30"
+  ],
+  "BAJAJ-AUTO::BB_BREAK:BEARISH": [
+    "2026-11-27 11:00:00+05:30"
+  ],
+  "HINDZINC::BB_REENTRY:BULLISH": [
+    "2026-11-27 11:15:00+05:30"
+  ],
+  "BDL::BB_REENTRY:BULLISH": [
+    "2026-11-27 11:15:00+05:30"
+  ],
+  "VEDL::BB_REENTRY:BULLISH": [
+    "2026-11-27 11:15:00+05:30"
+  ],
+  "MAZDOCK::BB_REENTRY:BULLISH": [
+    "2026-11-27 11:15:00+05:30"
+  ],
+  "SYRMA::BB_BREAK:BULLISH": [
+    "2026-11-27 11:15:00+05:30"
   ]
 }
