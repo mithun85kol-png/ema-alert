@@ -3138,7 +3138,7 @@ def send_rsi75_summary(hits, now_ist):
             icon = "\U0001F7E2" if bull else "\U0001F534"
             kindtxt = "F&O" if h.get("is_fno") else "Cash"
             sec = _html.escape(_sector_label(h["symbol"]) or "Other")
-            top = (f"{icon} <b>{_html.escape(h['symbol'])}</b> <i>({sec})</i>  \U0001F4C8 <a href=\"{h.get('chart_link', '')}\">Chart</a>"
+            top = (f"{icon} <b>{_html.escape(h['symbol'])}</b> <b>[{kindtxt}]</b> <i>({sec})</i>  \U0001F4C8 <a href=\"{h.get('chart_link', '')}\">Chart</a>"
                    f"\nRSI(15m) {h['rsi']:.1f} \u00b7 {h['close']:g} \u00b7 \u23F115-min")
             body = [f"{h['candle_time'][:10]} {h['candle_time'][11:16]} (15-min candle)  |  {kindtxt}  |  top 5 {'gainer' if h.get('list') == 'UP' else 'loser'}",
                     f"\u2705 15-min RSI {h['rsi']:.1f} {'above' if bull else 'below'} {getattr(config, 'RSI75_UPPER', 75) if bull else getattr(config, 'RSI75_LOWER', 25):g}",
@@ -5904,7 +5904,7 @@ def send_bb_summary(hits, now_ist, kind):
             if kindtxt in ("F&O", "Cash"):
                 links.append(f"\U0001F4CA <a href=\"https://www.screener.in/company/{urllib.parse.quote(h['symbol'])}/consolidated/\">Screener</a>")
             mv = f" ({h['day_pct']:+.2f}%)" if h.get("day_pct") is not None else ""
-            top = (f"{icon} <b>{_html.escape(h['symbol'])}</b>{sec}  " + "  \u00b7  ".join(links)
+            top = (f"{icon} <b>{_html.escape(h['symbol'])}</b> <b>[{kindtxt}]</b>{sec}  " + "  \u00b7  ".join(links)
                    + f"\nRSI {h['rsi']:.1f} \u00b7 {h['close']:g}{mv} \u00b7 \U0001F4CABB\u2705 \u00b7 \u23F1{h.get('tf', '15-min')}")
             body = [f"{h['candle_time'][:10]} {str(h['candle_time'])[11:16]} ({h.get('tf', '15-min')} candle)  |  {kindtxt}"]
             _ru = h.get("rule") or {}
