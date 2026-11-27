@@ -2716,7 +2716,8 @@
   "GOLD::BB_BREAK:BULLISH": [
     "2026-11-23 09:15:00+05:30",
     "2026-11-25 22:45:00+05:30",
-    "2026-11-26 19:45:00+05:30"
+    "2026-11-26 19:45:00+05:30",
+    "2026-11-27 09:30:00+05:30"
   ],
   "ENGINERSIN::MAENV::BEARISH:BEARISH": [
     "2026-09-10 09:45:00+05:30",
@@ -8945,6 +8946,216 @@
         "nifty": null,
         "vol": 6.42,
         "sector": "Services"
+      },
+      {
+        "symbol": "BDL",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 1072.0,
+        "key": "NSE_EQ|INE171Z01026",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.2,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "BANKBARODA",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 280.6,
+        "key": "NSE_EQ|INE028A01039",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.95,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "VOLTAS",
+        "direction": "BEARISH",
+        "time": "2026-11-27 09:15:00+05:30",
+        "price": 1191.3,
+        "key": "NSE_EQ|INE226A01021",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 128.44,
+        "sector": "Consumer Durables"
+      },
+      {
+        "symbol": "DATAPATTNS",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 4273.0,
+        "key": "NSE_EQ|INE0IX101010",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 4.08,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "HAL",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 5025.0,
+        "key": "NSE_EQ|INE066F01020",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 5.55,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "RBLBANK",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 399.75,
+        "key": "NSE_EQ|INE976G01028",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.07,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "BANKINDIA",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 168.2,
+        "key": "NSE_EQ|INE084A01016",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 2.0,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "SOLARINDS",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 18716.0,
+        "key": "NSE_EQ|INE343H01029",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.47,
+        "sector": "Chemicals"
+      },
+      {
+        "symbol": "ACMESOLAR",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 426.45,
+        "key": "NSE_EQ|INE622W01025",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.42,
+        "sector": "Power"
+      },
+      {
+        "symbol": "AAVAS",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 1122.1,
+        "key": "NSE_EQ|INE216P01012",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.6,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "GRSE",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:15:00+05:30",
+        "price": 2092.3,
+        "key": "NSE_EQ|INE382Z01011",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 4.69,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "BEML",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 2128.0,
+        "key": "NSE_EQ|INE258A01024",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 3.62,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "CHOLAHLDNG",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:15:00+05:30",
+        "price": 1404.1,
+        "key": "NSE_EQ|INE149A01033",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.39,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "AZAD",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 2388.0,
+        "key": "NSE_EQ|INE02IJ01035",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.38,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "CUPID",
+        "direction": "BULLISH",
+        "time": "2026-11-27 09:30:00+05:30",
+        "price": 379.2,
+        "key": "NSE_EQ|INE509F01029",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 1.88,
+        "sector": "Fast Moving Consumer Goods"
       }
     ]
   },
@@ -10700,7 +10911,6 @@
     "2026-11-06 13:00:00+05:30"
   ],
   "BB15_PASS:DONE": [
-    "2026-11-26 11:30:00",
     "2026-11-26 11:45:00",
     "2026-11-26 12:00:00",
     "2026-11-26 12:15:00",
@@ -10749,7 +10959,9 @@
     "2026-11-26 23:00:00",
     "2026-11-26 23:15:00",
     "2026-11-27 09:00:00",
-    "2026-11-27 09:15:00"
+    "2026-11-27 09:15:00",
+    "2026-11-27 09:30:00",
+    "2026-11-26 11:30:00"
   ],
   "TMCV::SWEEP::BULLISH:BULLISH": [
     "2026-09-07 09:15:00+05:30"
@@ -11645,7 +11857,8 @@
   ],
   "GOLD::BB5_REENTRY:BULLISH": [
     "2026-11-25 23:15:00+05:30",
-    "2026-11-25 23:25:00+05:30"
+    "2026-11-25 23:25:00+05:30",
+    "2026-11-27 09:35:00+05:30"
   ],
   "INDUSTOWER:BULLISH": [
     "2026-08-06 11:57:00+05:30",
@@ -16691,7 +16904,8 @@
     "2026-08-25 14:30:00+05:30"
   ],
   "ACMESOLAR::BB_BREAK:BULLISH": [
-    "2026-11-23 09:15:00+05:30"
+    "2026-11-23 09:15:00+05:30",
+    "2026-11-27 09:30:00+05:30"
   ],
   "BSOFT::N500:BULLISH": [
     "2026-10-21 09:15:00+05:30"
@@ -17902,5 +18116,47 @@
   ],
   "CDSL::BB_BREAK:BULLISH": [
     "2026-11-26 09:15:00+05:30"
+  ],
+  "BDL::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "BANKBARODA::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "VOLTAS::BB_BREAK:BEARISH": [
+    "2026-11-27 09:15:00+05:30"
+  ],
+  "DATAPATTNS::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "HAL::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "RBLBANK::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "BANKINDIA::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "SOLARINDS::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "AAVAS::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "GRSE::BB_BREAK:BULLISH": [
+    "2026-11-27 09:15:00+05:30"
+  ],
+  "BEML::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "CHOLAHLDNG::BB_BREAK:BULLISH": [
+    "2026-11-27 09:15:00+05:30"
+  ],
+  "AZAD::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
+  ],
+  "CUPID::BB_BREAK:BULLISH": [
+    "2026-11-27 09:30:00+05:30"
   ]
 }
