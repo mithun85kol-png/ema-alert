@@ -1316,7 +1316,7 @@ BB_STANDALONE_COMMODITIES = False # commodities get BB inside their MACD alert
 # vs previous close: LAST DAY (previous trading day vs the day before) ~09:00, 1st 15-min ~09:31, 30-min ~09:47, 1-hour ~10:17.
 TOP5_ENABLED = True
 TOP5_COUNT = 5
-TOP5_SCHEDULE = {"day": "09:00", "15": "09:31", "30": "09:47", "60": "10:17"}   # IST, first run at/after the time
+TOP5_SCHEDULE = {"day": "09:00", "15": "09:30", "30": "09:45", "60": "10:17"}   # IST, first run at/after the time
 
 
 # ---------- 2026-11-24 (v71): BB and MACD are SEPARATE alerts again ----------
@@ -1406,3 +1406,12 @@ BB_NEXT_CANDLE_IF_WICK = True
 BB_QUIET_CANDLES = 0   # 0 = no "first candle" requirement: any candle that closes outside the band with all MUSTs alerts; repeats are blocked by the re-arm rule (price must close back inside the band first)
 
 BB_MACD_NEED_CROSS = False   # False = MACD only has to be above signal (bullish) / below (bearish); True = a fresh cross within BB_MACD_CROSS_LOOKBACK candles is a must
+
+# ---- BB alerts only for the day's top movers (2026-11-27) ----
+BB_TOP5_ONLY = True            # stocks: BB alert only for the top-5 gainers + top-5 losers of the first 15 min / first 30 min (indices + commodities are not filtered)
+BB_TOP5_WINDOWS = ["15"]   # top-5 lists are built from the FIRST 15 MINUTES only (09:15-09:30), sent at TOP5_SCHEDULE["15"]; add "30" to also use the first 30 minutes
+
+BB_MOVE_FILTER = True     # stocks (F&O + cash): no BB alert once the stock already moved >= BB_MOVE_MAX_PCT %; also ALLOW any stock that moved >= BB_MOVE_MIN_PCT % (but < MAX) even if it is not in the top-5 lists
+BB_MOVE_MIN_PCT = 2
+BB_MOVE_MAX_PCT = 5
+BB_TOP5_APPLY_MAX = False   # False = top-5 stocks (first 15 min) get BB alerts even above 5% move; True = they also stop at BB_MOVE_MAX_PCT

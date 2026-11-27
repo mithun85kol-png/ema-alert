@@ -3104,8 +3104,12 @@ def _run_bb_only(now_ist, only_commodities=False, n500=False):
     saved_state = state.load_state()
     _sync_state_from_remote(saved_state)
     bb_hits = {"break": [], "reentry": []}
+    if not only_commodities:
+        _bb_top5_step(now_ist, dfs, pivots, saved_state, uni=("Cash" if n500 else "F&O"))
     for symbol, (df5, df75, df15) in dfs.items():
         if df15 is None or df15.empty:
+            continue
+        if not only_commodities and not _bb_stock_allowed(saved_state, symbol, df15, (pivots.get(symbol) or {}).get("prev_close"), now_ist):
             continue
         levels = pivots.get(symbol)
         if only_commodities:
@@ -4814,7 +4818,8 @@ def run_daily_bb_report(now_ist):
                             f"<a href=\"{build_chart_link(r['symbol'])}\">Chart</a>\n"
                             f"    {r['close']:g} ({r['chg']:+.2f}%) \u00b7 {word} band {r['band']:.2f} ({r['away']:+.1f}%) "
                             f"\u00b7 RSI {r['rsi']:.1f}" + (f" \u00b7 Vol {r['vol']:.1f}x" if r.get("vol") else "")
-                            + (f" \u00b7 candle {r['out_pct']:.0f}% bahire" if r.get("out_pct") is not None else ""))
+                            + (f" \u00b7 candle {r['out_pct']:.0f}% bahire" if r.get("out_pct") is not None else "")
+                            + (lambda _m: f" \u00b7 Monthly RSI {_m['monthly']:.1f} (info)" if _m and _m.get("monthly") is not None else "")(_bb_dm_rsi(r["symbol"], watchlist.get(r["symbol"]))))
 
         _lines(ups, "\U0001F7E2", "upper")
         if lows:
@@ -5817,13 +5822,13 @@ def send_bb_summary(hits, now_ist, kind):
             mv = f" ({h['day_pct']:+.2f}%)" if h.get("day_pct") is not None else ""
             top = (f"{icon} <b>{_html.escape(h['symbol'])}</b>{sec}  " + "  \u00b7  ".join(links)
                    + f"\nRSI {h['rsi']:.1f} \u00b7 {h['close']:g}{mv} \u00b7 \U0001F4CABB\u2705 \u00b7 \u23F1{h.get('tf', '15-min')}")
-            body = [f"{h['candle_time'][:10]} {str(h['candle_time'])[11:16]} ({h.get('tf', '15-min')} candle)  |  {kindtxt}" + ("  \u2705" if kindtxt == "F&O" else "")]
+            body = [f"{h['candle_time'][:10]} {str(h['candle_time'])[11:16]} ({h.get('tf', '15-min')} candle)  |  {kindtxt}"]
             _ru = h.get("rule") or {}
             _wm = float(_ru.get("wick_max", 20))
             _after = "  (wick wala candle ignore, ei next solid candle e alert)" if h.get("after_wick") else ""
-            body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): {'upper' if bull else 'lower'} band {band:.2f} er bahire CLOSE" + (f" \u00b7 candle {h['outside_pct']:.0f}% bahire (min {float((h.get('rule') or {}).get('outside_min', 0)):g}%)" if h.get("outside_pct") is not None else "") + _after)
+            body.append(f"\u2705 BB({getattr(config, 'BB_STD', 1.2):g}): {'upper' if bull else 'lower'} band {band:.2f} er bahire CLOSE" + (f" \u00b7 candle {h['outside_pct']:.0f}% bahire" + (f" (min {float((h.get('rule') or {}).get('outside_min', 0)):g}%)" if float((h.get('rule') or {}).get('outside_min', 0)) > 0 else "") if h.get("outside_pct") is not None else "") + _after)
             if h.get("wick_pct") is not None:
-                body.append(f"{mk(h['wick_ok'])} Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%) \u00b7 max {_wm:g}%" if _wm < 100 else " (info)")
+                body.append(f"{mk(h['wick_ok'])} Wick {h['wick_pct']:.0f}% (body {100 - h['wick_pct']:.0f}%)" + (f" \u00b7 max {_wm:g}%" if _wm < 100 else " (info)"))
             if _ru.get("same_color"):
                 body.append(f"{mk(h.get('same_ok'))} ager candle {'green' if bull else 'red'} (same colour)")
             def _tag(must):
@@ -5831,7 +5836,7 @@ def send_bb_summary(hits, now_ist, kind):
             _ri = mk(h.get("rsi_ok"))
             body.append(f"{_ri} RSI {h['rsi']:.1f} \u00b7 {getattr(config, 'BB_RSI_UPPER', 69):g}/{getattr(config, 'BB_RSI_LOWER', 31):g}" + _tag(_ru.get("rsi_must")))
             _ca = h.get("macd_cross_ago")
-            _gp = (" \u00b7 CROSS " + ("ei candle e" if _ca == 0 else f"{_ca} candle age")) if _ca is not None else " \u00b7 cross onek age hoyechhe"
+            _gp = (" \u00b7 CROSS " + ("ei candle e" if _ca == 0 else f"{_ca} candle age")) if _ca is not None else (" \u00b7 signal er upore" if bull else " \u00b7 signal er niche")
             body.append(f"{mk(h.get('macd_ok'))} MACD {h['macd']:.2f} / {h['macd_sig']:.2f}{_gp}" + _tag(_ru.get("macd_must")))
             if h.get("vol_ratio") is not None:
                 body.append(f"{mk(h.get('vol_ok'))} Volume {h['vol_ratio']:.1f}x of last candle" + _tag(_ru.get("vol_must")))
@@ -5841,6 +5846,10 @@ def send_bb_summary(hits, now_ist, kind):
                 body.append(f"{mk(h['close'] < h['s1'])} S1 {h['s1']:.2f} (info)")
             if h.get("st_line"):
                 body.append(f"{mk((h['close'] > h['st_line']) == bull)} Supertrend {h['st_line']:.2f} (info)")
+            _dm = _bb_dm_rsi(h["symbol"], h.get("instrument_key"))
+            if _dm:
+                body.append("\U0001F4CA " + " \u00b7 ".join(x for x in ((f"Daily RSI {_dm['daily']:.1f}" if _dm.get("daily") is not None else ""),
+                                                                      (f"Monthly RSI {_dm['monthly']:.1f}" if _dm.get("monthly") is not None else "")) if x) + " (info)")
             if h.get("month_pct") is not None:
                 body.append(f"\U0001F4C5 1 mash: {h['month_pct']:+.1f}% ({h.get('month_days')} din)")
             if h.get("is_fno") and kindtxt == "F&O" and getattr(config, "BB_MSG_OPTIONS", "full") != "off":
@@ -6020,18 +6029,22 @@ def maybe_run_day_movers_once_a_day(now_ist):
         run_day_movers_report(now_ist)
 
 
-def run_top5_report(now_ist, window):
+def run_top5_report(now_ist, window, dfs=None, pivots=None, saved_state=None, uni="F&O"):
     """TOP 5 GAINERS / LOSERS (F&O stocks) for window 'day' (previous trading day: its close vs the day before),
     '15' / '30' / '60' (price at the close of the first 15 / 30 / 60 minutes of today vs previous close). ADDED 2026-11-24."""
     import html as _html
     n = int(getattr(config, "TOP5_COUNT", 5))
     fo_watch = None if config.USE_FULL_FO_LIST else config.FO_STOCK_WATCHLIST
-    watchlist = instruments.resolve_fo_stock_list(fo_watch)
-    pivots = build_pivot_levels(watchlist)
-    dfs, _failed = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
+    if dfs is None:
+        watchlist = instruments.resolve_fo_stock_list(fo_watch)
+        pivots = build_pivot_levels(watchlist)
+        dfs, _failed = fetch_all(watchlist, now_ist, config.FETCH_WORKERS)
+    pivots = pivots or {}
     rows = []
     for sym, tup in dfs.items():
         try:
+            if sym in config.INDICES or sym in config.COMMODITIES:
+                continue
             df15 = tup[2]
             if df15 is None or df15.empty:
                 continue
@@ -6063,20 +6076,118 @@ def run_top5_report(now_ist, window):
         return
     label = {"day": "LAST DAY", "15": "1st 15-MIN", "30": "1st 30-MIN", "60": "1st 1-HOUR"}[window]
     sub = "prev day close vs day before" if window == "day" else "vs prev close"
-    out = [f"\U0001F3C6 <b>TOP {n} GAINERS / LOSERS \u2014 {label}</b>  {now_ist.strftime('%d %b %H:%M')}  (F&amp;O, {sub})"]
+    _uni_txt = _html.escape(uni)
+    out = [f"\U0001F3C6 <b>TOP {n} GAINERS / LOSERS \u2014 {label}</b>  {now_ist.strftime('%d %b %H:%M')}  ({_uni_txt}, {sub})"]
+    _today = now_ist.date().isoformat()
     for title, icon, sel in (("GAINERS", "\U0001F7E2", sorted(rows, key=lambda x: -x["pct"])[:n]),
                              ("LOSERS", "\U0001F534", sorted(rows, key=lambda x: x["pct"])[:n])):
         out.append(f"\n{icon} <b>{title}</b>")
+        if saved_state is not None:   # remember today's top stocks: BB alerts are only for these (config.BB_TOP5_ONLY)
+            for r in sel:
+                state.mark_alerted(saved_state, f"TOP5SEL::{r['symbol']}", "UP" if title == "GAINERS" else "DOWN", _today)
         for i, r in enumerate(sel, 1):
             out.append(f"{i}. <b>{_html.escape(r['symbol'])}</b> ({_html.escape(_sector_chart_label(r['symbol']))}) "
                        f"<b>{r['pct']:+.2f}%</b> \u00b7 {r['close']:g} "
                        f"<a href=\"{build_chart_link(r['symbol'])}\">Chart</a>")
+    if saved_state is not None and getattr(config, "BB_TOP5_ONLY", False):
+        out.append("\n\u2139\ufe0f BB alert aj sudhu ei stock gulor jonno")
     try:
         requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
                       data={"chat_id": config.TELEGRAM_CHAT_ID, "text": "\n".join(out)[:4000], "parse_mode": "HTML",
                             "disable_web_page_preview": True}, timeout=20)
     except Exception as e:
         print(f"[top5:{window}] send failed: {e}", flush=True)
+
+
+_DM_RSI_CACHE = {}
+
+
+def _bb_dm_rsi(symbol, instrument_key):
+    """Daily RSI(14) and Monthly RSI(14) for a BB alert - INFORMATION ONLY (never blocks an alert). Cached per run. None on failure."""
+    if not instrument_key:
+        return None
+    if symbol in _DM_RSI_CACHE:
+        return _DM_RSI_CACHE[symbol]
+    out = None
+    try:
+        hist = fetch_daily_history(instrument_key, days_back=getattr(config, "MONTHLY_RSI_HISTORY_LOOKBACK_DAYS", 1800), include_today=True)
+        if hist:
+            out = {"daily": None, "monthly": None}
+            closes = [float(x["close"]) for x in hist]
+            if len(closes) > 15:
+                v = _rsi_series(closes).iloc[-1]
+                out["daily"] = None if pd.isna(v) else float(v)
+            mi = get_monthly_rsi_info(hist)
+            if mi:
+                out["monthly"] = float(mi["rsi"])
+            if out["daily"] is None and out["monthly"] is None:
+                out = None
+    except Exception as e:
+        print(f"daily/monthly RSI failed for {symbol}: {e}", flush=True)
+    _DM_RSI_CACHE[symbol] = out
+    return out
+
+
+def _bb_move_pct(df15, prev_close, now_ist):
+    """Absolute % move of the stock vs the previous close, as of today's latest candle (None if unknown)."""
+    try:
+        if not prev_close:
+            return None
+        last = df15[df15["timestamp"].dt.date == now_ist.date()]
+        if last.empty:
+            return None
+        return abs(float(last.iloc[-1]["close"]) - float(prev_close)) / float(prev_close) * 100.0
+    except Exception:
+        return None
+
+
+def _bb_stock_allowed(saved_state, symbol, df15, prev_close, now_ist):
+    """Stock BB filter (F&O and cash) = TWO SEPARATE groups (2026-11-27):
+      A) today's top-5 gainers/losers of the first 15 minutes (F&O list + cash list)  -> always allowed
+         (BB_TOP5_APPLY_MAX = True would also stop them once they moved >= BB_MOVE_MAX_PCT)
+      B) ANY other stock that moved >= BB_MOVE_MIN_PCT (2%) but is still below BB_MOVE_MAX_PCT (5%) vs previous close.
+    Indices/commodities are never filtered."""
+    if symbol in config.INDICES or symbol in config.COMMODITIES:
+        return True
+    pct = _bb_move_pct(df15, prev_close, now_ist)
+    mx = float(getattr(config, "BB_MOVE_MAX_PCT", 5))
+    if getattr(config, "BB_TOP5_ONLY", False) and _bb_top5_ok(saved_state, symbol, now_ist):
+        return not (getattr(config, "BB_TOP5_APPLY_MAX", False) and pct is not None and pct >= mx)
+    return bool(getattr(config, "BB_MOVE_FILTER", False) and pct is not None and float(config.BB_MOVE_MIN_PCT) <= pct < mx)
+
+
+def _bb_top5_ok(saved_state, symbol, now_ist):
+    """True when BB alerts are allowed for this symbol: indices/commodities always; stocks only if they are in today's top-5
+    gainers/losers of the first 15 or 30 minutes (config.BB_TOP5_ONLY)."""
+    if not getattr(config, "BB_TOP5_ONLY", False):
+        return True
+    if symbol in config.INDICES or symbol in config.COMMODITIES:
+        return True
+    today = now_ist.date().isoformat()
+    return any(state.already_alerted(saved_state, f"TOP5SEL::{symbol}", d, today) for d in ("UP", "DOWN"))
+
+
+def _bb_top5_step(now_ist, dfs, pivots, saved_state, uni="F&O"):
+    """Build today's top-5 lists from the already-fetched F&O data (first 15 / 30 minutes), once each, and send them."""
+    if not getattr(config, "BB_TOP5_ONLY", False) or now_ist.weekday() >= 5:
+        return
+    today = now_ist.date().isoformat()
+    for window in getattr(config, "BB_TOP5_WINDOWS", ["15", "30"]):
+        hhmm = getattr(config, "TOP5_SCHEDULE", {}).get(window)
+        if not hhmm:
+            continue
+        hh, mm = (int(x) for x in hhmm.split(":"))
+        if not (dt.time(hh, mm) <= now_ist.time() <= dt.time(12, 0)):
+            continue
+        _dk = f"TOP5_{window}" if uni == "F&O" else f"TOP5CASH_{window}"
+        if state.already_alerted(saved_state, _dk, "DONE", today):
+            continue
+        state.mark_alerted(saved_state, _dk, "DONE", today)
+        try:
+            run_top5_report(now_ist, window, dfs=dfs, pivots=pivots, saved_state=saved_state, uni=uni)
+        except Exception as e:
+            print(f"Top5 {window} failed: {e}", flush=True)
+        state.save_state(saved_state)
 
 
 def maybe_run_top5_once_a_day(now_ist):
