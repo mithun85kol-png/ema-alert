@@ -887,7 +887,6 @@
     "2026-09-07 09:15:00+05:30"
   ],
   "BB15_PASS:DONE": [
-    "2026-11-26 17:30:00",
     "2026-11-26 17:45:00",
     "2026-11-26 18:00:00",
     "2026-11-26 18:15:00",
@@ -936,7 +935,9 @@
     "2026-11-27 14:30:00",
     "2026-11-27 14:45:00",
     "2026-11-27 15:00:00",
-    "2026-11-27 15:15:00"
+    "2026-11-27 15:15:00",
+    "2026-11-27 15:30:00",
+    "2026-11-26 17:30:00"
   ],
   "SBICARD::TRENDLINE::BULLISH:BULLISH": [
     "2026-08-21 14:45:00+05:30",
@@ -4308,7 +4309,8 @@
     "2026-11-23",
     "2026-11-24",
     "2026-11-25",
-    "2026-11-26"
+    "2026-11-26",
+    "2026-11-27"
   ],
   "BPCL:BEARISH": [
     "2026-08-20 14:30:00+05:30",
@@ -10016,7 +10018,12 @@
         "day": null,
         "nifty": null,
         "vol": 50.22,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 923.5,
+        "pnl": 1.409,
+        "best": 1.97,
+        "worst": -1.313,
+        "outcome": "STOP"
       },
       {
         "symbol": "HYUNDAI",
@@ -10030,7 +10037,12 @@
         "day": null,
         "nifty": null,
         "vol": 137.46,
-        "sector": "Automobile and Auto Components"
+        "sector": "Automobile and Auto Components",
+        "last": 2006.0,
+        "pnl": 1.478,
+        "best": 1.67,
+        "worst": -0.599,
+        "outcome": "STOP"
       },
       {
         "symbol": "POLICYBZR",
@@ -10044,7 +10056,12 @@
         "day": null,
         "nifty": null,
         "vol": 18.73,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 1186.5,
+        "pnl": -0.968,
+        "best": 1.511,
+        "worst": -2.037,
+        "outcome": "STOP"
       },
       {
         "symbol": "MAZDOCK",
@@ -10058,7 +10075,12 @@
         "day": null,
         "nifty": null,
         "vol": 62.08,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 1890.0,
+        "pnl": 1.422,
+        "best": 2.812,
+        "worst": -0.027,
+        "outcome": "TARGET"
       },
       {
         "symbol": "EMMVEE",
@@ -10072,7 +10094,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.45,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 270.6,
+        "pnl": -1.589,
+        "best": 0.556,
+        "worst": -3.473,
+        "outcome": "TARGET"
       },
       {
         "symbol": "DEEPAKNTR",
@@ -10086,7 +10113,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.65,
-        "sector": "Chemicals"
+        "sector": "Chemicals",
+        "last": 1540.0,
+        "pnl": -1.124,
+        "best": 0.655,
+        "worst": -1.413,
+        "outcome": "TARGET"
       },
       {
         "symbol": "ESCORTS",
@@ -10100,7 +10132,12 @@
         "day": null,
         "nifty": null,
         "vol": 6.55,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 2570.0,
+        "pnl": 2.232,
+        "best": 2.908,
+        "worst": -0.294,
+        "outcome": "TARGET"
       },
       {
         "symbol": "MMTC",
@@ -10114,7 +10151,12 @@
         "day": null,
         "nifty": null,
         "vol": 6.42,
-        "sector": "Services"
+        "sector": "Services",
+        "last": 50.95,
+        "pnl": -3.045,
+        "best": 0.514,
+        "worst": -3.178,
+        "outcome": "STOP"
       },
       {
         "symbol": "BDL",
@@ -10128,7 +10170,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.2,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 1077.5,
+        "pnl": 0.513,
+        "best": 2.038,
+        "worst": -0.644,
+        "outcome": "STOP"
       },
       {
         "symbol": "BANKBARODA",
@@ -10142,7 +10189,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.95,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 274.9,
+        "pnl": -2.031,
+        "best": 0.303,
+        "worst": -2.416,
+        "outcome": "STOP"
       },
       {
         "symbol": "VOLTAS",
@@ -10156,7 +10208,12 @@
         "day": null,
         "nifty": null,
         "vol": 128.44,
-        "sector": "Consumer Durables"
+        "sector": "Consumer Durables",
+        "last": 1186.8,
+        "pnl": 0.378,
+        "best": 1.536,
+        "worst": -1.024,
+        "outcome": "TARGET"
       },
       {
         "symbol": "DATAPATTNS",
@@ -10170,7 +10227,12 @@
         "day": null,
         "nifty": null,
         "vol": 4.08,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 4336.9,
+        "pnl": 1.495,
+        "best": 3.487,
+        "worst": -0.257,
+        "outcome": "TARGET"
       },
       {
         "symbol": "HAL",
@@ -10184,7 +10246,12 @@
         "day": null,
         "nifty": null,
         "vol": 5.55,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 5074.0,
+        "pnl": 0.975,
+        "best": 2.448,
+        "worst": -0.657,
+        "outcome": "STOP"
       },
       {
         "symbol": "RBLBANK",
@@ -10198,7 +10265,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.07,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 390.0,
+        "pnl": -2.439,
+        "best": 0.801,
+        "worst": -2.439,
+        "outcome": "TARGET"
       },
       {
         "symbol": "BANKINDIA",
@@ -10212,7 +10284,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.0,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 162.5,
+        "pnl": -3.389,
+        "best": 0.464,
+        "worst": -3.686,
+        "outcome": "STOP"
       },
       {
         "symbol": "SOLARINDS",
@@ -10226,7 +10303,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.47,
-        "sector": "Chemicals"
+        "sector": "Chemicals",
+        "last": 19450.0,
+        "pnl": 3.922,
+        "best": 4.296,
+        "worst": 0.0,
+        "outcome": "TARGET"
       },
       {
         "symbol": "ACMESOLAR",
@@ -10240,7 +10322,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.42,
-        "sector": "Power"
+        "sector": "Power",
+        "last": 425.85,
+        "pnl": -0.141,
+        "best": 1.419,
+        "worst": -0.575,
+        "outcome": "TARGET"
       },
       {
         "symbol": "AAVAS",
@@ -10254,7 +10341,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.6,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 1115.1,
+        "pnl": -0.624,
+        "best": 0.989,
+        "worst": -1.292,
+        "outcome": "TARGET"
       },
       {
         "symbol": "GRSE",
@@ -10268,7 +10360,12 @@
         "day": null,
         "nifty": null,
         "vol": 4.69,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 2149.0,
+        "pnl": 2.71,
+        "best": 3.618,
+        "worst": -0.105,
+        "outcome": "TARGET"
       },
       {
         "symbol": "BEML",
@@ -10282,7 +10379,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.62,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 2319.0,
+        "pnl": 8.976,
+        "best": 11.997,
+        "worst": -0.094,
+        "outcome": "TARGET"
       },
       {
         "symbol": "CHOLAHLDNG",
@@ -10296,7 +10398,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.39,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 1362.4,
+        "pnl": -2.97,
+        "best": 1.638,
+        "worst": -3.07,
+        "outcome": "TARGET"
       },
       {
         "symbol": "AZAD",
@@ -10310,7 +10417,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.38,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 2404.0,
+        "pnl": 0.67,
+        "best": 1.843,
+        "worst": -0.209,
+        "outcome": "TARGET"
       },
       {
         "symbol": "CUPID",
@@ -10324,7 +10436,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.88,
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 389.0,
+        "pnl": 2.584,
+        "best": 3.349,
+        "worst": -0.171,
+        "outcome": "TARGET"
       },
       {
         "symbol": "COCHINSHIP",
@@ -10338,7 +10455,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.9,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 1126.0,
+        "pnl": 0.133,
+        "best": 1.779,
+        "worst": -0.4,
+        "outcome": "TARGET"
       },
       {
         "symbol": "ANGELONE",
@@ -10352,7 +10474,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.23,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 376.0,
+        "pnl": 0.481,
+        "best": 2.325,
+        "worst": -1.176,
+        "outcome": "STOP"
       },
       {
         "symbol": "BLUESTARCO",
@@ -10366,7 +10493,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.54,
-        "sector": "Consumer Durables"
+        "sector": "Consumer Durables",
+        "last": 1735.0,
+        "pnl": 0.029,
+        "best": 1.17,
+        "worst": -0.674,
+        "outcome": "STOP"
       },
       {
         "symbol": "ZENTEC",
@@ -10380,7 +10512,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.45,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 1793.4,
+        "pnl": 0.168,
+        "best": 1.206,
+        "worst": -0.771,
+        "outcome": "TARGET"
       },
       {
         "symbol": "WELCORP",
@@ -10394,7 +10531,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.2,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 2311.0,
+        "pnl": 0.03,
+        "best": 1.112,
+        "worst": -1.052,
+        "outcome": "STOP"
       },
       {
         "symbol": "AWL",
@@ -10408,7 +10550,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.1,
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 169.4,
+        "pnl": 0.361,
+        "best": 0.569,
+        "worst": -0.853,
+        "outcome": "STOP"
       },
       {
         "symbol": "HINDZINC",
@@ -10422,7 +10569,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.25,
-        "sector": "Metals & Mining"
+        "sector": "Metals & Mining",
+        "last": 545.0,
+        "pnl": 0.119,
+        "best": 0.909,
+        "worst": -0.974,
+        "outcome": "STOP"
       },
       {
         "symbol": "YESBANK",
@@ -10436,7 +10588,12 @@
         "day": null,
         "nifty": null,
         "vol": 4.38,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 17.8,
+        "pnl": -1.874,
+        "best": 0.276,
+        "worst": -2.426,
+        "outcome": "STOP"
       },
       {
         "symbol": "MPHASIS",
@@ -10450,7 +10607,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.05,
-        "sector": "Information Technology"
+        "sector": "Information Technology",
+        "last": 2441.2,
+        "pnl": 0.115,
+        "best": 0.258,
+        "worst": -1.432,
+        "outcome": "STOP"
       },
       {
         "symbol": "BEL",
@@ -10464,7 +10626,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.04,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 411.45,
+        "pnl": -0.315,
+        "best": 0.424,
+        "worst": -1.139,
+        "outcome": "STOP"
       },
       {
         "symbol": "CHOICEIN",
@@ -10478,7 +10645,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.27,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 769.6,
+        "pnl": -1.067,
+        "best": 0.116,
+        "worst": -1.273,
+        "outcome": "STOP"
       },
       {
         "symbol": "CUB",
@@ -10492,7 +10664,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.23,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 233.1,
+        "pnl": 0.111,
+        "best": 0.686,
+        "worst": -0.647,
+        "outcome": "STOP"
       },
       {
         "symbol": "NLCINDIA",
@@ -10506,7 +10683,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.04,
-        "sector": "Power"
+        "sector": "Power",
+        "last": 236.2,
+        "pnl": 0.88,
+        "best": 4.848,
+        "worst": -0.081,
+        "outcome": "TARGET"
       },
       {
         "symbol": "BALRAMCHIN",
@@ -10520,7 +10702,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.57,
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 679.2,
+        "pnl": 1.472,
+        "best": 1.561,
+        "worst": -0.015,
+        "outcome": "TARGET"
       },
       {
         "symbol": "ACE",
@@ -10534,7 +10721,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.06,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 1326.25,
+        "pnl": 0.219,
+        "best": 0.45,
+        "worst": -0.291,
+        "outcome": "NONE"
       },
       {
         "symbol": "ECLERX",
@@ -10548,7 +10740,12 @@
         "day": null,
         "nifty": null,
         "vol": 5.83,
-        "sector": "Services"
+        "sector": "Services",
+        "last": 1550.5,
+        "pnl": -0.219,
+        "best": 0.714,
+        "worst": -0.766,
+        "outcome": "TARGET"
       },
       {
         "symbol": "GLENMARK",
@@ -10562,7 +10759,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.5,
-        "sector": "Healthcare"
+        "sector": "Healthcare",
+        "last": 2834.9,
+        "pnl": 1.07,
+        "best": 1.501,
+        "worst": -0.007,
+        "outcome": "TARGET"
       },
       {
         "symbol": "KAYNES",
@@ -10576,7 +10778,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.45,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 2725.0,
+        "pnl": -1.225,
+        "best": 0.188,
+        "worst": -1.225,
+        "outcome": "STOP"
       },
       {
         "symbol": "VEDL",
@@ -10590,7 +10797,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.13,
-        "sector": "Metals & Mining"
+        "sector": "Metals & Mining",
+        "last": 245.31,
+        "pnl": 0.352,
+        "best": 1.002,
+        "worst": -0.266,
+        "outcome": "TARGET"
       },
       {
         "symbol": "ZYDUSLIFE",
@@ -10604,7 +10816,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.6,
-        "sector": "Healthcare"
+        "sector": "Healthcare",
+        "last": 1156.9,
+        "pnl": 0.891,
+        "best": 1.302,
+        "worst": -0.797,
+        "outcome": "STOP"
       },
       {
         "symbol": "CROMPTON",
@@ -10618,7 +10835,12 @@
         "day": null,
         "nifty": null,
         "vol": 5.48,
-        "sector": "Consumer Durables"
+        "sector": "Consumer Durables",
+        "last": 211.0,
+        "pnl": 0.166,
+        "best": 0.52,
+        "worst": -0.558,
+        "outcome": "TARGET"
       },
       {
         "symbol": "MFSL",
@@ -10632,7 +10854,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.77,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 1425.0,
+        "pnl": 0.196,
+        "best": 0.819,
+        "worst": -0.28,
+        "outcome": "TARGET"
       },
       {
         "symbol": "RVNL",
@@ -10646,7 +10873,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.1,
-        "sector": "Construction"
+        "sector": "Construction",
+        "last": 190.7,
+        "pnl": -0.366,
+        "best": 0.627,
+        "worst": -0.825,
+        "outcome": "STOP"
       },
       {
         "symbol": "BAJAJ-AUTO",
@@ -10660,7 +10892,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.72,
-        "sector": "Automobile and Auto Components"
+        "sector": "Automobile and Auto Components",
+        "last": 10485.0,
+        "pnl": 1.438,
+        "best": 1.626,
+        "worst": 0.0,
+        "outcome": "TARGET"
       },
       {
         "symbol": "HAVELLS",
@@ -10674,7 +10911,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.42,
-        "sector": "Consumer Durables"
+        "sector": "Consumer Durables",
+        "last": 1142.4,
+        "pnl": 0.808,
+        "best": 1.398,
+        "worst": -0.721,
+        "outcome": "STOP"
       },
       {
         "symbol": "SYRMA",
@@ -10688,7 +10930,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.52,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 1502.0,
+        "pnl": -1.534,
+        "best": 0.229,
+        "worst": -1.626,
+        "outcome": "STOP"
       },
       {
         "symbol": "ASHOKLEY",
@@ -10702,7 +10949,12 @@
         "day": null,
         "nifty": null,
         "vol": 2.22,
-        "sector": "Capital Goods"
+        "sector": "Capital Goods",
+        "last": 151.42,
+        "pnl": 0.02,
+        "best": 1.479,
+        "worst": -0.363,
+        "outcome": "TARGET"
       },
       {
         "symbol": "CDSL",
@@ -10716,7 +10968,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.24,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 1453.0,
+        "pnl": -1.418,
+        "best": 0.244,
+        "worst": -1.622,
+        "outcome": "STOP"
       },
       {
         "symbol": "LTF",
@@ -10730,7 +10987,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.68,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 276.4,
+        "pnl": 0.072,
+        "best": 0.56,
+        "worst": -0.289,
+        "outcome": "TARGET"
       },
       {
         "symbol": "CHOLAFIN",
@@ -10744,7 +11006,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.0,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 1802.0,
+        "pnl": -0.295,
+        "best": 0.262,
+        "worst": -0.417,
+        "outcome": "NONE"
       },
       {
         "symbol": "BHARTIARTL",
@@ -10758,7 +11025,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.11,
-        "sector": "Telecommunication"
+        "sector": "Telecommunication",
+        "last": 2067.9,
+        "pnl": -0.267,
+        "best": 0.286,
+        "worst": -0.267,
+        "outcome": "NONE"
       },
       {
         "symbol": "SBICARD",
@@ -10772,7 +11044,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.69,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 565.8,
+        "pnl": 0.308,
+        "best": 0.44,
+        "worst": -0.696,
+        "outcome": "STOP"
       },
       {
         "symbol": "BANDHANBNK",
@@ -10786,7 +11063,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.25,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 166.66,
+        "pnl": 0.519,
+        "best": 1.14,
+        "worst": -0.054,
+        "outcome": "TARGET"
       },
       {
         "symbol": "PHOENIXLTD",
@@ -10800,7 +11082,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.41,
-        "sector": "Realty"
+        "sector": "Realty",
+        "last": 2229.7,
+        "pnl": 0.433,
+        "best": 1.237,
+        "worst": -0.107,
+        "outcome": "TARGET"
       },
       {
         "symbol": "ADANIENSOL",
@@ -10814,7 +11101,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.69,
-        "sector": "Power"
+        "sector": "Power",
+        "last": 1337.0,
+        "pnl": 0.742,
+        "best": 1.218,
+        "worst": -0.312,
+        "outcome": "TARGET"
       },
       {
         "symbol": "UNOMINDA",
@@ -10828,7 +11120,12 @@
         "day": null,
         "nifty": null,
         "vol": 6.17,
-        "sector": "Automobile and Auto Components"
+        "sector": "Automobile and Auto Components",
+        "last": 1354.0,
+        "pnl": 0.339,
+        "best": 0.412,
+        "worst": -0.287,
+        "outcome": "NONE"
       },
       {
         "symbol": "MOTHERSON",
@@ -10842,7 +11139,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.08,
-        "sector": "Automobile and Auto Components"
+        "sector": "Automobile and Auto Components",
+        "last": 161.5,
+        "pnl": -0.298,
+        "best": 0.037,
+        "worst": -0.484,
+        "outcome": "NONE"
       },
       {
         "symbol": "HAVELLS",
@@ -10856,7 +11158,12 @@
         "day": null,
         "nifty": null,
         "vol": 4.0,
-        "sector": "Consumer Durables"
+        "sector": "Consumer Durables",
+        "last": 1142.4,
+        "pnl": 0.201,
+        "best": 0.795,
+        "worst": -0.131,
+        "outcome": "TARGET"
       },
       {
         "symbol": "GODREJCP",
@@ -10870,7 +11177,12 @@
         "day": null,
         "nifty": null,
         "vol": 3.47,
-        "sector": "Fast Moving Consumer Goods"
+        "sector": "Fast Moving Consumer Goods",
+        "last": 918.9,
+        "pnl": 0.103,
+        "best": 0.239,
+        "worst": -0.332,
+        "outcome": "NONE"
       },
       {
         "symbol": "SBICARD",
@@ -10884,7 +11196,12 @@
         "day": null,
         "nifty": null,
         "vol": 4.17,
-        "sector": "Financial Services"
+        "sector": "Financial Services",
+        "last": 565.8,
+        "pnl": 0.168,
+        "best": 0.3,
+        "worst": -0.132,
+        "outcome": "NONE"
       },
       {
         "symbol": "EICHERMOT",
@@ -10898,7 +11215,12 @@
         "day": null,
         "nifty": null,
         "vol": 1.74,
-        "sector": "Automobile and Auto Components"
+        "sector": "Automobile and Auto Components",
+        "last": 8003.5,
+        "pnl": 0.429,
+        "best": 0.429,
+        "worst": -0.031,
+        "outcome": "NONE"
       }
     ]
   },
