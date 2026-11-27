@@ -99,7 +99,7 @@ def _ema75_line(info, direction):
             f"{_p(info['ema'])} ({sign}{info['dist_pct']}%)\n")
 
 
-BUILD_TAG = "short-v107 (2026-11-27)"
+BUILD_TAG = "short-v108 (2026-11-27)"
 
 
 def _ema920_line(info15, info75):

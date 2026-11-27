@@ -1358,7 +1358,7 @@ BB_IN_FULL_RUN = False
 #        reports, corporate actions, bulk deals ... are all OFF. One cron is enough, no workflow change needed.
 # False: everything runs as before.
 BB_ONLY_MODE = True
-BB_ONLY_INCLUDE_N500 = True
+BB_ONLY_INCLUDE_N500 = False   # cash (Nifty 500, non-F&O) stocks OFF 2026-11-27: no cash top-5, no cash BB/RSI alerts
 BB_IN_FULL_RUN = True
 
 BB_FIRST_OUTSIDE_ONLY = True    # previous candle must have closed INSIDE the band
