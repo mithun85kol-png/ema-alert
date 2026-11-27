@@ -3082,6 +3082,84 @@ def build_nifty500_watchlist(now_ist=None):
     return instruments.resolve_nifty500_stocks()
 
 
+def _rsi75_scan(symbol, df15, now_ist, saved_state, instrument_key, is_fno, hits):
+    """15-min RSI alert for TODAY'S TOP-5 stocks (F&O list + cash list, first 15 minutes): the closed 15-min candle's RSI is
+    ABOVE RSI75_UPPER (bullish) / BELOW RSI75_LOWER (bearish) AND the MONTHLY RSI supports it (bullish: monthly RSI >=
+    RSI75_MONTHLY_BULL_MIN, bearish: <= RSI75_MONTHLY_BEAR_MAX). Once per stock per direction per day (first such candle). Never raises."""
+    try:
+        if not getattr(config, "RSI75_ALERT_ENABLED", False) or symbol in config.INDICES or symbol in config.COMMODITIES:
+            return
+        today = now_ist.date().isoformat()
+        if getattr(config, "RSI75_TOP5_ONLY", True) and not any(
+                state.already_alerted(saved_state, f"TOP5SEL::{symbol}", dn, today) for dn in ("UP", "DOWN")):
+            return
+        d = _bb_eval(df15)
+        if d is None:
+            return
+        up, lo = float(config.RSI75_UPPER), float(config.RSI75_LOWER)
+        idx = [i for i in range(len(d)) if str(d.iloc[i]["timestamp"]).startswith(today) and not pd.isna(d.iloc[i]["rsi"])]
+        for direction in ("BULLISH", "BEARISH"):
+            bull = direction == "BULLISH"
+            if state.already_alerted(saved_state, f"{symbol}::RSI75", direction, today):
+                continue
+            for i in idx:
+                rsi = float(d.iloc[i]["rsi"])
+                if (bull and rsi > up) or ((not bull) and rsi < lo):
+                    dm = _bb_dm_rsi(symbol, instrument_key)
+                    mrsi = (dm or {}).get("monthly")
+                    if mrsi is None:
+                        print(f"RSI75 {symbol}: monthly RSI unavailable - skipped", flush=True)
+                        break
+                    sup = mrsi >= float(config.RSI75_MONTHLY_BULL_MIN) if bull else mrsi <= float(config.RSI75_MONTHLY_BEAR_MAX)
+                    if not sup:
+                        break                       # monthly RSI does not support: no alert today for this direction
+                    state.mark_alerted(saved_state, f"{symbol}::RSI75", direction, today)
+                    pc = (_bb_move_pct(df15, None, now_ist))
+                    r = d.iloc[i]
+                    hits.append({"symbol": symbol, "direction": direction, "rsi": rsi, "close": float(r["close"]),
+                                 "candle_time": str(r["timestamp"]), "monthly": mrsi, "daily": (dm or {}).get("daily"),
+                                 "instrument_key": instrument_key, "is_fno": is_fno, "chart_link": build_chart_link(symbol),
+                                 "list": "UP" if state.already_alerted(saved_state, f"TOP5SEL::{symbol}", "UP", today) else "DOWN"})
+                    break
+    except Exception as e:
+        print(f"RSI75 scan failed for {symbol}: {e}", flush=True)
+
+
+def send_rsi75_summary(hits, now_ist):
+    import html as _html
+    from telegram_notifier import _sector_label
+    if not hits:
+        return
+    ct0 = max(str(h["candle_time"]) for h in hits)[11:16]
+    out = [f"\U0001F4C8 <b>15-MIN RSI {getattr(config, 'RSI75_UPPER', 75):g}/{getattr(config, 'RSI75_LOWER', 25):g} \u2014 TOP 5 + MONTHLY RSI</b> (candle {ct0})   <i>{_html.escape(BUILD_TAG_SHORT())}</i>"]
+    for h in sorted(hits, key=lambda h: (h["direction"] != "BULLISH", h["symbol"])):
+        try:
+            bull = h["direction"] == "BULLISH"
+            icon = "\U0001F7E2" if bull else "\U0001F534"
+            kindtxt = "F&O" if h.get("is_fno") else "Cash"
+            sec = _html.escape(_sector_label(h["symbol"]) or "Other")
+            top = (f"{icon} <b>{_html.escape(h['symbol'])}</b> <i>({sec})</i>  \U0001F4C8 <a href=\"{h.get('chart_link', '')}\">Chart</a>"
+                   f"\nRSI(15m) {h['rsi']:.1f} \u00b7 {h['close']:g} \u00b7 \u23F115-min")
+            body = [f"{h['candle_time'][:10]} {h['candle_time'][11:16]} (15-min candle)  |  {kindtxt}  |  top 5 {'gainer' if h.get('list') == 'UP' else 'loser'}",
+                    f"\u2705 15-min RSI {h['rsi']:.1f} {'above' if bull else 'below'} {getattr(config, 'RSI75_UPPER', 75) if bull else getattr(config, 'RSI75_LOWER', 25):g}",
+                    f"\u2705 Monthly RSI {h['monthly']:.1f} support ({'>=' if bull else '<='} {getattr(config, 'RSI75_MONTHLY_BULL_MIN', 60) if bull else getattr(config, 'RSI75_MONTHLY_BEAR_MAX', 40):g})"]
+            if h.get("daily") is not None:
+                body.append(f"\U0001F4CA Daily RSI {h['daily']:.1f} (info)")
+            if h.get("is_fno") and getattr(config, "BB_MSG_OPTIONS", "full") != "off":
+                ao = get_atm_option_text(h["symbol"], h.get("instrument_key"), now_ist.date(), short=False)
+                if ao:
+                    body.append(ao)
+            out.append(f"{top}\n<blockquote expandable>" + "\n".join(body) + "</blockquote>")
+        except Exception as e:
+            print(f"RSI75 message build failed for {h.get('symbol')}: {e}", flush=True)
+    try:
+        requests.post(f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/sendMessage",
+                      data={"chat_id": config.TELEGRAM_CHAT_ID, "text": "\n".join(out)[:3900], "parse_mode": "HTML",
+                            "disable_web_page_preview": True}, timeout=20)
+    except Exception as e:
+        print(f"RSI75 summary send failed: {e}", flush=True)
+
+
 def _run_bb_only(now_ist, only_commodities=False, n500=False):
     """BB-ONLY fast run (2026-11-25, "BB alert first priority"): fetch the watchlist and run ONLY the Bollinger scan,
     no MACD / score / report work, so the alert goes out within ~1-3 minutes of the candle close.
@@ -3104,11 +3182,14 @@ def _run_bb_only(now_ist, only_commodities=False, n500=False):
     saved_state = state.load_state()
     _sync_state_from_remote(saved_state)
     bb_hits = {"break": [], "reentry": []}
+    rsi75_hits = []
     if not only_commodities:
         _bb_top5_step(now_ist, dfs, pivots, saved_state, uni=("Cash" if n500 else "F&O"))
     for symbol, (df5, df75, df15) in dfs.items():
         if df15 is None or df15.empty:
             continue
+        if not only_commodities:
+            _rsi75_scan(symbol, df15, now_ist, saved_state, watchlist.get(symbol), (symbol.upper() in fno), rsi75_hits)
         if not only_commodities and not _bb_stock_allowed(saved_state, symbol, df15, (pivots.get(symbol) or {}).get("prev_close"), now_ist):
             continue
         levels = pivots.get(symbol)
@@ -3121,6 +3202,9 @@ def _run_bb_only(now_ist, only_commodities=False, n500=False):
         if _hits:
             send_bb_summary(_hits, now_ist, _k)
             n += len(_hits)
+    if rsi75_hits:
+        send_rsi75_summary(rsi75_hits, now_ist)
+        n += len(rsi75_hits)
     state.save_state(saved_state)
     if failed:
         print(f"{len(failed)} instrument(s) failed to fetch: {failed}", flush=True)

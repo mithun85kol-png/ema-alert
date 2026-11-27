@@ -1415,3 +1415,11 @@ BB_MOVE_FILTER = True     # stocks (F&O + cash): no BB alert once the stock alre
 BB_MOVE_MIN_PCT = 2
 BB_MOVE_MAX_PCT = 5
 BB_TOP5_APPLY_MAX = False   # False = top-5 stocks (first 15 min) get BB alerts even above 5% move; True = they also stop at BB_MOVE_MAX_PCT
+
+# ---- 15-min RSI alert for the top-5 stocks, with MONTHLY RSI support (2026-11-27) ----
+RSI75_ALERT_ENABLED = True
+RSI75_UPPER = 75                 # bullish: 15-min RSI above this
+RSI75_LOWER = 25                 # bearish: 15-min RSI below this
+RSI75_MONTHLY_BULL_MIN = 60      # bullish needs monthly RSI >= this ("support")
+RSI75_MONTHLY_BEAR_MAX = 40      # bearish needs monthly RSI <= this
+RSI75_TOP5_ONLY = True           # only today's top-5 stocks (F&O list + cash list, first 15 minutes)
