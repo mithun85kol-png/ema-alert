@@ -9219,6 +9219,76 @@
         "nifty": null,
         "vol": 1.1,
         "sector": "Fast Moving Consumer Goods"
+      },
+      {
+        "symbol": "HINDZINC",
+        "direction": "BULLISH",
+        "time": "2026-11-27 10:00:00+05:30",
+        "price": 544.35,
+        "key": "NSE_EQ|INE267A01025",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.25,
+        "sector": "Metals & Mining"
+      },
+      {
+        "symbol": "YESBANK",
+        "direction": "BULLISH",
+        "time": "2026-11-27 10:00:00+05:30",
+        "price": 18.14,
+        "key": "NSE_EQ|INE528G01035",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 4.38,
+        "sector": "Financial Services"
+      },
+      {
+        "symbol": "MPHASIS",
+        "direction": "BEARISH",
+        "time": "2026-11-27 10:00:00+05:30",
+        "price": 2444.0,
+        "key": "NSE_EQ|INE356A01018",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 1.05,
+        "sector": "Information Technology"
+      },
+      {
+        "symbol": "BEL",
+        "direction": "BULLISH",
+        "time": "2026-11-27 10:00:00+05:30",
+        "price": 412.75,
+        "key": "NSE_EQ|INE263A01024",
+        "score": "",
+        "type": "BB",
+        "fno": true,
+        "day": null,
+        "nifty": null,
+        "vol": 3.04,
+        "sector": "Capital Goods"
+      },
+      {
+        "symbol": "CHOICEIN",
+        "direction": "BULLISH",
+        "time": "2026-11-27 10:00:00+05:30",
+        "price": 777.9,
+        "key": "NSE_EQ|INE102B01014",
+        "score": "",
+        "type": "BB",
+        "fno": false,
+        "day": null,
+        "nifty": null,
+        "vol": 3.27,
+        "sector": "Financial Services"
       }
     ]
   },
@@ -10395,7 +10465,6 @@
     "2026-11-23 09:15:00+05:30"
   ],
   "BB15_PASS:DONE": [
-    "2026-11-26 12:00:00",
     "2026-11-26 12:15:00",
     "2026-11-26 12:30:00",
     "2026-11-26 12:45:00",
@@ -10444,7 +10513,9 @@
     "2026-11-27 09:00:00",
     "2026-11-27 09:15:00",
     "2026-11-27 09:30:00",
-    "2026-11-27 09:45:00"
+    "2026-11-27 09:45:00",
+    "2026-11-27 10:00:00",
+    "2026-11-26 12:00:00"
   ],
   "CRAFTSMAN::SWEEP::BEARISH:BEARISH": [
     "2026-09-07 09:15:00+05:30"
@@ -12082,7 +12153,8 @@
   ],
   "BEL::BB_BREAK:BULLISH": [
     "2026-11-23 09:45:00+05:30",
-    "2026-11-25 11:15:00+05:30"
+    "2026-11-25 11:15:00+05:30",
+    "2026-11-27 10:00:00+05:30"
   ],
   "WOCKPHARMA::N500:BULLISH": [
     "2026-09-07 10:15:00+05:30",
@@ -12491,7 +12563,8 @@
     "2026-08-21 13:30:00+05:30"
   ],
   "CHOICEIN::BB_BREAK:BULLISH": [
-    "2026-11-23 10:30:00+05:30"
+    "2026-11-23 10:30:00+05:30",
+    "2026-11-27 10:00:00+05:30"
   ],
   "NAUKRI::ORB15_MOVE:BULLISH": [
     "2026-11-20"
@@ -18258,5 +18331,14 @@
   ],
   "KAYNES::TRENDLINE::BEARISH:BEARISH": [
     "2026-08-24 12:00:00+05:30"
+  ],
+  "HINDZINC::BB_BREAK:BULLISH": [
+    "2026-11-27 10:00:00+05:30"
+  ],
+  "YESBANK::BB_BREAK:BULLISH": [
+    "2026-11-27 10:00:00+05:30"
+  ],
+  "MPHASIS::BB_BREAK:BEARISH": [
+    "2026-11-27 10:00:00+05:30"
   ]
 }
